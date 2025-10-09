@@ -3,80 +3,84 @@
 {% block title %}Validar Ticket - Sistema de Tickets{% endblock %}
 
 {% block content %}
-<div class="card">
-    <h2>✅ Validación de Tickets</h2>
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div class="p-6">
+        <h2 class="text-3xl font-bold tracking-tight mb-4">Validacion de Tickets</h2>
 
-    <p style="color: #666; margin-bottom: 30px;">
-        Escanea el código QR o ingresa manualmente el código del ticket para validar el acceso al evento.
-    </p>
+        <p class="text-muted-foreground mb-8">
+            Escanea el codigo QR o ingresa manualmente el codigo del ticket para validar el acceso al evento.
+        </p>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
-        <!-- Opción 1: Escanear QR -->
-        <div>
-            <h3>Escanear QR</h3>
-            <div style="margin: 20px 0;">
-                <button id="startScanBtn" class="btn btn-success" onclick="startScanner()">📷 Activar Cámara</button>
-                <button id="stopScanBtn" class="btn btn-danger" onclick="stopScanner()" style="display: none;">⏹️ Detener Cámara</button>
-            </div>
-            <div id="reader" style="width: 100%; margin-top: 20px; border: 2px dashed #ddd; border-radius: 10px; min-height: 300px;"></div>
-            <div id="scanStatus" style="margin-top: 20px;"></div>
-        </div>
-
-        <!-- Opción 2: Código Manual -->
-        <div>
-            <h3>Validación Manual</h3>
-            <form id="validateForm">
-                <div class="form-group">
-                    <label for="ticket_code">Código del Ticket</label>
-                    <input type="text" id="ticket_code" name="ticket_code" required
-                           placeholder="Ingrese el código del ticket"
-                           style="font-family: monospace;">
-                    <small style="color: #666; display: block; margin-top: 5px;">
-                        El código se encuentra en la página de tickets
-                    </small>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Opción 1: Escanear QR -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-semibold">Escanear QR</h3>
+                <div class="flex gap-2">
+                    <button id="startScanBtn" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-emerald-600 text-white hover:bg-emerald-700 h-10 px-4 py-2" onclick="startScanner()">Activar Camara</button>
+                    <button id="stopScanBtn" class="hidden inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-destructive text-destructive-foreground hover:bg-destructive/90 h-10 px-4 py-2" onclick="stopScanner()">Detener Camara</button>
                 </div>
-                <button type="submit" class="btn btn-primary">Validar Ticket</button>
-            </form>
-        </div>
-    </div>
+                <div id="reader" class="w-full border-2 border-dashed border-border rounded-lg min-h-[300px]"></div>
+                <div id="scanStatus"></div>
+            </div>
 
-    <div id="validationResult" style="margin-top: 30px;"></div>
+            <!-- Opción 2: Código Manual -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-semibold">Validacion Manual</h3>
+                <form id="validateForm" class="space-y-4">
+                    <div class="space-y-2">
+                        <label for="ticket_code" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Codigo del Ticket</label>
+                        <input type="text" id="ticket_code" name="ticket_code" required
+                               placeholder="Ingrese el codigo del ticket"
+                               class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background font-mono placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <p class="text-xs text-muted-foreground">El codigo se encuentra en la pagina de tickets</p>
+                    </div>
+                    <button type="submit" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full">Validar Ticket</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="validationResult" class="mt-8"></div>
+    </div>
 </div>
 
 <!-- Historial de validaciones -->
-<div class="card">
-    <h2>📋 Últimas Validaciones</h2>
-    <div id="validationHistory"></div>
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm mt-6">
+    <div class="p-6">
+        <h2 class="text-2xl font-bold tracking-tight mb-4">Ultimas Validaciones</h2>
+        <div id="validationHistory"></div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_css %}
 <style>
     .validation-success {
-        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         color: white;
-        padding: 30px;
-        border-radius: 10px;
-        margin-top: 20px;
+        padding: 2rem;
+        border-radius: 0.75rem;
+        margin-top: 1.25rem;
         animation: slideIn 0.5s ease-out;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     }
 
     .validation-error {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         color: white;
-        padding: 30px;
-        border-radius: 10px;
-        margin-top: 20px;
+        padding: 2rem;
+        border-radius: 0.75rem;
+        margin-top: 1.25rem;
         animation: slideIn 0.5s ease-out;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     }
 
     .validation-info {
-        background: #f8f9fa;
-        padding: 15px;
-        border-radius: 5px;
-        margin-top: 15px;
-        border-left: 4px solid #00629B;
-        color: #333;
+        background: hsl(var(--muted));
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-top: 1rem;
+        border-left: 4px solid hsl(var(--primary));
+        color: hsl(var(--foreground));
     }
 
     @keyframes slideIn {
@@ -95,7 +99,7 @@
     }
 
     #reader video {
-        border-radius: 10px;
+        border-radius: 0.75rem;
     }
 </style>
 {% endblock %}
@@ -116,7 +120,7 @@
         html5QrCode = new Html5Qrcode("reader");
 
         document.getElementById('scanStatus').innerHTML =
-            '<div style="color: #00629B;">Iniciando cámara...</div>';
+            '<div class="text-primary font-medium">Iniciando camara...</div>';
 
         html5QrCode.start(
             { facingMode: "environment" },
@@ -128,13 +132,13 @@
             onScanError
         ).then(() => {
             document.getElementById('scanStatus').innerHTML =
-                '<div style="color: #28a745; font-weight: bold;">✓ Cámara activa - Apunte al código QR</div>';
-            document.getElementById('startScanBtn').style.display = 'none';
-            document.getElementById('stopScanBtn').style.display = 'inline-block';
+                '<div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 font-semibold">Camara activa - Apunte al codigo QR</div>';
+            document.getElementById('startScanBtn').classList.add('hidden');
+            document.getElementById('stopScanBtn').classList.remove('hidden');
         }).catch(err => {
             console.log("Error al iniciar cámara:", err);
             document.getElementById('scanStatus').innerHTML =
-                '<div class="alert alert-error">No se pudo acceder a la cámara. Verifique los permisos o use validación manual.</div>';
+                '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">No se pudo acceder a la camara. Verifique los permisos o use validacion manual.</div>';
         });
     }
 
@@ -142,9 +146,9 @@
         if (html5QrCode && html5QrCode.isScanning) {
             html5QrCode.stop().then(() => {
                 document.getElementById('scanStatus').innerHTML =
-                    '<div style="color: #666;">Cámara detenida</div>';
-                document.getElementById('startScanBtn').style.display = 'inline-block';
-                document.getElementById('stopScanBtn').style.display = 'none';
+                    '<div class="text-muted-foreground">Camara detenida</div>';
+                document.getElementById('startScanBtn').classList.remove('hidden');
+                document.getElementById('stopScanBtn').classList.add('hidden');
             }).catch(err => {
                 console.error("Error al detener cámara:", err);
             });
@@ -218,7 +222,7 @@
             document.getElementById('validateForm').reset();
         } catch (error) {
             document.getElementById('validationResult').innerHTML =
-                '<div class="validation-error"><h3>❌ Error</h3><p>Error al validar el ticket</p></div>';
+                '<div class="validation-error"><h3 class="text-3xl font-bold mb-3">Error</h3><p class="text-lg">Error al validar el ticket</p></div>';
         }
     });
 
@@ -231,19 +235,19 @@
 
             resultHTML = `
                 <div class="validation-success">
-                    <h3 style="font-size: 32px; margin-bottom: 15px;">✅ ACCESO PERMITIDO</h3>
-                    <p style="font-size: 20px; margin-bottom: 20px;">${data.message}</p>
+                    <h3 class="text-4xl font-bold mb-4">ACCESO PERMITIDO</h3>
+                    <p class="text-xl mb-5">${data.message}</p>
                     <div class="validation-info">
-                        <p><strong>Usuario:</strong> ${data.user.name}</p>
-                        <p><strong>Email:</strong> ${data.user.email}</p>
-                        <p><strong>Evento:</strong> ${data.event.name}</p>
-                        <p><strong>Ubicación:</strong> ${data.event.location}</p>
-                        <p style="margin-top: 15px; padding: 10px; background: white; border-radius: 5px; border: 2px solid #28a745;">
-                            <strong style="font-size: 18px; color: #28a745;">👥 Total de personas: ${totalPeople}</strong><br>
-                            <span style="color: #666; font-size: 14px;">
+                        <p class="mb-2"><strong>Usuario:</strong> ${data.user.name}</p>
+                        <p class="mb-2"><strong>Email:</strong> ${data.user.email}</p>
+                        <p class="mb-2"><strong>Evento:</strong> ${data.event.name}</p>
+                        <p class="mb-4"><strong>Ubicacion:</strong> ${data.event.location}</p>
+                        <div class="mt-4 p-4 bg-white rounded-lg border-2 border-emerald-500">
+                            <p class="text-lg font-bold text-emerald-700 mb-1">Total de personas: ${totalPeople}</p>
+                            <p class="text-sm text-muted-foreground">
                                 (1 titular + ${companions} acompañante${companions !== 1 ? 's' : ''})
-                            </span>
-                        </p>
+                            </p>
+                        </div>
                     </div>
                 </div>
             `;
@@ -253,8 +257,8 @@
         } else {
             resultHTML = `
                 <div class="validation-error">
-                    <h3 style="font-size: 32px; margin-bottom: 15px;">❌ ACCESO DENEGADO</h3>
-                    <p style="font-size: 20px;">${data.message}</p>
+                    <h3 class="text-4xl font-bold mb-4">ACCESO DENEGADO</h3>
+                    <p class="text-xl">${data.message}</p>
                 </div>
             `;
 
@@ -292,22 +296,22 @@
 
     function updateHistoryDisplay() {
         const historyHTML = validationHistory.map(item => `
-            <div style="padding: 15px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
+            <div class="flex justify-between items-center p-4 border-b border-border">
                 <div>
-                    <strong>${item.user}</strong>
-                    <p style="color: #666; margin-top: 5px;">${item.timestamp}</p>
+                    <p class="font-semibold">${item.user}</p>
+                    <p class="text-sm text-muted-foreground mt-1">${item.timestamp}</p>
                 </div>
                 <div>
                     ${item.valid ?
-                        '<span class="badge badge-success">✅ Válido</span>' :
-                        '<span class="badge badge-danger">❌ Inválido</span>'
+                        '<span class="inline-flex items-center rounded-full border border-transparent bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-xs font-semibold">Valido</span>' :
+                        '<span class="inline-flex items-center rounded-full border border-transparent bg-red-100 text-red-700 px-2.5 py-0.5 text-xs font-semibold">Invalido</span>'
                     }
                 </div>
             </div>
         `).join('');
 
         document.getElementById('validationHistory').innerHTML = historyHTML ||
-            '<p style="color: #666;">No hay validaciones recientes</p>';
+            '<p class="text-center text-muted-foreground py-4">No hay validaciones recientes</p>';
     }
 
     function playSuccessSound() {

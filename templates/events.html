@@ -3,78 +3,95 @@
 {% block title %}Eventos - Sistema de Tickets{% endblock %}
 
 {% block content %}
-<div class="card">
-    <h2>📅 Gestión de Eventos</h2>
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div class="p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-3xl font-bold tracking-tight">Gestion de Eventos</h2>
+            <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2" onclick="openModal()">
+                Crear Nuevo Evento
+            </button>
+        </div>
 
-    <button class="btn btn-primary" onclick="openModal()">➕ Crear Nuevo Evento</button>
-
-    {% if events %}
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Ubicación</th>
-                <th>Fecha</th>
-                <th>Estado</th>
-                <th>Tickets</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for event in events %}
-            <tr>
-                <td>{{ event.id }}</td>
-                <td>{{ event.name }}</td>
-                <td>{{ event.location }}</td>
-                <td>{{ event.event_date.strftime('%d/%m/%Y %H:%M') }}</td>
-                <td>
-                    {% if event.is_active %}
-                    <span class="badge badge-success">Activo</span>
-                    {% else %}
-                    <span class="badge badge-danger">Inactivo</span>
-                    {% endif %}
-                </td>
-                <td><span class="badge badge-warning">{{ event.ticket_count }}</span></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p style="margin-top: 20px; color: #666;">No hay eventos creados</p>
-    {% endif %}
+        {% if events %}
+        <div class="relative w-full overflow-auto">
+            <table class="w-full caption-bottom text-sm">
+                <thead class="[&_tr]:border-b">
+                    <tr class="border-b transition-colors hover:bg-muted/50">
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">ID</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nombre</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Ubicacion</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Fecha</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Estado</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Tickets</th>
+                    </tr>
+                </thead>
+                <tbody class="[&_tr:last-child]:border-0">
+                    {% for event in events %}
+                    <tr class="border-b transition-colors hover:bg-muted/50">
+                        <td class="p-4 align-middle">{{ event.id }}</td>
+                        <td class="p-4 align-middle font-medium">{{ event.name }}</td>
+                        <td class="p-4 align-middle">{{ event.location }}</td>
+                        <td class="p-4 align-middle">{{ event.event_date.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td class="p-4 align-middle">
+                            {% if event.is_active %}
+                            <span class="inline-flex items-center rounded-full border border-transparent bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-xs font-semibold">Activo</span>
+                            {% else %}
+                            <span class="inline-flex items-center rounded-full border border-transparent bg-red-100 text-red-700 px-2.5 py-0.5 text-xs font-semibold">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="p-4 align-middle">
+                            <span class="inline-flex items-center rounded-full border border-transparent bg-amber-100 text-amber-700 px-2.5 py-0.5 text-xs font-semibold">{{ event.ticket_count }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center text-muted-foreground py-8">No hay eventos creados</p>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Modal para crear evento -->
-<div id="eventModal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span>
-        <h2>Crear Nuevo Evento</h2>
-
-        <form id="eventForm">
-            <div class="form-group">
-                <label for="name">Nombre del Evento *</label>
-                <input type="text" id="name" name="name" required>
+<div id="eventModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-lg">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-semibold leading-none tracking-tight">Crear Nuevo Evento</h2>
+                <button onclick="closeModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
+        </div>
 
-            <div class="form-group">
-                <label for="description">Descripción</label>
-                <textarea id="description" name="description" rows="3"></textarea>
-            </div>
+        <div class="p-6">
+            <form id="eventForm" class="space-y-4">
+                <div class="space-y-2">
+                    <label for="name" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Nombre del Evento *</label>
+                    <input type="text" id="name" name="name" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                </div>
 
-            <div class="form-group">
-                <label for="location">Ubicación *</label>
-                <input type="text" id="location" name="location" required>
-            </div>
+                <div class="space-y-2">
+                    <label for="description" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Descripcion</label>
+                    <textarea id="description" name="description" rows="3" class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"></textarea>
+                </div>
 
-            <div class="form-group">
-                <label for="event_date">Fecha y Hora *</label>
-                <input type="datetime-local" id="event_date" name="event_date" required>
-            </div>
+                <div class="space-y-2">
+                    <label for="location" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Ubicacion *</label>
+                    <input type="text" id="location" name="location" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                </div>
 
-            <button type="submit" class="btn btn-primary">Crear Evento</button>
-        </form>
+                <div class="space-y-2">
+                    <label for="event_date" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Fecha y Hora *</label>
+                    <input type="datetime-local" id="event_date" name="event_date" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                </div>
 
-        <div id="message" style="margin-top: 20px;"></div>
+                <button type="submit" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full">Crear Evento</button>
+            </form>
+
+            <div id="message" class="mt-4"></div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -82,11 +99,11 @@
 {% block extra_js %}
 <script>
     function openModal() {
-        document.getElementById('eventModal').style.display = 'block';
+        document.getElementById('eventModal').classList.remove('hidden');
     }
 
     function closeModal() {
-        document.getElementById('eventModal').style.display = 'none';
+        document.getElementById('eventModal').classList.add('hidden');
         document.getElementById('eventForm').reset();
         document.getElementById('message').innerHTML = '';
     }
@@ -114,17 +131,17 @@
 
             if (response.ok) {
                 document.getElementById('message').innerHTML =
-                    '<div class="alert alert-success">Evento creado exitosamente</div>';
+                    '<div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">Evento creado exitosamente</div>';
                 setTimeout(() => {
                     window.location.reload();
                 }, 1500);
             } else {
                 document.getElementById('message').innerHTML =
-                    `<div class="alert alert-error">Error: ${data.detail}</div>`;
+                    `<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error: ${data.detail}</div>`;
             }
         } catch (error) {
             document.getElementById('message').innerHTML =
-                '<div class="alert alert-error">Error al crear evento</div>';
+                '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error al crear evento</div>';
         }
     });
 

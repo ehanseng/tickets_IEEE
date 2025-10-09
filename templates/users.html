@@ -3,86 +3,124 @@
 {% block title %}Usuarios - Sistema de Tickets{% endblock %}
 
 {% block content %}
-<div class="card">
-    <h2>👥 Gestión de Usuarios</h2>
-
-    <button class="btn btn-primary" onclick="openModal()">➕ Registrar Nuevo Usuario</button>
-
-    {% if users %}
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Email</th>
-                <th>Cédula</th>
-                <th>Universidad</th>
-                <th>Teléfono</th>
-                <th>Tickets</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for user in users %}
-            <tr>
-                <td>{{ user.id }}</td>
-                <td>{{ user.name }}</td>
-                <td>{{ user.email }}</td>
-                <td>{{ user.identification or '-' }}</td>
-                <td>{{ user.university or '-' }}</td>
-                <td>{{ user.phone or '-' }}</td>
-                <td><span class="badge badge-success">{{ user.ticket_count }}</span></td>
-                <td>
-                    <button class="btn btn-primary" style="font-size: 11px; padding: 6px 10px; margin: 2px; background: #ffc107; border-color: #ffc107;"
-                            onclick="editUser({{ user.id }}, '{{ user.name }}', '{{ user.email }}', '{{ user.identification or '' }}', '{{ user.university or '' }}', '{{ user.phone or '' }}')">✏️ Editar</button>
-                    <button class="btn btn-danger" style="font-size: 11px; padding: 6px 10px; margin: 2px;"
-                            onclick="deleteUser({{ user.id }}, '{{ user.name }}', {{ user.ticket_count }})">🗑️ Borrar</button>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p style="margin-top: 20px; color: #666;">No hay usuarios registrados</p>
-    {% endif %}
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div class="flex flex-col space-y-1.5 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-2xl font-semibold leading-none tracking-tight">Gestión de Usuarios</h3>
+                <p class="text-sm text-muted-foreground mt-1">Administra los usuarios registrados en el sistema</p>
+            </div>
+            <button onclick="openModal()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Registrar Usuario
+            </button>
+        </div>
+    </div>
+    <div class="p-6 pt-0">
+        {% if users %}
+        <div class="relative w-full overflow-auto">
+            <table class="w-full caption-bottom text-sm">
+                <thead class="[&_tr]:border-b">
+                    <tr class="border-b transition-colors hover:bg-muted/50">
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">ID</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nombre</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Cédula</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Universidad</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Teléfono</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Tickets</th>
+                        <th class="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="[&_tr:last-child]:border-0">
+                    {% for user in users %}
+                    <tr class="border-b transition-colors hover:bg-muted/50">
+                        <td class="p-4 align-middle">{{ user.id }}</td>
+                        <td class="p-4 align-middle font-medium">{{ user.name }}</td>
+                        <td class="p-4 align-middle">{{ user.email }}</td>
+                        <td class="p-4 align-middle text-muted-foreground">{{ user.identification or '-' }}</td>
+                        <td class="p-4 align-middle text-muted-foreground">{{ user.university or '-' }}</td>
+                        <td class="p-4 align-middle text-muted-foreground">{{ user.phone or '-' }}</td>
+                        <td class="p-4 align-middle">
+                            <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary text-primary-foreground">
+                                {{ user.ticket_count }}
+                            </span>
+                        </td>
+                        <td class="p-4 align-middle text-right">
+                            <div class="flex justify-end gap-2">
+                                <button onclick="editUser({{ user.id }}, '{{ user.name }}', '{{ user.email }}', '{{ user.identification or '' }}', '{{ user.university or '' }}', '{{ user.phone or '' }}')" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3">
+                                    Editar
+                                </button>
+                                <button onclick="deleteUser({{ user.id }}, '{{ user.name }}', {{ user.ticket_count }})" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-destructive text-destructive-foreground hover:bg-destructive/90 h-8 px-3">
+                                    Borrar
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-8 text-center">
+            <svg class="h-12 w-12 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+            <p class="text-muted-foreground">No hay usuarios registrados</p>
+        </div>
+        {% endif %}
+    </div>
 </div>
 
-<!-- Modal para crear usuario -->
-<div id="userModal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span>
-        <h2>Registrar Nuevo Usuario</h2>
-
-        <form id="userForm">
-            <div class="form-group">
-                <label for="name">Nombre Completo *</label>
-                <input type="text" id="name" name="name" required>
+<!-- Modal para crear/editar usuario -->
+<div id="userModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold leading-none tracking-tight">Registrar Nuevo Usuario</h3>
+                <button onclick="closeModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
             </div>
+        </div>
+        <div class="p-6">
+            <form id="userForm" class="space-y-4">
+                <div class="space-y-2">
+                    <label for="name" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Nombre Completo *</label>
+                    <input type="text" id="name" name="name" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                </div>
 
-            <div class="form-group">
-                <label for="email">Email *</label>
-                <input type="email" id="email" name="email" required>
-            </div>
+                <div class="space-y-2">
+                    <label for="email" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Email *</label>
+                    <input type="email" id="email" name="email" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                </div>
 
-            <div class="form-group">
-                <label for="identification">Cédula</label>
-                <input type="text" id="identification" name="identification" placeholder="Número de identificación">
-            </div>
+                <div class="space-y-2">
+                    <label for="identification" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Cédula</label>
+                    <input type="text" id="identification" name="identification" placeholder="Número de identificación" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                </div>
 
-            <div class="form-group">
-                <label for="university">Universidad</label>
-                <input type="text" id="university" name="university" placeholder="Ej: Universidad Tadeo Lozano">
-            </div>
+                <div class="space-y-2">
+                    <label for="university" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Universidad</label>
+                    <input type="text" id="university" name="university" placeholder="Ej: Universidad Tadeo Lozano" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                </div>
 
-            <div class="form-group">
-                <label for="phone">Teléfono</label>
-                <input type="tel" id="phone" name="phone">
-            </div>
+                <div class="space-y-2">
+                    <label for="phone" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Teléfono</label>
+                    <input type="tel" id="phone" name="phone" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                </div>
 
-            <button type="submit" class="btn btn-primary">Registrar Usuario</button>
-        </form>
+                <button type="submit" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full">
+                    Registrar Usuario
+                </button>
+            </form>
 
-        <div id="message" style="margin-top: 20px;"></div>
+            <div id="message" class="mt-4"></div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -90,11 +128,11 @@
 {% block extra_js %}
 <script>
     function openModal() {
-        document.getElementById('userModal').style.display = 'block';
+        document.getElementById('userModal').classList.remove('hidden');
     }
 
     function closeModal() {
-        document.getElementById('userModal').style.display = 'none';
+        document.getElementById('userModal').classList.add('hidden');
         document.getElementById('userForm').reset();
         document.getElementById('message').innerHTML = '';
     }
@@ -123,25 +161,31 @@
 
             if (response.ok) {
                 document.getElementById('message').innerHTML =
-                    '<div class="alert alert-success">Usuario registrado exitosamente</div>';
+                    '<div class="rounded-lg border bg-green-50 px-4 py-3 text-sm text-green-900">Usuario registrado exitosamente</div>';
                 setTimeout(() => {
                     window.location.reload();
                 }, 1500);
             } else {
                 document.getElementById('message').innerHTML =
-                    `<div class="alert alert-error">Error: ${data.detail}</div>`;
+                    `<div class="rounded-lg border bg-red-50 px-4 py-3 text-sm text-red-900">Error: ${data.detail}</div>`;
             }
         } catch (error) {
             document.getElementById('message').innerHTML =
-                '<div class="alert alert-error">Error al registrar usuario</div>';
+                '<div class="rounded-lg border bg-red-50 px-4 py-3 text-sm text-red-900">Error al registrar usuario</div>';
         }
     });
 
-    // Cerrar modal al hacer clic fuera
-    window.onclick = function(event) {
-        const modal = document.getElementById('userModal');
-        if (event.target == modal) {
-            closeModal();
+    function editUser(id, name, email, identification, university, phone) {
+        alert('Función de edición en desarrollo');
+    }
+
+    function deleteUser(id, name, ticketCount) {
+        if (ticketCount > 0) {
+            alert(`No se puede eliminar el usuario "${name}" porque tiene ${ticketCount} tickets asociados.`);
+            return;
+        }
+        if (confirm(`¿Estás seguro de que quieres eliminar al usuario "${name}"?`)) {
+            alert('Función de eliminación en desarrollo');
         }
     }
 </script>

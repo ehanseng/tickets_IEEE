@@ -3,159 +3,189 @@
 {% block title %}Tickets - Sistema de Tickets{% endblock %}
 
 {% block content %}
-<div class="card">
-    <h2>🎫 Gestión de Tickets</h2>
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div class="p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-3xl font-bold tracking-tight">Gestion de Tickets</h2>
+            <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2" onclick="openModal()">
+                Generar Nuevo Ticket
+            </button>
+        </div>
 
-    <button class="btn btn-primary" onclick="openModal()">➕ Generar Nuevo Ticket</button>
-
-    {% if tickets %}
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Usuario</th>
-                <th>Evento</th>
-                <th>Personas</th>
-                <th>Código</th>
-                <th>Fecha Creación</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for ticket in tickets %}
-            <tr>
-                <td>{{ ticket.id }}</td>
-                <td>{{ ticket.user_name }}</td>
-                <td>{{ ticket.event_name }}</td>
-                <td>
-                    {% set comp = ticket.companions if ticket.companions is defined else 0 %}
-                    <strong style="color: #00629B;">{{ 1 + comp }}</strong>
-                    <br>
-                    <small style="color: #666; font-size: 11px;">
-                        {% if comp == 0 %}
-                        Solo titular
-                        {% elif comp == 1 %}
-                        +1 acompañante
-                        {% else %}
-                        +{{ comp }} acompañantes
-                        {% endif %}
-                    </small>
-                </td>
-                <td>
-                    <code style="font-size: 11px; background: #f8f9fa; padding: 5px; border-radius: 3px; display: block; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"
-                          title="{{ ticket.ticket_code }}">
-                        {{ ticket.ticket_code[:16] }}...
-                    </code>
-                    <button class="btn" style="font-size: 10px; padding: 3px 8px; margin-top: 5px;"
-                            onclick="copyCode('{{ ticket.ticket_code }}')">📋 Copiar</button>
-                </td>
-                <td>{{ ticket.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
-                <td>
-                    {% if ticket.is_used %}
-                    <span class="badge badge-danger" id="status-{{ ticket.id }}">Usado</span>
-                    <br>
-                    <small style="color: #666; font-size: 10px;">{{ ticket.used_at.strftime('%d/%m/%Y %H:%M') if ticket.used_at else '' }}</small>
-                    {% else %}
-                    <span class="badge badge-success" id="status-{{ ticket.id }}">Disponible</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <button class="btn btn-primary" style="font-size: 11px; padding: 6px 10px; margin: 2px;"
-                            onclick="viewTicket({{ ticket.id }}, '{{ ticket.ticket_code }}')">👁️ Ver</button>
-                    <button class="btn btn-primary" style="font-size: 11px; padding: 6px 10px; margin: 2px; background: #ffc107; border-color: #ffc107;"
-                            onclick="editTicket({{ ticket.id }}, {{ ticket.companions }})">✏️ Editar</button>
-                    {% if ticket.is_used %}
-                    <button class="btn btn-success" style="font-size: 11px; padding: 6px 10px; margin: 2px;"
-                            id="reactivate-{{ ticket.id }}"
-                            onclick="reactivateTicket({{ ticket.id }})">🔄 Reactivar</button>
-                    {% endif %}
-                    <button class="btn btn-danger" style="font-size: 11px; padding: 6px 10px; margin: 2px;"
-                            onclick="deleteTicket({{ ticket.id }})">🗑️ Borrar</button>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p style="margin-top: 20px; color: #666;">No hay tickets generados</p>
-    {% endif %}
+        {% if tickets %}
+        <div class="relative w-full overflow-auto">
+            <table class="w-full caption-bottom text-sm">
+                <thead class="[&_tr]:border-b">
+                    <tr class="border-b transition-colors hover:bg-muted/50">
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">ID</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Usuario</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Evento</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Personas</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Codigo</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Fecha Creacion</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Estado</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="[&_tr:last-child]:border-0">
+                    {% for ticket in tickets %}
+                    <tr class="border-b transition-colors hover:bg-muted/50">
+                        <td class="p-4 align-middle">{{ ticket.id }}</td>
+                        <td class="p-4 align-middle font-medium">{{ ticket.user_name }}</td>
+                        <td class="p-4 align-middle">{{ ticket.event_name }}</td>
+                        <td class="p-4 align-middle">
+                            {% set comp = ticket.companions if ticket.companions is defined else 0 %}
+                            <strong class="text-primary">{{ 1 + comp }}</strong>
+                            <br>
+                            <small class="text-xs text-muted-foreground">
+                                {% if comp == 0 %}
+                                Solo titular
+                                {% elif comp == 1 %}
+                                +1 acompañante
+                                {% else %}
+                                +{{ comp }} acompañantes
+                                {% endif %}
+                            </small>
+                        </td>
+                        <td class="p-4 align-middle">
+                            <code class="relative rounded bg-muted px-2 py-1 font-mono text-xs block max-w-[150px] overflow-hidden text-ellipsis"
+                                  title="{{ ticket.ticket_code }}">
+                                {{ ticket.ticket_code[:16] }}...
+                            </code>
+                            <button class="inline-flex items-center justify-center rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-7 px-2 mt-1"
+                                    onclick="copyCode('{{ ticket.ticket_code }}')">Copiar</button>
+                        </td>
+                        <td class="p-4 align-middle">{{ ticket.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td class="p-4 align-middle">
+                            {% if ticket.is_used %}
+                            <span class="inline-flex items-center rounded-full border border-transparent bg-red-100 text-red-700 px-2.5 py-0.5 text-xs font-semibold" id="status-{{ ticket.id }}">Usado</span>
+                            <br>
+                            <small class="text-xs text-muted-foreground">{{ ticket.used_at.strftime('%d/%m/%Y %H:%M') if ticket.used_at else '' }}</small>
+                            {% else %}
+                            <span class="inline-flex items-center rounded-full border border-transparent bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-xs font-semibold" id="status-{{ ticket.id }}">Disponible</span>
+                            {% endif %}
+                        </td>
+                        <td class="p-4 align-middle">
+                            <div class="flex flex-wrap gap-1">
+                                <button class="inline-flex items-center justify-center rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3"
+                                        onclick="viewTicket({{ ticket.id }}, '{{ ticket.ticket_code }}')">Ver</button>
+                                <button class="inline-flex items-center justify-center rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-amber-500 text-white hover:bg-amber-600 h-8 px-3"
+                                        onclick="editTicket({{ ticket.id }}, {{ ticket.companions }})">Editar</button>
+                                {% if ticket.is_used %}
+                                <button class="inline-flex items-center justify-center rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-emerald-600 text-white hover:bg-emerald-700 h-8 px-3"
+                                        id="reactivate-{{ ticket.id }}"
+                                        onclick="reactivateTicket({{ ticket.id }})">Reactivar</button>
+                                {% endif %}
+                                <button class="inline-flex items-center justify-center rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-destructive text-destructive-foreground hover:bg-destructive/90 h-8 px-3"
+                                        onclick="deleteTicket({{ ticket.id }})">Borrar</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center text-muted-foreground py-8">No hay tickets generados</p>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Modal para generar ticket -->
-<div id="ticketModal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span>
-        <h2>Generar Nuevo Ticket</h2>
-
-        <form id="ticketForm">
-            <div class="form-group">
-                <label for="user_id">Usuario *</label>
-                <select id="user_id" name="user_id" required>
-                    <option value="">Seleccione un usuario</option>
-                    {% for user in users %}
-                    <option value="{{ user.id }}">{{ user.name }} ({{ user.email }})</option>
-                    {% endfor %}
-                </select>
+<div id="ticketModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-lg">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-semibold leading-none tracking-tight">Generar Nuevo Ticket</h2>
+                <button onclick="closeModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
+        </div>
 
-            <div class="form-group">
-                <label for="event_id">Evento *</label>
-                <select id="event_id" name="event_id" required>
-                    <option value="">Seleccione un evento</option>
-                    {% for event in events %}
-                    <option value="{{ event.id }}">{{ event.name }} - {{ event.event_date.strftime('%d/%m/%Y') }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+        <div class="p-6">
+            <form id="ticketForm" class="space-y-4">
+                <div class="space-y-2">
+                    <label for="user_id" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Usuario *</label>
+                    <select id="user_id" name="user_id" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <option value="">Seleccione un usuario</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}">{{ user.name }} ({{ user.email }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-            <div class="form-group">
-                <label for="companions">Acompañantes (0-4)</label>
-                <input type="number" id="companions" name="companions" min="0" max="4" value="0" required>
-                <small style="color: #666; display: block; margin-top: 5px;">
-                    Cantidad de personas adicionales que acompañan al titular (máximo 4)
-                </small>
-            </div>
+                <div class="space-y-2">
+                    <label for="event_id" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Evento *</label>
+                    <select id="event_id" name="event_id" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <option value="">Seleccione un evento</option>
+                        {% for event in events %}
+                        <option value="{{ event.id }}">{{ event.name }} - {{ event.event_date.strftime('%d/%m/%Y') }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-            <button type="submit" class="btn btn-primary">Generar Ticket</button>
-        </form>
+                <div class="space-y-2">
+                    <label for="companions" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Acompañantes (0-4)</label>
+                    <input type="number" id="companions" name="companions" min="0" max="4" value="0" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                    <p class="text-xs text-muted-foreground">Cantidad de personas adicionales que acompañan al titular (maximo 4)</p>
+                </div>
 
-        <div id="message" style="margin-top: 20px;"></div>
+                <button type="submit" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full">Generar Ticket</button>
+            </form>
+
+            <div id="message" class="mt-4"></div>
+        </div>
     </div>
 </div>
 
 <!-- Modal para ver QR -->
-<div id="qrModal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeQRModal()">&times;</span>
-        <h2>Código QR del Ticket</h2>
-        <div id="qrContent" style="text-align: center; margin-top: 20px;">
-            <p>Cargando...</p>
+<div id="qrModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-lg">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-semibold leading-none tracking-tight">Codigo QR del Ticket</h2>
+                <button onclick="closeQRModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <div id="qrContent" class="text-center">
+                <p class="text-muted-foreground">Cargando...</p>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Modal para editar ticket -->
-<div id="editModal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeEditModal()">&times;</span>
-        <h2>Editar Ticket</h2>
-
-        <form id="editForm">
-            <input type="hidden" id="edit_ticket_id">
-
-            <div class="form-group">
-                <label for="edit_companions">Acompañantes (0-4)</label>
-                <input type="number" id="edit_companions" name="edit_companions" min="0" max="4" required>
-                <small style="color: #666; display: block; margin-top: 5px;">
-                    Cantidad de personas adicionales que acompañan al titular
-                </small>
+<div id="editModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-lg">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-semibold leading-none tracking-tight">Editar Ticket</h2>
+                <button onclick="closeEditModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
+        </div>
 
-            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-        </form>
+        <div class="p-6">
+            <form id="editForm" class="space-y-4">
+                <input type="hidden" id="edit_ticket_id">
 
-        <div id="editMessage" style="margin-top: 20px;"></div>
+                <div class="space-y-2">
+                    <label for="edit_companions" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Acompañantes (0-4)</label>
+                    <input type="number" id="edit_companions" name="edit_companions" min="0" max="4" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                    <p class="text-xs text-muted-foreground">Cantidad de personas adicionales que acompañan al titular</p>
+                </div>
+
+                <button type="submit" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full">Guardar Cambios</button>
+            </form>
+
+            <div id="editMessage" class="mt-4"></div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -163,17 +193,17 @@
 {% block extra_js %}
 <script>
     function openModal() {
-        document.getElementById('ticketModal').style.display = 'block';
+        document.getElementById('ticketModal').classList.remove('hidden');
     }
 
     function closeModal() {
-        document.getElementById('ticketModal').style.display = 'none';
+        document.getElementById('ticketModal').classList.add('hidden');
         document.getElementById('ticketForm').reset();
         document.getElementById('message').innerHTML = '';
     }
 
     function closeQRModal() {
-        document.getElementById('qrModal').style.display = 'none';
+        document.getElementById('qrModal').classList.add('hidden');
     }
 
     function copyCode(code) {
@@ -192,8 +222,8 @@
     }
 
     async function viewTicket(ticketId, ticketCode) {
-        document.getElementById('qrModal').style.display = 'block';
-        document.getElementById('qrContent').innerHTML = '<p>Cargando...</p>';
+        document.getElementById('qrModal').classList.remove('hidden');
+        document.getElementById('qrContent').innerHTML = '<p class="text-muted-foreground">Cargando...</p>';
 
         try {
             const response = await fetch(`/tickets/${ticketId}/qr-base64`);
@@ -201,28 +231,28 @@
 
             if (response.ok) {
                 document.getElementById('qrContent').innerHTML = `
-                    <img src="${data.qr_code}" alt="QR Code" style="max-width: 100%; border: 2px solid #ddd; padding: 10px; border-radius: 10px;">
+                    <img src="${data.qr_code}" alt="QR Code" class="max-w-full border-2 border-border p-2 rounded-lg mx-auto">
 
-                    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
-                        <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">Código del ticket:</p>
-                        <code style="background: white; padding: 10px; border-radius: 3px; display: block; word-break: break-all; font-size: 12px; border: 1px solid #ddd;">
+                    <div class="mt-5 p-4 rounded-lg bg-muted">
+                        <p class="text-sm text-muted-foreground mb-2">Codigo del ticket:</p>
+                        <code class="block bg-background p-3 rounded-md break-all text-xs border border-border font-mono">
                             ${ticketCode}
                         </code>
-                        <button class="btn btn-primary" style="margin-top: 10px; width: 100%;"
-                                onclick="copyCode('${ticketCode}')">📋 Copiar Código</button>
+                        <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 mt-3 w-full"
+                                onclick="copyCode('${ticketCode}')">Copiar Codigo</button>
                     </div>
 
-                    <p style="margin-top: 20px;">
-                        <a href="/tickets/${ticketId}/qr" download="ticket_${ticketId}.png" class="btn btn-success">📥 Descargar QR</a>
+                    <p class="mt-5">
+                        <a href="/tickets/${ticketId}/qr" download="ticket_${ticketId}.png" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-emerald-600 text-white hover:bg-emerald-700 h-10 px-4 py-2 w-full">Descargar QR</a>
                     </p>
                 `;
             } else {
                 document.getElementById('qrContent').innerHTML =
-                    '<div class="alert alert-error">Error al cargar el QR</div>';
+                    '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error al cargar el QR</div>';
             }
         } catch (error) {
             document.getElementById('qrContent').innerHTML =
-                '<div class="alert alert-error">Error al cargar el QR</div>';
+                '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error al cargar el QR</div>';
         }
     }
 
@@ -248,7 +278,7 @@
 
             if (response.ok) {
                 document.getElementById('message').innerHTML =
-                    '<div class="alert alert-success">Ticket generado exitosamente</div>';
+                    '<div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">Ticket generado exitosamente</div>';
                 setTimeout(() => {
                     closeModal();
                     viewTicket(data.id, data.ticket_code);
@@ -256,11 +286,11 @@
                 }, 1500);
             } else {
                 document.getElementById('message').innerHTML =
-                    `<div class="alert alert-error">Error: ${data.detail}</div>`;
+                    `<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error: ${data.detail}</div>`;
             }
         } catch (error) {
             document.getElementById('message').innerHTML =
-                '<div class="alert alert-error">Error al generar ticket</div>';
+                '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error al generar ticket</div>';
         }
     });
 
@@ -285,7 +315,7 @@
                 const reactivateBtn = document.getElementById(`reactivate-${ticketId}`);
 
                 if (statusBadge) {
-                    statusBadge.className = 'badge badge-success';
+                    statusBadge.className = 'inline-flex items-center rounded-full border border-transparent bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-xs font-semibold';
                     statusBadge.textContent = 'Disponible';
                     // Remover la fecha de uso
                     const smallTag = statusBadge.nextElementSibling;
@@ -310,7 +340,7 @@
     }
 
     function closeEditModal() {
-        document.getElementById('editModal').style.display = 'none';
+        document.getElementById('editModal').classList.add('hidden');
         document.getElementById('editForm').reset();
         document.getElementById('editMessage').innerHTML = '';
     }
@@ -318,7 +348,7 @@
     function editTicket(ticketId, currentCompanions) {
         document.getElementById('edit_ticket_id').value = ticketId;
         document.getElementById('edit_companions').value = currentCompanions;
-        document.getElementById('editModal').style.display = 'block';
+        document.getElementById('editModal').classList.remove('hidden');
     }
 
     document.getElementById('editForm').addEventListener('submit', async (e) => {
@@ -340,18 +370,18 @@
 
             if (response.ok) {
                 document.getElementById('editMessage').innerHTML =
-                    '<div class="alert alert-success">Ticket actualizado exitosamente</div>';
+                    '<div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">Ticket actualizado exitosamente</div>';
                 setTimeout(() => {
                     closeEditModal();
                     window.location.reload();
                 }, 1500);
             } else {
                 document.getElementById('editMessage').innerHTML =
-                    `<div class="alert alert-error">Error: ${data.detail || 'No se pudo actualizar el ticket'}</div>`;
+                    `<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error: ${data.detail || 'No se pudo actualizar el ticket'}</div>`;
             }
         } catch (error) {
             document.getElementById('editMessage').innerHTML =
-                '<div class="alert alert-error">Error al actualizar ticket</div>';
+                '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error al actualizar ticket</div>';
         }
     });
 
