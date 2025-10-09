@@ -27,9 +27,9 @@ class EmailService:
 
         # Mostrar configuración en desarrollo (sin mostrar contraseña)
         if self.smtp_user:
-            print(f"✓ SMTP configurado: {self.smtp_user} via {self.smtp_host}:{self.smtp_port}")
+            print(f"OK - SMTP configurado: {self.smtp_user} via {self.smtp_host}:{self.smtp_port}")
         else:
-            print("⚠️  SMTP no configurado - Los correos se simularán")
+            print("AVISO - SMTP no configurado - Los correos se simularan")
 
     def send_ticket_email(
         self,
