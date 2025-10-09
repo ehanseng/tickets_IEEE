@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block title %}Validar Ticket - Sistema de Tickets{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>✅ Validación de Tickets</h2>
+
+    <p style="color: #666; margin-bottom: 30px;">
+        Escanea el código QR o ingresa manualmente el código del ticket para validar el acceso al evento.
+    </p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+        <!-- Opción 1: Escanear QR -->
+        <div>
+            <h3>Escanear QR</h3>
+            <div style="margin: 20px 0;">
+                <button id="startScanBtn" class="btn btn-success" onclick="startScanner()">📷 Activar Cámara</button>
+                <button id="stopScanBtn" class="btn btn-danger" onclick="stopScanner()" style="display: none;">⏹️ Detener Cámara</button>
+            </div>
+            <div id="reader" style="width: 100%; margin-top: 20px; border: 2px dashed #ddd; border-radius: 10px; min-height: 300px;"></div>
+            <div id="scanStatus" style="margin-top: 20px;"></div>
+        </div>
+
+        <!-- Opción 2: Código Manual -->
+        <div>
+            <h3>Validación Manual</h3>
+            <form id="validateForm">
+                <div class="form-group">
+                    <label for="ticket_code">Código del Ticket</label>
+                    <input type="text" id="ticket_code" name="ticket_code" required
+                           placeholder="Ingrese el código del ticket"
+                           style="font-family: monospace;">
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        El código se encuentra en la página de tickets
+                    </small>
+                </div>
+                <button type="submit" class="btn btn-primary">Validar Ticket</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="validationResult" style="margin-top: 30px;"></div>
+</div>
+
+<!-- Historial de validaciones -->
+<div class="card">
+    <h2>📋 Últimas Validaciones</h2>
+    <div id="validationHistory"></div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .validation-success {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 10px;
+        margin-top: 20px;
+        animation: slideIn 0.5s ease-out;
+    }
+
+    .validation-error {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 10px;
+        margin-top: 20px;
+        animation: slideIn 0.5s ease-out;
+    }
+
+    .validation-info {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-top: 15px;
+        border-left: 4px solid #00629B;
+        color: #333;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    #reader {
+        position: relative;
+    }
+
+    #reader video {
+        border-radius: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+    let html5QrCode;
+    const validationHistory = [];
+
+    // Inicializar escáner QR
+    function startScanner() {
+        if (html5QrCode && html5QrCode.isScanning) {
+            console.log("El escáner ya está activo");
+            return;
+        }
+
+        html5QrCode = new Html5Qrcode("reader");
+
+        document.getElementById('scanStatus').innerHTML =
+            '<div style="color: #00629B;">Iniciando cámara...</div>';
+
+        html5QrCode.start(
+            { facingMode: "environment" },
+            {
+                fps: 10,
+                qrbox: { width: 250, height: 250 }
+            },
+            onScanSuccess,
+            onScanError
+        ).then(() => {
+            document.getElementById('scanStatus').innerHTML =
+                '<div style="color: #28a745; font-weight: bold;">✓ Cámara activa - Apunte al código QR</div>';
+            document.getElementById('startScanBtn').style.display = 'none';
+            document.getElementById('stopScanBtn').style.display = 'inline-block';
+        }).catch(err => {
+            console.log("Error al iniciar cámara:", err);
+            document.getElementById('scanStatus').innerHTML =
+                '<div class="alert alert-error">No se pudo acceder a la cámara. Verifique los permisos o use validación manual.</div>';
+        });
+    }
+
+    function stopScanner() {
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => {
+                document.getElementById('scanStatus').innerHTML =
+                    '<div style="color: #666;">Cámara detenida</div>';
+                document.getElementById('startScanBtn').style.display = 'inline-block';
+                document.getElementById('stopScanBtn').style.display = 'none';
+            }).catch(err => {
+                console.error("Error al detener cámara:", err);
+            });
+        }
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+        // Detener el escáner temporalmente
+        html5QrCode.pause();
+
+        // Validar el QR escaneado
+        validateQR(decodedText);
+
+        // Reiniciar el escáner después de 3 segundos
+        setTimeout(() => {
+            html5QrCode.resume();
+        }, 3000);
+    }
+
+    function onScanError(errorMessage) {
+        // Ignorar errores de escaneo continuos
+    }
+
+    async function validateQR(qrData) {
+        try {
+            console.log('Datos escaneados del QR:', qrData);
+            console.log('Longitud:', qrData.length);
+
+            // El QR ahora contiene directamente el ticket_code (64 caracteres SHA-256)
+            // Validar directamente
+            const response = await fetch('/validate/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ticket_code: qrData })
+            });
+
+            const data = await response.json();
+            console.log('Respuesta del servidor:', data);
+
+            displayValidationResult(data);
+        } catch (error) {
+            console.error('Error:', error);
+            displayValidationResult({
+                valid: false,
+                message: 'Error al procesar el código QR'
+            });
+        }
+    }
+
+    // Validación manual
+    document.getElementById('validateForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const ticketCode = document.getElementById('ticket_code').value;
+
+        try {
+            const response = await fetch('/validate/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ticket_code: ticketCode })
+            });
+
+            const data = await response.json();
+            displayValidationResult(data);
+
+            // Limpiar formulario
+            document.getElementById('validateForm').reset();
+        } catch (error) {
+            document.getElementById('validationResult').innerHTML =
+                '<div class="validation-error"><h3>❌ Error</h3><p>Error al validar el ticket</p></div>';
+        }
+    });
+
+    function displayValidationResult(data) {
+        let resultHTML;
+
+        if (data.valid) {
+            const companions = data.ticket.companions || 0;
+            const totalPeople = 1 + companions;
+
+            resultHTML = `
+                <div class="validation-success">
+                    <h3 style="font-size: 32px; margin-bottom: 15px;">✅ ACCESO PERMITIDO</h3>
+                    <p style="font-size: 20px; margin-bottom: 20px;">${data.message}</p>
+                    <div class="validation-info">
+                        <p><strong>Usuario:</strong> ${data.user.name}</p>
+                        <p><strong>Email:</strong> ${data.user.email}</p>
+                        <p><strong>Evento:</strong> ${data.event.name}</p>
+                        <p><strong>Ubicación:</strong> ${data.event.location}</p>
+                        <p style="margin-top: 15px; padding: 10px; background: white; border-radius: 5px; border: 2px solid #28a745;">
+                            <strong style="font-size: 18px; color: #28a745;">👥 Total de personas: ${totalPeople}</strong><br>
+                            <span style="color: #666; font-size: 14px;">
+                                (1 titular + ${companions} acompañante${companions !== 1 ? 's' : ''})
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            // Reproducir sonido de éxito (opcional)
+            playSuccessSound();
+        } else {
+            resultHTML = `
+                <div class="validation-error">
+                    <h3 style="font-size: 32px; margin-bottom: 15px;">❌ ACCESO DENEGADO</h3>
+                    <p style="font-size: 20px;">${data.message}</p>
+                </div>
+            `;
+
+            // Reproducir sonido de error (opcional)
+            playErrorSound();
+        }
+
+        document.getElementById('validationResult').innerHTML = resultHTML;
+
+        // Agregar al historial
+        addToHistory(data);
+
+        // Limpiar resultado después de 5 segundos
+        setTimeout(() => {
+            document.getElementById('validationResult').innerHTML = '';
+        }, 5000);
+    }
+
+    function addToHistory(data) {
+        const timestamp = new Date().toLocaleString('es-ES');
+        validationHistory.unshift({
+            timestamp: timestamp,
+            valid: data.valid,
+            message: data.message,
+            user: data.user ? data.user.name : 'N/A'
+        });
+
+        // Mantener solo las últimas 10 validaciones
+        if (validationHistory.length > 10) {
+            validationHistory.pop();
+        }
+
+        updateHistoryDisplay();
+    }
+
+    function updateHistoryDisplay() {
+        const historyHTML = validationHistory.map(item => `
+            <div style="padding: 15px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong>${item.user}</strong>
+                    <p style="color: #666; margin-top: 5px;">${item.timestamp}</p>
+                </div>
+                <div>
+                    ${item.valid ?
+                        '<span class="badge badge-success">✅ Válido</span>' :
+                        '<span class="badge badge-danger">❌ Inválido</span>'
+                    }
+                </div>
+            </div>
+        `).join('');
+
+        document.getElementById('validationHistory').innerHTML = historyHTML ||
+            '<p style="color: #666;">No hay validaciones recientes</p>';
+    }
+
+    function playSuccessSound() {
+        // Opcional: agregar sonido de éxito
+        // const audio = new Audio('/static/success.mp3');
+        // audio.play();
+    }
+
+    function playErrorSound() {
+        // Opcional: agregar sonido de error
+        // const audio = new Audio('/static/error.mp3');
+        // audio.play();
+    }
+
+    // Limpiar al salir de la página
+    window.addEventListener('beforeunload', () => {
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop();
+        }
+    });
+</script>
+{% endblock %}

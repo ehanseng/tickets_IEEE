@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+
+{% block title %}Tickets - Sistema de Tickets{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>🎫 Gestión de Tickets</h2>
+
+    <button class="btn btn-primary" onclick="openModal()">➕ Generar Nuevo Ticket</button>
+
+    {% if tickets %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Usuario</th>
+                <th>Evento</th>
+                <th>Personas</th>
+                <th>Código</th>
+                <th>Fecha Creación</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ticket in tickets %}
+            <tr>
+                <td>{{ ticket.id }}</td>
+                <td>{{ ticket.user_name }}</td>
+                <td>{{ ticket.event_name }}</td>
+                <td>
+                    {% set comp = ticket.companions if ticket.companions is defined else 0 %}
+                    <strong style="color: #00629B;">{{ 1 + comp }}</strong>
+                    <br>
+                    <small style="color: #666; font-size: 11px;">
+                        {% if comp == 0 %}
+                        Solo titular
+                        {% elif comp == 1 %}
+                        +1 acompañante
+                        {% else %}
+                        +{{ comp }} acompañantes
+                        {% endif %}
+                    </small>
+                </td>
+                <td>
+                    <code style="font-size: 11px; background: #f8f9fa; padding: 5px; border-radius: 3px; display: block; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"
+                          title="{{ ticket.ticket_code }}">
+                        {{ ticket.ticket_code[:16] }}...
+                    </code>
+                    <button class="btn" style="font-size: 10px; padding: 3px 8px; margin-top: 5px;"
+                            onclick="copyCode('{{ ticket.ticket_code }}')">📋 Copiar</button>
+                </td>
+                <td>{{ ticket.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                <td>
+                    {% if ticket.is_used %}
+                    <span class="badge badge-danger" id="status-{{ ticket.id }}">Usado</span>
+                    <br>
+                    <small style="color: #666; font-size: 10px;">{{ ticket.used_at.strftime('%d/%m/%Y %H:%M') if ticket.used_at else '' }}</small>
+                    {% else %}
+                    <span class="badge badge-success" id="status-{{ ticket.id }}">Disponible</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <button class="btn btn-primary" style="font-size: 11px; padding: 6px 10px; margin: 2px;"
+                            onclick="viewTicket({{ ticket.id }}, '{{ ticket.ticket_code }}')">👁️ Ver</button>
+                    <button class="btn btn-primary" style="font-size: 11px; padding: 6px 10px; margin: 2px; background: #ffc107; border-color: #ffc107;"
+                            onclick="editTicket({{ ticket.id }}, {{ ticket.companions }})">✏️ Editar</button>
+                    {% if ticket.is_used %}
+                    <button class="btn btn-success" style="font-size: 11px; padding: 6px 10px; margin: 2px;"
+                            id="reactivate-{{ ticket.id }}"
+                            onclick="reactivateTicket({{ ticket.id }})">🔄 Reactivar</button>
+                    {% endif %}
+                    <button class="btn btn-danger" style="font-size: 11px; padding: 6px 10px; margin: 2px;"
+                            onclick="deleteTicket({{ ticket.id }})">🗑️ Borrar</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="margin-top: 20px; color: #666;">No hay tickets generados</p>
+    {% endif %}
+</div>
+
+<!-- Modal para generar ticket -->
+<div id="ticketModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>Generar Nuevo Ticket</h2>
+
+        <form id="ticketForm">
+            <div class="form-group">
+                <label for="user_id">Usuario *</label>
+                <select id="user_id" name="user_id" required>
+                    <option value="">Seleccione un usuario</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}">{{ user.name }} ({{ user.email }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="event_id">Evento *</label>
+                <select id="event_id" name="event_id" required>
+                    <option value="">Seleccione un evento</option>
+                    {% for event in events %}
+                    <option value="{{ event.id }}">{{ event.name }} - {{ event.event_date.strftime('%d/%m/%Y') }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="companions">Acompañantes (0-4)</label>
+                <input type="number" id="companions" name="companions" min="0" max="4" value="0" required>
+                <small style="color: #666; display: block; margin-top: 5px;">
+                    Cantidad de personas adicionales que acompañan al titular (máximo 4)
+                </small>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Generar Ticket</button>
+        </form>
+
+        <div id="message" style="margin-top: 20px;"></div>
+    </div>
+</div>
+
+<!-- Modal para ver QR -->
+<div id="qrModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeQRModal()">&times;</span>
+        <h2>Código QR del Ticket</h2>
+        <div id="qrContent" style="text-align: center; margin-top: 20px;">
+            <p>Cargando...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar ticket -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeEditModal()">&times;</span>
+        <h2>Editar Ticket</h2>
+
+        <form id="editForm">
+            <input type="hidden" id="edit_ticket_id">
+
+            <div class="form-group">
+                <label for="edit_companions">Acompañantes (0-4)</label>
+                <input type="number" id="edit_companions" name="edit_companions" min="0" max="4" required>
+                <small style="color: #666; display: block; margin-top: 5px;">
+                    Cantidad de personas adicionales que acompañan al titular
+                </small>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </form>
+
+        <div id="editMessage" style="margin-top: 20px;"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openModal() {
+        document.getElementById('ticketModal').style.display = 'block';
+    }
+
+    function closeModal() {
+        document.getElementById('ticketModal').style.display = 'none';
+        document.getElementById('ticketForm').reset();
+        document.getElementById('message').innerHTML = '';
+    }
+
+    function closeQRModal() {
+        document.getElementById('qrModal').style.display = 'none';
+    }
+
+    function copyCode(code) {
+        navigator.clipboard.writeText(code).then(() => {
+            alert('✓ Código copiado al portapapeles');
+        }).catch(err => {
+            // Fallback para navegadores antiguos
+            const textArea = document.createElement('textarea');
+            textArea.value = code;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            alert('✓ Código copiado al portapapeles');
+        });
+    }
+
+    async function viewTicket(ticketId, ticketCode) {
+        document.getElementById('qrModal').style.display = 'block';
+        document.getElementById('qrContent').innerHTML = '<p>Cargando...</p>';
+
+        try {
+            const response = await fetch(`/tickets/${ticketId}/qr-base64`);
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('qrContent').innerHTML = `
+                    <img src="${data.qr_code}" alt="QR Code" style="max-width: 100%; border: 2px solid #ddd; padding: 10px; border-radius: 10px;">
+
+                    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+                        <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">Código del ticket:</p>
+                        <code style="background: white; padding: 10px; border-radius: 3px; display: block; word-break: break-all; font-size: 12px; border: 1px solid #ddd;">
+                            ${ticketCode}
+                        </code>
+                        <button class="btn btn-primary" style="margin-top: 10px; width: 100%;"
+                                onclick="copyCode('${ticketCode}')">📋 Copiar Código</button>
+                    </div>
+
+                    <p style="margin-top: 20px;">
+                        <a href="/tickets/${ticketId}/qr" download="ticket_${ticketId}.png" class="btn btn-success">📥 Descargar QR</a>
+                    </p>
+                `;
+            } else {
+                document.getElementById('qrContent').innerHTML =
+                    '<div class="alert alert-error">Error al cargar el QR</div>';
+            }
+        } catch (error) {
+            document.getElementById('qrContent').innerHTML =
+                '<div class="alert alert-error">Error al cargar el QR</div>';
+        }
+    }
+
+    document.getElementById('ticketForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = {
+            user_id: parseInt(document.getElementById('user_id').value),
+            event_id: parseInt(document.getElementById('event_id').value),
+            companions: parseInt(document.getElementById('companions').value)
+        };
+
+        try {
+            const response = await fetch('/tickets/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('message').innerHTML =
+                    '<div class="alert alert-success">Ticket generado exitosamente</div>';
+                setTimeout(() => {
+                    closeModal();
+                    viewTicket(data.id, data.ticket_code);
+                    setTimeout(() => window.location.reload(), 2000);
+                }, 1500);
+            } else {
+                document.getElementById('message').innerHTML =
+                    `<div class="alert alert-error">Error: ${data.detail}</div>`;
+            }
+        } catch (error) {
+            document.getElementById('message').innerHTML =
+                '<div class="alert alert-error">Error al generar ticket</div>';
+        }
+    });
+
+    async function reactivateTicket(ticketId) {
+        if (!confirm('¿Estás seguro de que quieres reactivar este ticket? Permitirá que se use nuevamente.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/tickets/${ticketId}/reactivate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Actualizar la interfaz sin recargar la página
+                const statusBadge = document.getElementById(`status-${ticketId}`);
+                const reactivateBtn = document.getElementById(`reactivate-${ticketId}`);
+
+                if (statusBadge) {
+                    statusBadge.className = 'badge badge-success';
+                    statusBadge.textContent = 'Disponible';
+                    // Remover la fecha de uso
+                    const smallTag = statusBadge.nextElementSibling;
+                    if (smallTag && smallTag.tagName === 'BR') {
+                        smallTag.nextElementSibling?.remove();
+                        smallTag.remove();
+                    }
+                }
+
+                if (reactivateBtn) {
+                    reactivateBtn.remove();
+                }
+
+                alert('✓ Ticket reactivado exitosamente');
+            } else {
+                alert(`Error: ${data.detail || 'No se pudo reactivar el ticket'}`);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al reactivar el ticket');
+        }
+    }
+
+    function closeEditModal() {
+        document.getElementById('editModal').style.display = 'none';
+        document.getElementById('editForm').reset();
+        document.getElementById('editMessage').innerHTML = '';
+    }
+
+    function editTicket(ticketId, currentCompanions) {
+        document.getElementById('edit_ticket_id').value = ticketId;
+        document.getElementById('edit_companions').value = currentCompanions;
+        document.getElementById('editModal').style.display = 'block';
+    }
+
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const ticketId = document.getElementById('edit_ticket_id').value;
+        const companions = parseInt(document.getElementById('edit_companions').value);
+
+        try {
+            const response = await fetch(`/tickets/${ticketId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ companions: companions })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('editMessage').innerHTML =
+                    '<div class="alert alert-success">Ticket actualizado exitosamente</div>';
+                setTimeout(() => {
+                    closeEditModal();
+                    window.location.reload();
+                }, 1500);
+            } else {
+                document.getElementById('editMessage').innerHTML =
+                    `<div class="alert alert-error">Error: ${data.detail || 'No se pudo actualizar el ticket'}</div>`;
+            }
+        } catch (error) {
+            document.getElementById('editMessage').innerHTML =
+                '<div class="alert alert-error">Error al actualizar ticket</div>';
+        }
+    });
+
+    async function deleteTicket(ticketId) {
+        if (!confirm('¿Estás seguro de que quieres eliminar este ticket? Esta acción no se puede deshacer.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/tickets/${ticketId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert('✓ Ticket eliminado exitosamente');
+                window.location.reload();
+            } else {
+                alert(`Error: ${data.detail || 'No se pudo eliminar el ticket'}`);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al eliminar el ticket');
+        }
+    }
+
+    window.onclick = function(event) {
+        const ticketModal = document.getElementById('ticketModal');
+        const qrModal = document.getElementById('qrModal');
+        const editModal = document.getElementById('editModal');
+
+        if (event.target == ticketModal) {
+            closeModal();
+        }
+        if (event.target == qrModal) {
+            closeQRModal();
+        }
+        if (event.target == editModal) {
+            closeEditModal();
+        }
+    }
+</script>
+{% endblock %}

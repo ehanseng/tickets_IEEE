@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Eventos - Sistema de Tickets{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>📅 Gestión de Eventos</h2>
+
+    <button class="btn btn-primary" onclick="openModal()">➕ Crear Nuevo Evento</button>
+
+    {% if events %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Ubicación</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th>Tickets</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+            <tr>
+                <td>{{ event.id }}</td>
+                <td>{{ event.name }}</td>
+                <td>{{ event.location }}</td>
+                <td>{{ event.event_date.strftime('%d/%m/%Y %H:%M') }}</td>
+                <td>
+                    {% if event.is_active %}
+                    <span class="badge badge-success">Activo</span>
+                    {% else %}
+                    <span class="badge badge-danger">Inactivo</span>
+                    {% endif %}
+                </td>
+                <td><span class="badge badge-warning">{{ event.ticket_count }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="margin-top: 20px; color: #666;">No hay eventos creados</p>
+    {% endif %}
+</div>
+
+<!-- Modal para crear evento -->
+<div id="eventModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>Crear Nuevo Evento</h2>
+
+        <form id="eventForm">
+            <div class="form-group">
+                <label for="name">Nombre del Evento *</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Descripción</label>
+                <textarea id="description" name="description" rows="3"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="location">Ubicación *</label>
+                <input type="text" id="location" name="location" required>
+            </div>
+
+            <div class="form-group">
+                <label for="event_date">Fecha y Hora *</label>
+                <input type="datetime-local" id="event_date" name="event_date" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Crear Evento</button>
+        </form>
+
+        <div id="message" style="margin-top: 20px;"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openModal() {
+        document.getElementById('eventModal').style.display = 'block';
+    }
+
+    function closeModal() {
+        document.getElementById('eventModal').style.display = 'none';
+        document.getElementById('eventForm').reset();
+        document.getElementById('message').innerHTML = '';
+    }
+
+    document.getElementById('eventForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = {
+            name: document.getElementById('name').value,
+            description: document.getElementById('description').value || null,
+            location: document.getElementById('location').value,
+            event_date: document.getElementById('event_date').value
+        };
+
+        try {
+            const response = await fetch('/events/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('message').innerHTML =
+                    '<div class="alert alert-success">Evento creado exitosamente</div>';
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                document.getElementById('message').innerHTML =
+                    `<div class="alert alert-error">Error: ${data.detail}</div>`;
+            }
+        } catch (error) {
+            document.getElementById('message').innerHTML =
+                '<div class="alert alert-error">Error al crear evento</div>';
+        }
+    });
+
+    window.onclick = function(event) {
+        const modal = document.getElementById('eventModal');
+        if (event.target == modal) {
+            closeModal();
+        }
+    }
+</script>
+{% endblock %}

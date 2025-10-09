@@ -1,0 +1,18 @@
+[project]
+name = "ticket"
+version = "0.1.0"
+description = "Sistema de tickets con QR para control de ingreso a eventos"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "sqlalchemy>=2.0.0",
+    "qrcode>=8.0",
+    "pillow>=11.0.0",
+    "pydantic>=2.0.0",
+    "pydantic[email]>=2.0.0",
+    "python-multipart>=0.0.12",
+    "jinja2>=3.1.0",
+    "cryptography>=44.0.0",
+]
