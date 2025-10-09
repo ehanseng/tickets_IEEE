@@ -7,6 +7,10 @@ from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 from typing import Optional
 import os
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde .env
+load_dotenv()
 
 
 class EmailService:
@@ -20,6 +24,12 @@ class EmailService:
         self.smtp_password = os.getenv("SMTP_PASSWORD", "")
         self.from_email = os.getenv("FROM_EMAIL", self.smtp_user)
         self.from_name = os.getenv("FROM_NAME", "IEEE Tadeo - Sistema de Tickets")
+
+        # Mostrar configuración en desarrollo (sin mostrar contraseña)
+        if self.smtp_user:
+            print(f"✓ SMTP configurado: {self.smtp_user} via {self.smtp_host}:{self.smtp_port}")
+        else:
+            print("⚠️  SMTP no configurado - Los correos se simularán")
 
     def send_ticket_email(
         self,

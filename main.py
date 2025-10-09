@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
 from typing import List
+import os
+from dotenv import load_dotenv
 import models
 import schemas
 from database import engine, get_db
@@ -21,6 +23,12 @@ from auth import (
     get_password_hash,
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
+
+# Cargar variables de entorno
+load_dotenv()
+
+# Configuración
+BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8000")
 
 # Crear tablas
 models.Base.metadata.create_all(bind=engine)
@@ -586,7 +594,7 @@ def send_ticket_email(
     event = db.query(models.Event).filter(models.Event.id == ticket.event_id).first()
 
     # Construir URL completa del ticket
-    ticket_url = f"http://127.0.0.1:8000/ticket/{ticket.unique_url}"
+    ticket_url = f"{BASE_URL}/ticket/{ticket.unique_url}"
 
     # Enviar correo
     success = email_service.send_ticket_email(
