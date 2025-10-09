@@ -108,3 +108,53 @@ class TicketValidationResponse(BaseModel):
     ticket: Optional[TicketResponse] = None
     user: Optional[UserResponse] = None
     event: Optional[EventResponse] = None
+
+
+# Schemas de Autenticación
+class LoginRequest(BaseModel):
+    """Schema para solicitud de login"""
+    username: str
+    password: str
+
+
+class Token(BaseModel):
+    """Schema para respuesta de token"""
+    access_token: str
+    token_type: str
+
+
+class AdminUserCreate(BaseModel):
+    """Schema para crear usuario administrador o validador"""
+    username: str
+    email: EmailStr
+    password: str
+    full_name: str
+    role: str  # "admin" o "validator"
+    access_start: Optional[datetime] = None  # Para validadores
+    access_end: Optional[datetime] = None  # Para validadores
+
+
+class AdminUserResponse(BaseModel):
+    """Schema para respuesta de usuario admin"""
+    id: int
+    username: str
+    email: str
+    full_name: str
+    role: str
+    is_active: bool
+    created_at: datetime
+    access_start: Optional[datetime]
+    access_end: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class AdminUserUpdate(BaseModel):
+    """Schema para actualizar usuario admin"""
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
+    is_active: Optional[bool] = None
+    access_start: Optional[datetime] = None
+    access_end: Optional[datetime] = None
+    password: Optional[str] = None

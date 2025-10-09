@@ -1,16 +1,25 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Request
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 import models
 import schemas
 from database import engine, get_db
 from ticket_service import ticket_service
+from auth import (
+    authenticate_user,
+    create_access_token,
+    get_current_user,
+    require_admin,
+    require_validator,
+    get_password_hash,
+    ACCESS_TOKEN_EXPIRE_MINUTES
+)
 
 # Crear tablas
 models.Base.metadata.create_all(bind=engine)
@@ -28,10 +37,128 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 
+# ========== ENDPOINTS DE AUTENTICACIÓN ==========
+
+@app.post("/auth/login", response_model=schemas.Token)
+def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
+    """Endpoint de login - retorna token JWT"""
+    user = authenticate_user(db, login_data.username, login_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario o contraseña incorrectos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Crear token JWT
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username, "role": user.role.value},
+        expires_delta=access_token_expires
+    )
+
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.post("/auth/validators", response_model=schemas.AdminUserResponse, status_code=status.HTTP_201_CREATED)
+def create_validator(
+    validator_data: schemas.AdminUserCreate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Crear un nuevo validador (solo ADMIN)"""
+    # Verificar si el username ya existe
+    existing_user = db.query(models.AdminUser).filter(
+        models.AdminUser.username == validator_data.username
+    ).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
+
+    # Verificar si el email ya existe
+    existing_email = db.query(models.AdminUser).filter(
+        models.AdminUser.email == validator_data.email
+    ).first()
+    if existing_email:
+        raise HTTPException(status_code=400, detail="El email ya está registrado")
+
+    # Crear el validador
+    hashed_password = get_password_hash(validator_data.password)
+    db_user = models.AdminUser(
+        username=validator_data.username,
+        email=validator_data.email,
+        hashed_password=hashed_password,
+        full_name=validator_data.full_name,
+        role=validator_data.role,
+        access_start=validator_data.access_start,
+        access_end=validator_data.access_end
+    )
+
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+
+    return db_user
+
+
+@app.get("/auth/validators", response_model=List[schemas.AdminUserResponse])
+def list_validators(
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Listar todos los validadores (solo ADMIN)"""
+    validators = db.query(models.AdminUser).all()
+    return validators
+
+
+@app.put("/auth/validators/{validator_id}", response_model=schemas.AdminUserResponse)
+def update_validator(
+    validator_id: int,
+    validator_update: schemas.AdminUserUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Actualizar un validador (solo ADMIN)"""
+    validator = db.query(models.AdminUser).filter(models.AdminUser.id == validator_id).first()
+    if not validator:
+        raise HTTPException(status_code=404, detail="Validador no encontrado")
+
+    # Actualizar solo los campos proporcionados
+    if validator_update.email is not None:
+        # Verificar que el email no esté en uso por otro usuario
+        existing = db.query(models.AdminUser).filter(
+            models.AdminUser.email == validator_update.email,
+            models.AdminUser.id != validator_id
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="El email ya está registrado por otro usuario")
+        validator.email = validator_update.email
+
+    if validator_update.full_name is not None:
+        validator.full_name = validator_update.full_name
+
+    if validator_update.is_active is not None:
+        validator.is_active = validator_update.is_active
+
+    if validator_update.access_start is not None:
+        validator.access_start = validator_update.access_start
+
+    if validator_update.access_end is not None:
+        validator.access_end = validator_update.access_end
+
+    db.commit()
+    db.refresh(validator)
+
+    return validator
+
+
 # ========== ENDPOINTS DE USUARIOS ==========
 
 @app.post("/users/", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+def create_user(
+    user: schemas.UserCreate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Crear un nuevo usuario"""
     # Verificar si el email ya existe
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
@@ -46,14 +173,23 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 
 @app.get("/users/", response_model=List[schemas.UserResponse])
-def list_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def list_users(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Listar todos los usuarios"""
     users = db.query(models.User).offset(skip).limit(limit).all()
     return users
 
 
 @app.get("/users/{user_id}", response_model=schemas.UserResponse)
-def get_user(user_id: int, db: Session = Depends(get_db)):
+def get_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Obtener un usuario por ID"""
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
@@ -62,7 +198,12 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @app.put("/users/{user_id}", response_model=schemas.UserResponse)
-def update_user(user_id: int, user_update: schemas.UserUpdate, db: Session = Depends(get_db)):
+def update_user(
+    user_id: int,
+    user_update: schemas.UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Actualizar un usuario"""
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
@@ -92,7 +233,11 @@ def update_user(user_id: int, user_update: schemas.UserUpdate, db: Session = Dep
 
 
 @app.delete("/users/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Eliminar un usuario"""
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
@@ -119,7 +264,11 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
 # ========== ENDPOINTS DE EVENTOS ==========
 
 @app.post("/events/", response_model=schemas.EventResponse, status_code=status.HTTP_201_CREATED)
-def create_event(event: schemas.EventCreate, db: Session = Depends(get_db)):
+def create_event(
+    event: schemas.EventCreate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Crear un nuevo evento"""
     db_event = models.Event(**event.model_dump())
     db.add(db_event)
@@ -129,7 +278,13 @@ def create_event(event: schemas.EventCreate, db: Session = Depends(get_db)):
 
 
 @app.get("/events/", response_model=List[schemas.EventResponse])
-def list_events(skip: int = 0, limit: int = 100, active_only: bool = False, db: Session = Depends(get_db)):
+def list_events(
+    skip: int = 0,
+    limit: int = 100,
+    active_only: bool = False,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Listar todos los eventos"""
     query = db.query(models.Event)
     if active_only:
@@ -139,7 +294,11 @@ def list_events(skip: int = 0, limit: int = 100, active_only: bool = False, db: 
 
 
 @app.get("/events/{event_id}", response_model=schemas.EventResponse)
-def get_event(event_id: int, db: Session = Depends(get_db)):
+def get_event(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Obtener un evento por ID"""
     event = db.query(models.Event).filter(models.Event.id == event_id).first()
     if not event:
@@ -150,7 +309,11 @@ def get_event(event_id: int, db: Session = Depends(get_db)):
 # ========== ENDPOINTS DE TICKETS ==========
 
 @app.post("/tickets/", response_model=schemas.TicketResponse, status_code=status.HTTP_201_CREATED)
-def create_ticket(ticket: schemas.TicketCreate, db: Session = Depends(get_db)):
+def create_ticket(
+    ticket: schemas.TicketCreate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Crear un ticket para un usuario en un evento"""
     # Verificar que el usuario existe
     user = db.query(models.User).filter(models.User.id == ticket.user_id).first()
@@ -195,14 +358,23 @@ def create_ticket(ticket: schemas.TicketCreate, db: Session = Depends(get_db)):
 
 
 @app.get("/tickets/", response_model=List[schemas.TicketResponse])
-def list_tickets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def list_tickets(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Listar todos los tickets"""
     tickets = db.query(models.Ticket).offset(skip).limit(limit).all()
     return tickets
 
 
 @app.get("/tickets/{ticket_id}", response_model=schemas.TicketResponse)
-def get_ticket(ticket_id: int, db: Session = Depends(get_db)):
+def get_ticket(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Obtener un ticket por ID"""
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
@@ -211,7 +383,11 @@ def get_ticket(ticket_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/tickets/{ticket_id}/reactivate")
-def reactivate_ticket(ticket_id: int, db: Session = Depends(get_db)):
+def reactivate_ticket(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Reactivar un ticket usado (marcarlo como no usado)"""
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
@@ -235,7 +411,12 @@ def reactivate_ticket(ticket_id: int, db: Session = Depends(get_db)):
 
 
 @app.put("/tickets/{ticket_id}", response_model=schemas.TicketResponse)
-def update_ticket(ticket_id: int, ticket_update: schemas.TicketUpdate, db: Session = Depends(get_db)):
+def update_ticket(
+    ticket_id: int,
+    ticket_update: schemas.TicketUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Actualizar un ticket (solo acompañantes por ahora)"""
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
@@ -251,7 +432,11 @@ def update_ticket(ticket_id: int, ticket_update: schemas.TicketUpdate, db: Sessi
 
 
 @app.delete("/tickets/{ticket_id}")
-def delete_ticket(ticket_id: int, db: Session = Depends(get_db)):
+def delete_ticket(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Eliminar un ticket"""
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
@@ -277,7 +462,11 @@ def delete_ticket(ticket_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/tickets/{ticket_id}/qr")
-def get_ticket_qr(ticket_id: int, db: Session = Depends(get_db)):
+def get_ticket_qr(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Obtener la imagen QR de un ticket - regenera el QR optimizado"""
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
@@ -303,7 +492,11 @@ def get_ticket_qr(ticket_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/tickets/{ticket_id}/qr-base64")
-def get_ticket_qr_base64(ticket_id: int, db: Session = Depends(get_db)):
+def get_ticket_qr_base64(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Obtener el QR en formato base64 para mostrar en web"""
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
@@ -325,7 +518,11 @@ def get_ticket_qr_base64(ticket_id: int, db: Session = Depends(get_db)):
 # ========== ENDPOINTS DE VALIDACIÓN ==========
 
 @app.post("/validate/", response_model=schemas.TicketValidationResponse)
-def validate_ticket(validation: schemas.TicketValidation, db: Session = Depends(get_db)):
+def validate_ticket(
+    validation: schemas.TicketValidation,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_validator)
+):
     """Validar un ticket en la entrada del evento"""
     try:
         # Buscar el ticket por código
@@ -372,7 +569,11 @@ def validate_ticket(validation: schemas.TicketValidation, db: Session = Depends(
 
 
 @app.post("/validate/scan/", response_model=schemas.TicketValidationResponse)
-def validate_scanned_qr(encrypted_data: str, db: Session = Depends(get_db)):
+def validate_scanned_qr(
+    encrypted_data: str,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_validator)
+):
     """Validar un QR escaneado (datos encriptados)"""
     try:
         # Desencriptar datos del QR
@@ -393,7 +594,11 @@ class QRDataValidation(BaseModel):
     qr_data: str
 
 @app.post("/validate/qr", response_model=schemas.TicketValidationResponse)
-def validate_qr_data(data: QRDataValidation, db: Session = Depends(get_db)):
+def validate_qr_data(
+    data: QRDataValidation,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_validator)
+):
     """Validar QR desde datos escaneados - recibe datos encriptados del QR"""
     try:
         # Intentar desencriptar los datos del QR
@@ -412,8 +617,35 @@ def validate_qr_data(data: QRDataValidation, db: Session = Depends(get_db)):
 
 # ========== RUTAS DE ADMINISTRACIÓN ==========
 
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    """Página de login"""
+    return templates.TemplateResponse("login.html", {
+        "request": request
+    })
+
+
+@app.get("/admin/access", response_class=HTMLResponse)
+async def admin_access_management(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Página de gestión de validadores (solo admin)"""
+    validators = db.query(models.AdminUser).all()
+    return templates.TemplateResponse("access_management.html", {
+        "request": request,
+        "current_user": current_user,
+        "validators": validators
+    })
+
+
 @app.get("/admin", response_class=HTMLResponse)
-async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
+async def admin_dashboard(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Dashboard de administración"""
     # Obtener estadísticas
     total_users = db.query(func.count(models.User.id)).scalar()
@@ -444,13 +676,18 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
 
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
+        "current_user": current_user,
         "stats": stats,
         "active_events": active_events_list
     })
 
 
 @app.get("/admin/users", response_class=HTMLResponse)
-async def admin_users(request: Request, db: Session = Depends(get_db)):
+async def admin_users(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Página de gestión de usuarios"""
     users = db.query(
         models.User,
@@ -465,12 +702,17 @@ async def admin_users(request: Request, db: Session = Depends(get_db)):
 
     return templates.TemplateResponse("users.html", {
         "request": request,
+        "current_user": current_user,
         "users": users_list
     })
 
 
 @app.get("/admin/events", response_class=HTMLResponse)
-async def admin_events(request: Request, db: Session = Depends(get_db)):
+async def admin_events(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Página de gestión de eventos"""
     events = db.query(
         models.Event,
@@ -485,12 +727,17 @@ async def admin_events(request: Request, db: Session = Depends(get_db)):
 
     return templates.TemplateResponse("events.html", {
         "request": request,
+        "current_user": current_user,
         "events": events_list
     })
 
 
 @app.get("/admin/tickets", response_class=HTMLResponse)
-async def admin_tickets(request: Request, db: Session = Depends(get_db)):
+async def admin_tickets(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
     """Página de gestión de tickets"""
     tickets = db.query(models.Ticket).all()
     users = db.query(models.User).all()
@@ -508,6 +755,7 @@ async def admin_tickets(request: Request, db: Session = Depends(get_db)):
 
     return templates.TemplateResponse("tickets.html", {
         "request": request,
+        "current_user": current_user,
         "tickets": tickets_list,
         "users": users,
         "events": events
@@ -515,10 +763,14 @@ async def admin_tickets(request: Request, db: Session = Depends(get_db)):
 
 
 @app.get("/admin/validate", response_class=HTMLResponse)
-async def admin_validate(request: Request):
+async def admin_validate(
+    request: Request,
+    current_user: models.AdminUser = Depends(require_validator)
+):
     """Página de validación de tickets"""
     return templates.TemplateResponse("validate.html", {
-        "request": request
+        "request": request,
+        "current_user": current_user
     })
 
 
@@ -526,13 +778,13 @@ async def admin_validate(request: Request):
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    """Página principal - redirige al dashboard"""
+    """Página principal - redirige al login"""
     return """
     <!DOCTYPE html>
     <html>
     <head>
         <title>Sistema de Tickets IEEE</title>
-        <meta http-equiv="refresh" content="0; url=/admin">
+        <meta http-equiv="refresh" content="0; url=/login">
         <style>
             body {
                 font-family: Arial, sans-serif;
@@ -548,9 +800,9 @@ async def root(request: Request):
     </head>
     <body>
         <div style="text-align: center;">
-            <h1>🎫 Sistema de Tickets IEEE</h1>
-            <p>Redirigiendo al panel de administración...</p>
-            <p><a href="/admin" style="color: white;">Haz clic aquí si no eres redirigido automáticamente</a></p>
+            <h1>Sistema de Tickets IEEE</h1>
+            <p>Redirigiendo al login...</p>
+            <p><a href="/login" style="color: white;">Haz clic aquí si no eres redirigido automáticamente</a></p>
         </div>
     </body>
     </html>

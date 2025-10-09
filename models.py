@@ -1,7 +1,8 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Enum
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
+import enum
 
 
 class User(Base):
@@ -53,3 +54,46 @@ class Ticket(Base):
     # Relaciones
     user = relationship("User", back_populates="tickets")
     event = relationship("Event", back_populates="tickets")
+
+
+class RoleEnum(enum.Enum):
+    """Roles de sistema"""
+    ADMIN = "admin"
+    VALIDATOR = "validator"
+
+
+class AdminUser(Base):
+    """Modelo de Usuario Administrador y Validador"""
+    __tablename__ = "admin_users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    full_name = Column(String, nullable=False)
+    role = Column(Enum(RoleEnum), nullable=False, default=RoleEnum.ADMIN)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Campos específicos para validadores
+    access_start = Column(DateTime, nullable=True)  # Inicio de acceso temporal
+    access_end = Column(DateTime, nullable=True)  # Fin de acceso temporal
+
+    # Relación con validaciones
+    validations = relationship("ValidationLog", back_populates="validator")
+
+
+class ValidationLog(Base):
+    """Registro de validaciones realizadas"""
+    __tablename__ = "validation_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, ForeignKey("tickets.id"), nullable=False)
+    validator_id = Column(Integer, ForeignKey("admin_users.id"), nullable=False)
+    validated_at = Column(DateTime, default=datetime.utcnow)
+    success = Column(Boolean, default=True)
+    notes = Column(Text, nullable=True)
+
+    # Relaciones
+    ticket = relationship("Ticket")
+    validator = relationship("AdminUser", back_populates="validations")

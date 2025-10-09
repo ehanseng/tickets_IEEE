@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Accesos - Sistema de Tickets{% endblock %}
+
+{% block content %}
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div class="flex flex-col space-y-1.5 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-2xl font-semibold leading-none tracking-tight">Gestión de Validadores</h3>
+                <p class="text-sm text-muted-foreground mt-1">Administra los accesos temporales para validadores de eventos</p>
+            </div>
+            <button onclick="openModal()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Crear Validador
+            </button>
+        </div>
+    </div>
+    <div class="p-6 pt-0">
+        {% if validators %}
+        <div class="relative w-full overflow-auto">
+            <table class="w-full caption-bottom text-sm">
+                <thead class="[&_tr]:border-b">
+                    <tr class="border-b transition-colors hover:bg-muted/50">
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">ID</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Usuario</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nombre</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Acceso</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Estado</th>
+                        <th class="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="[&_tr:last-child]:border-0">
+                    {% for validator in validators %}
+                    <tr class="border-b transition-colors hover:bg-muted/50">
+                        <td class="p-4 align-middle">{{ validator.id }}</td>
+                        <td class="p-4 align-middle font-medium">{{ validator.username }}</td>
+                        <td class="p-4 align-middle">{{ validator.full_name }}</td>
+                        <td class="p-4 align-middle text-muted-foreground">{{ validator.email }}</td>
+                        <td class="p-4 align-middle">
+                            {% if validator.access_start and validator.access_end %}
+                            <div class="text-xs">
+                                <div>Desde: {{ validator.access_start.strftime('%d/%m/%Y %H:%M') }}</div>
+                                <div>Hasta: {{ validator.access_end.strftime('%d/%m/%Y %H:%M') }}</div>
+                            </div>
+                            {% else %}
+                            <span class="text-muted-foreground text-xs">Sin restricción</span>
+                            {% endif %}
+                        </td>
+                        <td class="p-4 align-middle">
+                            {% if validator.is_active %}
+                            <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold border-emerald-200 bg-emerald-100 text-emerald-700">
+                                Activo
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold border-red-200 bg-red-100 text-red-700">
+                                Inactivo
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="p-4 align-middle text-right">
+                            <div class="flex justify-end gap-2">
+                                <button onclick="editValidator({{ validator.id }}, '{{ validator.username }}', '{{ validator.full_name }}', '{{ validator.email }}', {{ validator.is_active|lower }}, '{{ validator.access_start.isoformat() if validator.access_start else '' }}', '{{ validator.access_end.isoformat() if validator.access_end else '' }}')" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3">
+                                    Editar
+                                </button>
+                                <button onclick="toggleValidator({{ validator.id }}, {{ validator.is_active|lower }})" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 {% if validator.is_active %}bg-amber-600 text-white hover:bg-amber-700{% else %}bg-emerald-600 text-white hover:bg-emerald-700{% endif %} h-8 px-3">
+                                    {% if validator.is_active %}Desactivar{% else %}Activar{% endif %}
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-8 text-center">
+            <svg class="h-12 w-12 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+            <p class="text-muted-foreground">No hay validadores registrados</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal para crear validador -->
+<div id="validatorModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold leading-none tracking-tight" id="modalTitle">Crear Validador</h3>
+                <button onclick="closeModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="p-6">
+            <form id="validatorForm" class="space-y-4">
+                <input type="hidden" id="validator_id">
+                <input type="hidden" id="is_edit" value="false">
+
+                <div class="space-y-2">
+                    <label for="username" class="text-sm font-medium leading-none">Usuario *</label>
+                    <input type="text" id="username" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                </div>
+
+                <div class="space-y-2">
+                    <label for="email" class="text-sm font-medium leading-none">Email *</label>
+                    <input type="email" id="email" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                </div>
+
+                <div class="space-y-2" id="passwordField">
+                    <label for="password" class="text-sm font-medium leading-none">Contraseña *</label>
+                    <input type="password" id="password" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                </div>
+
+                <div class="space-y-2">
+                    <label for="full_name" class="text-sm font-medium leading-none">Nombre Completo *</label>
+                    <input type="text" id="full_name" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                </div>
+
+                <div class="space-y-2">
+                    <label for="access_start" class="text-sm font-medium leading-none">Inicio de Acceso</label>
+                    <input type="datetime-local" id="access_start" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <p class="text-xs text-muted-foreground">Dejar vacío para acceso inmediato</p>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="access_end" class="text-sm font-medium leading-none">Fin de Acceso</label>
+                    <input type="datetime-local" id="access_end" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <p class="text-xs text-muted-foreground">Dejar vacío para acceso sin límite</p>
+                </div>
+
+                <button type="submit" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full">
+                    Guardar Validador
+                </button>
+            </form>
+
+            <div id="message" class="mt-4"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const token = localStorage.getItem('access_token');
+
+    function openModal() {
+        document.getElementById('validatorModal').classList.remove('hidden');
+        document.getElementById('is_edit').value = 'false';
+        document.getElementById('modalTitle').textContent = 'Crear Validador';
+        document.getElementById('passwordField').style.display = 'block';
+        document.getElementById('password').required = true;
+    }
+
+    function closeModal() {
+        document.getElementById('validatorModal').classList.add('hidden');
+        document.getElementById('validatorForm').reset();
+        document.getElementById('message').innerHTML = '';
+    }
+
+    function editValidator(id, username, full_name, email, is_active, access_start, access_end) {
+        document.getElementById('validatorModal').classList.remove('hidden');
+        document.getElementById('is_edit').value = 'true';
+        document.getElementById('validator_id').value = id;
+        document.getElementById('modalTitle').textContent = 'Editar Validador';
+        document.getElementById('username').value = username;
+        document.getElementById('username').disabled = true;
+        document.getElementById('full_name').value = full_name;
+        document.getElementById('email').value = email;
+        document.getElementById('passwordField').style.display = 'none';
+        document.getElementById('password').required = false;
+
+        if (access_start) {
+            const startDate = new Date(access_start);
+            document.getElementById('access_start').value = startDate.toISOString().slice(0, 16);
+        }
+        if (access_end) {
+            const endDate = new Date(access_end);
+            document.getElementById('access_end').value = endDate.toISOString().slice(0, 16);
+        }
+    }
+
+    async function toggleValidator(id, currentStatus) {
+        const action = currentStatus ? 'desactivar' : 'activar';
+        if (!confirm(`¿Estás seguro de que quieres ${action} este validador?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/auth/validators/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ is_active: !currentStatus })
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const data = await response.json();
+                alert(`Error: ${data.detail || 'No se pudo actualizar el validador'}`);
+            }
+        } catch (error) {
+            alert('Error de conexión');
+        }
+    }
+
+    document.getElementById('validatorForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const isEdit = document.getElementById('is_edit').value === 'true';
+        const validatorId = document.getElementById('validator_id').value;
+        const message = document.getElementById('message');
+
+        const formData = {
+            email: document.getElementById('email').value,
+            full_name: document.getElementById('full_name').value,
+            access_start: document.getElementById('access_start').value || null,
+            access_end: document.getElementById('access_end').value || null
+        };
+
+        if (!isEdit) {
+            formData.username = document.getElementById('username').value;
+            formData.password = document.getElementById('password').value;
+            formData.role = 'validator';
+        }
+
+        try {
+            const url = isEdit ? `/auth/validators/${validatorId}` : '/auth/validators';
+            const method = isEdit ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                message.innerHTML = '<div class="rounded-lg border bg-green-50 px-4 py-3 text-sm text-green-900">Validador guardado exitosamente</div>';
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                message.innerHTML = `<div class="rounded-lg border bg-red-50 px-4 py-3 text-sm text-red-900">Error: ${data.detail}</div>`;
+            }
+        } catch (error) {
+            message.innerHTML = '<div class="rounded-lg border bg-red-50 px-4 py-3 text-sm text-red-900">Error de conexión</div>';
+        }
+    });
+</script>
+{% endblock %}
