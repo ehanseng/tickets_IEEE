@@ -2,6 +2,7 @@ import qrcode
 import hashlib
 import secrets
 import json
+import string
 from pathlib import Path
 from datetime import datetime
 from cryptography.fernet import Fernet
@@ -28,6 +29,14 @@ class TicketService:
         timestamp = datetime.utcnow().isoformat()
         data = f"{user_id}-{event_id}-{timestamp}-{secrets.token_hex(8)}"
         return hashlib.sha256(data.encode()).hexdigest()
+
+    def generate_unique_url(self) -> str:
+        """Genera una URL única usando tokens seguros"""
+        return secrets.token_urlsafe(32)
+
+    def generate_pin(self) -> str:
+        """Genera un PIN de 6 dígitos"""
+        return ''.join(secrets.choice(string.digits) for _ in range(6))
 
     def create_qr_data(self, ticket_code: str, user_name: str, event_name: str, event_date: str) -> str:
         """Crea y encripta los datos que irán en el QR"""

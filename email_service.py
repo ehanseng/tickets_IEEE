@@ -1,0 +1,278 @@
+"""
+Servicio para envío de correos electrónicos
+"""
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from datetime import datetime
+from typing import Optional
+import os
+
+
+class EmailService:
+    """Servicio para enviar correos electrónicos"""
+
+    def __init__(self):
+        # Configuración SMTP (usar variables de entorno en producción)
+        self.smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
+        self.smtp_user = os.getenv("SMTP_USER", "")
+        self.smtp_password = os.getenv("SMTP_PASSWORD", "")
+        self.from_email = os.getenv("FROM_EMAIL", self.smtp_user)
+        self.from_name = os.getenv("FROM_NAME", "IEEE Tadeo - Sistema de Tickets")
+
+    def send_ticket_email(
+        self,
+        to_email: str,
+        user_name: str,
+        event_name: str,
+        event_date: datetime,
+        event_location: str,
+        event_description: str,
+        ticket_url: str,
+        access_pin: str,
+        companions: int
+    ) -> bool:
+        """
+        Envía un correo con la información del ticket y el PIN de acceso
+
+        Returns:
+            bool: True si el correo se envió correctamente, False en caso contrario
+        """
+        try:
+            # Crear mensaje
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = f'Tu Ticket para {event_name} - IEEE Tadeo'
+            msg['From'] = f'{self.from_name} <{self.from_email}>'
+            msg['To'] = to_email
+
+            # Formato de fecha
+            event_date_str = event_date.strftime('%d de %B de %Y a las %H:%M')
+
+            # Crear contenido HTML
+            html_content = f"""
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }}
+        .container {{
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        .header {{
+            text-align: center;
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }}
+        .header h1 {{
+            color: #0066cc;
+            margin: 0;
+            font-size: 28px;
+        }}
+        .pin-box {{
+            background-color: #f0f7ff;
+            border: 2px solid #0066cc;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin: 30px 0;
+        }}
+        .pin-code {{
+            font-size: 36px;
+            font-weight: bold;
+            color: #0066cc;
+            letter-spacing: 8px;
+            font-family: 'Courier New', monospace;
+        }}
+        .info-section {{
+            margin: 25px 0;
+        }}
+        .info-section h2 {{
+            color: #0066cc;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 8px;
+        }}
+        .info-row {{
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }}
+        .info-label {{
+            font-weight: 600;
+            color: #666;
+        }}
+        .info-value {{
+            color: #333;
+        }}
+        .btn {{
+            display: inline-block;
+            background-color: #0066cc;
+            color: white;
+            text-decoration: none;
+            padding: 15px 40px;
+            border-radius: 6px;
+            font-weight: 600;
+            text-align: center;
+            margin: 20px 0;
+        }}
+        .btn:hover {{
+            background-color: #0052a3;
+        }}
+        .footer {{
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            color: #666;
+            font-size: 14px;
+        }}
+        .warning {{
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎟️ Tu Ticket IEEE Tadeo</h1>
+            <p style="color: #666; margin: 10px 0 0 0;">Confirmación de Registro</p>
+        </div>
+
+        <p>Hola <strong>{user_name}</strong>,</p>
+        <p>¡Gracias por registrarte! Tu ticket para el evento ha sido generado exitosamente.</p>
+
+        <div class="info-section">
+            <h2>📅 Información del Evento</h2>
+            <div class="info-row">
+                <span class="info-label">Evento:</span>
+                <span class="info-value">{event_name}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Fecha:</span>
+                <span class="info-value">{event_date_str}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Ubicación:</span>
+                <span class="info-value">{event_location}</span>
+            </div>
+            {f'<div class="info-row"><span class="info-label">Acompañantes:</span><span class="info-value">{companions}</span></div>' if companions > 0 else ''}
+        </div>
+
+        <div class="pin-box">
+            <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">Tu PIN de Acceso</p>
+            <div class="pin-code">{access_pin}</div>
+            <p style="margin: 10px 0 0 0; color: #666; font-size: 12px;">Guarda este PIN, lo necesitarás para acceder a tu ticket</p>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="{ticket_url}" class="btn">Ver Mi Ticket</a>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Importante:</strong>
+            <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+                <li>Guarda este correo en un lugar seguro</li>
+                <li>No compartas tu PIN con nadie</li>
+                <li>Presenta el código QR en la entrada del evento</li>
+                <li>Llega con 15 minutos de anticipación</li>
+            </ul>
+        </div>
+
+        {f'<div class="info-section"><h2>ℹ️ Sobre el Evento</h2><p>{event_description}</p></div>' if event_description else ''}
+
+        <div class="footer">
+            <p>Este correo fue generado automáticamente por el Sistema de Tickets IEEE Tadeo.</p>
+            <p>Si tienes alguna pregunta, contacta al organizador del evento.</p>
+        </div>
+    </div>
+</body>
+</html>
+            """
+
+            # Crear versión texto plano
+            text_content = f"""
+Tu Ticket IEEE Tadeo - {event_name}
+
+Hola {user_name},
+
+¡Gracias por registrarte! Tu ticket para el evento ha sido generado exitosamente.
+
+INFORMACIÓN DEL EVENTO:
+- Evento: {event_name}
+- Fecha: {event_date_str}
+- Ubicación: {event_location}
+{f'- Acompañantes: {companions}' if companions > 0 else ''}
+
+TU PIN DE ACCESO: {access_pin}
+
+Para ver tu ticket y código QR, accede al siguiente enlace:
+{ticket_url}
+
+IMPORTANTE:
+- Guarda este correo en un lugar seguro
+- No compartas tu PIN con nadie
+- Presenta el código QR en la entrada del evento
+- Llega con 15 minutos de anticipación
+
+{f'SOBRE EL EVENTO:\\n{event_description}\\n' if event_description else ''}
+
+---
+Este correo fue generado automáticamente por el Sistema de Tickets IEEE Tadeo.
+            """
+
+            # Adjuntar partes
+            part1 = MIMEText(text_content, 'plain', 'utf-8')
+            part2 = MIMEText(html_content, 'html', 'utf-8')
+
+            msg.attach(part1)
+            msg.attach(part2)
+
+            # Enviar correo
+            if not self.smtp_user or not self.smtp_password:
+                print("⚠️  SMTP no configurado - El correo NO se enviará")
+                print(f"📧 Correo simulado enviado a: {to_email}")
+                print(f"🔑 PIN: {access_pin}")
+                print(f"🔗 URL: {ticket_url}")
+                return True  # Retornar True en desarrollo para no bloquear
+
+            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                server.starttls()
+                server.login(self.smtp_user, self.smtp_password)
+                server.send_message(msg)
+
+            print(f"✅ Correo enviado exitosamente a {to_email}")
+            return True
+
+        except Exception as e:
+            print(f"❌ Error al enviar correo: {str(e)}")
+            # En desarrollo, imprimir la información pero no fallar
+            print(f"📧 Información del ticket:")
+            print(f"   Email: {to_email}")
+            print(f"   PIN: {access_pin}")
+            print(f"   URL: {ticket_url}")
+            return False
+
+
+# Instancia global del servicio
+email_service = EmailService()

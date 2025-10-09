@@ -69,6 +69,10 @@
                             <div class="flex flex-wrap gap-1">
                                 <button class="inline-flex items-center justify-center rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3"
                                         onclick="viewTicket({{ ticket.id }}, '{{ ticket.ticket_code }}')">Ver</button>
+                                <button class="inline-flex items-center justify-center rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-8 px-3"
+                                        onclick="sendEmail({{ ticket.id }})">
+                                    📧 Enviar
+                                </button>
                                 <button class="inline-flex items-center justify-center rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-amber-500 text-white hover:bg-amber-600 h-8 px-3"
                                         onclick="editTicket({{ ticket.id }}, {{ ticket.companions }})">Editar</button>
                                 {% if ticket.is_used %}
@@ -384,6 +388,33 @@
                 '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error al actualizar ticket</div>';
         }
     });
+
+    async function sendEmail(ticketId) {
+        if (!confirm('¿Enviar ticket por correo electrónico al usuario?')) {
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`/tickets/${ticketId}/send-email`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert(`✓ Correo enviado exitosamente a ${data.email}`);
+            } else {
+                alert(`Error: ${data.detail || 'No se pudo enviar el correo'}`);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al enviar el correo');
+        }
+    }
 
     async function deleteTicket(ticketId) {
         if (!confirm('¿Estás seguro de que quieres eliminar este ticket? Esta acción no se puede deshacer.')) {

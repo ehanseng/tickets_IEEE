@@ -51,6 +51,10 @@ class Ticket(Base):
     used_at = Column(DateTime, nullable=True)
     qr_path = Column(String, nullable=True)  # Ruta del archivo QR generado
 
+    # URL única y PIN para acceso del usuario
+    unique_url = Column(String, unique=True, index=True, nullable=True)  # URL única del ticket
+    access_pin = Column(String, nullable=True)  # PIN de 6 dígitos para acceso
+
     # Relaciones
     user = relationship("User", back_populates="tickets")
     event = relationship("Event", back_populates="tickets")

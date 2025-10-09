@@ -11,6 +11,7 @@ import models
 import schemas
 from database import engine, get_db
 from ticket_service import ticket_service
+from email_service import email_service
 from auth import (
     authenticate_user,
     create_access_token,
@@ -385,6 +386,10 @@ def create_ticket(
     # Generar código de ticket
     ticket_code = ticket_service.generate_ticket_code(ticket.user_id, ticket.event_id)
 
+    # Generar URL única y PIN
+    unique_url = ticket_service.generate_unique_url()
+    access_pin = ticket_service.generate_pin()
+
     # Generar QR code
     qr_path = ticket_service.generate_qr_code(
         ticket_code=ticket_code,
@@ -398,7 +403,9 @@ def create_ticket(
         ticket_code=ticket_code,
         user_id=ticket.user_id,
         event_id=ticket.event_id,
-        qr_path=qr_path
+        qr_path=qr_path,
+        unique_url=unique_url,
+        access_pin=access_pin
     )
     db.add(db_ticket)
     db.commit()
@@ -562,6 +569,42 @@ def get_ticket_qr_base64(
     )
 
     return {"qr_code": qr_base64}
+
+
+@app.post("/tickets/{ticket_id}/send-email")
+def send_ticket_email(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Enviar ticket por correo electrónico al usuario"""
+    ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+
+    user = db.query(models.User).filter(models.User.id == ticket.user_id).first()
+    event = db.query(models.Event).filter(models.Event.id == ticket.event_id).first()
+
+    # Construir URL completa del ticket
+    ticket_url = f"http://127.0.0.1:8000/ticket/{ticket.unique_url}"
+
+    # Enviar correo
+    success = email_service.send_ticket_email(
+        to_email=user.email,
+        user_name=user.name,
+        event_name=event.name,
+        event_date=event.event_date,
+        event_location=event.location,
+        event_description=event.description or "",
+        ticket_url=ticket_url,
+        access_pin=ticket.access_pin,
+        companions=ticket.companions
+    )
+
+    if success:
+        return {"message": "Correo enviado exitosamente", "email": user.email}
+    else:
+        raise HTTPException(status_code=500, detail="Error al enviar el correo")
 
 
 # ========== ENDPOINTS DE VALIDACIÓN ==========
@@ -826,6 +869,84 @@ async def admin_validate(
     return templates.TemplateResponse("validate.html", {
         "request": request
     })
+
+
+# ========== ENDPOINTS PÚBLICOS DE TICKETS ==========
+
+@app.get("/ticket/{unique_url}", response_class=HTMLResponse)
+async def view_ticket_pin_form(
+    unique_url: str,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Muestra el formulario para ingresar PIN del ticket"""
+    # Verificar que el ticket existe
+    ticket = db.query(models.Ticket).filter(
+        models.Ticket.unique_url == unique_url
+    ).first()
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+
+    return templates.TemplateResponse("ticket_pin.html", {
+        "request": request,
+        "unique_url": unique_url
+    })
+
+
+@app.post("/ticket/{unique_url}/verify")
+async def verify_ticket_pin(
+    unique_url: str,
+    pin: str,
+    db: Session = Depends(get_db)
+):
+    """Verifica el PIN y retorna la información del ticket"""
+    ticket = db.query(models.Ticket).filter(
+        models.Ticket.unique_url == unique_url
+    ).first()
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+
+    if ticket.access_pin != pin:
+        raise HTTPException(status_code=401, detail="PIN incorrecto")
+
+    # Obtener información del usuario y evento
+    user = db.query(models.User).filter(models.User.id == ticket.user_id).first()
+    event = db.query(models.Event).filter(models.Event.id == ticket.event_id).first()
+
+    # Generar QR en base64
+    qr_base64 = ticket_service.generate_qr_base64(
+        ticket_code=ticket.ticket_code,
+        user_name=user.name,
+        event_name=event.name,
+        event_date=event.event_date.isoformat()
+    )
+
+    return {
+        "valid": True,
+        "ticket": {
+            "ticket_code": ticket.ticket_code,
+            "qr_code": qr_base64,
+            "is_used": ticket.is_used,
+            "used_at": ticket.used_at.isoformat() if ticket.used_at else None,
+            "companions": ticket.companions,
+            "created_at": ticket.created_at.isoformat()
+        },
+        "user": {
+            "name": user.name,
+            "email": user.email,
+            "phone": user.phone,
+            "identification": user.identification,
+            "university": user.university
+        },
+        "event": {
+            "name": event.name,
+            "description": event.description,
+            "location": event.location,
+            "event_date": event.event_date.isoformat()
+        }
+    }
 
 
 # ========== ENDPOINT PRINCIPAL ==========
