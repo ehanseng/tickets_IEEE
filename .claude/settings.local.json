@@ -8,7 +8,11 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(uv sync:*)"
+      "Bash(uv sync:*)",
+      "Bash(curl http://127.0.0.1:8000/login)",
+      "Bash(curl -X POST http://127.0.0.1:8000/auth/validators -H \"Content-Type: application/json\" -H \"Authorization: Bearer test\" -d \"{\"\"username\"\":\"\"test\"\",\"\"email\"\":\"\"test@test.com\"\",\"\"password\"\":\"\"test123\"\",\"\"full_name\"\":\"\"Test User\"\",\"\"role\"\":\"\"validator\"\"}\")",
+      "Bash(curl -X POST http://127.0.0.1:8000/auth/login -H \"Content-Type: application/json\" -d \"{\"\"username\"\":\"\"admin\"\",\"\"password\"\":\"\"admin123\"\"}\")",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

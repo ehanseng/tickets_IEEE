@@ -83,12 +83,16 @@ def create_validator(
 
     # Crear el validador
     hashed_password = get_password_hash(validator_data.password)
+
+    # Convertir el string role a RoleEnum
+    role_enum = models.RoleEnum.ADMIN if validator_data.role == "admin" else models.RoleEnum.VALIDATOR
+
     db_user = models.AdminUser(
         username=validator_data.username,
         email=validator_data.email,
         hashed_password=hashed_password,
         full_name=validator_data.full_name,
-        role=validator_data.role,
+        role=role_enum,
         access_start=validator_data.access_start,
         access_end=validator_data.access_end
     )
@@ -628,23 +632,37 @@ async def login_page(request: Request):
 @app.get("/admin/access", response_class=HTMLResponse)
 async def admin_access_management(
     request: Request,
-    db: Session = Depends(get_db),
-    current_user: models.AdminUser = Depends(require_admin)
+    db: Session = Depends(get_db)
 ):
     """Página de gestión de validadores (solo admin)"""
     validators = db.query(models.AdminUser).all()
+
+    # Convertir validators a formato serializable
+    validators_list = []
+    for v in validators:
+        v_dict = {
+            "id": v.id,
+            "username": v.username,
+            "email": v.email,
+            "full_name": v.full_name,
+            "role": v.role.value if v.role else None,  # Convertir enum a string
+            "is_active": v.is_active,
+            "created_at": v.created_at,
+            "access_start": v.access_start,
+            "access_end": v.access_end
+        }
+        validators_list.append(type('Validator', (), v_dict))
+
     return templates.TemplateResponse("access_management.html", {
         "request": request,
-        "current_user": current_user,
-        "validators": validators
+        "validators": validators_list
     })
 
 
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_dashboard(
     request: Request,
-    db: Session = Depends(get_db),
-    current_user: models.AdminUser = Depends(require_admin)
+    db: Session = Depends(get_db)
 ):
     """Dashboard de administración"""
     # Obtener estadísticas
@@ -676,7 +694,6 @@ async def admin_dashboard(
 
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
-        "current_user": current_user,
         "stats": stats,
         "active_events": active_events_list
     })
@@ -685,8 +702,7 @@ async def admin_dashboard(
 @app.get("/admin/users", response_class=HTMLResponse)
 async def admin_users(
     request: Request,
-    db: Session = Depends(get_db),
-    current_user: models.AdminUser = Depends(require_admin)
+    db: Session = Depends(get_db)
 ):
     """Página de gestión de usuarios"""
     users = db.query(
@@ -702,7 +718,6 @@ async def admin_users(
 
     return templates.TemplateResponse("users.html", {
         "request": request,
-        "current_user": current_user,
         "users": users_list
     })
 
@@ -710,8 +725,7 @@ async def admin_users(
 @app.get("/admin/events", response_class=HTMLResponse)
 async def admin_events(
     request: Request,
-    db: Session = Depends(get_db),
-    current_user: models.AdminUser = Depends(require_admin)
+    db: Session = Depends(get_db)
 ):
     """Página de gestión de eventos"""
     events = db.query(
@@ -727,7 +741,6 @@ async def admin_events(
 
     return templates.TemplateResponse("events.html", {
         "request": request,
-        "current_user": current_user,
         "events": events_list
     })
 
@@ -735,8 +748,7 @@ async def admin_events(
 @app.get("/admin/tickets", response_class=HTMLResponse)
 async def admin_tickets(
     request: Request,
-    db: Session = Depends(get_db),
-    current_user: models.AdminUser = Depends(require_admin)
+    db: Session = Depends(get_db)
 ):
     """Página de gestión de tickets"""
     tickets = db.query(models.Ticket).all()
@@ -755,7 +767,6 @@ async def admin_tickets(
 
     return templates.TemplateResponse("tickets.html", {
         "request": request,
-        "current_user": current_user,
         "tickets": tickets_list,
         "users": users,
         "events": events
@@ -764,13 +775,11 @@ async def admin_tickets(
 
 @app.get("/admin/validate", response_class=HTMLResponse)
 async def admin_validate(
-    request: Request,
-    current_user: models.AdminUser = Depends(require_validator)
+    request: Request
 ):
     """Página de validación de tickets"""
     return templates.TemplateResponse("validate.html", {
-        "request": request,
-        "current_user": current_user
+        "request": request
     })
 
 

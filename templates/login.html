@@ -124,13 +124,25 @@
                     // Guardar token en localStorage
                     localStorage.setItem('access_token', data.access_token);
 
+                    // Decodificar el token para obtener el rol
+                    const tokenParts = data.access_token.split('.');
+                    const payload = JSON.parse(atob(tokenParts[1]));
+                    const userRole = payload.role;
+
+                    // Guardar el rol
+                    localStorage.setItem('user_role', userRole);
+
                     // Mostrar mensaje de éxito
                     message.innerHTML = '<div class="rounded-lg border bg-green-50 px-4 py-3 text-sm text-green-900">Inicio de sesión exitoso. Redirigiendo...</div>';
                     message.classList.remove('hidden');
 
-                    // Redirigir al dashboard
+                    // Redirigir según el rol
                     setTimeout(() => {
-                        window.location.href = '/admin';
+                        if (userRole === 'validator') {
+                            window.location.href = '/admin/validate';
+                        } else {
+                            window.location.href = '/admin';
+                        }
                     }, 1000);
                 } else {
                     // Mostrar error

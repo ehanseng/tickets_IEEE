@@ -75,25 +75,36 @@
                     </svg>
                     <span class="text-xl font-semibold text-foreground">Sistema de Tickets IEEE Tadeo</span>
                 </div>
-                <div class="flex items-center space-x-1">
-                    <a href="/admin" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 {% if request.url.path == '/admin' %}bg-accent text-accent-foreground{% endif %}">
-                        Dashboard
-                    </a>
-                    <a href="/admin/users" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 {% if '/users' in request.url.path %}bg-accent text-accent-foreground{% endif %}">
-                        Usuarios
-                    </a>
-                    <a href="/admin/events" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 {% if '/events' in request.url.path %}bg-accent text-accent-foreground{% endif %}">
-                        Eventos
-                    </a>
-                    <a href="/admin/tickets" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 {% if '/tickets' in request.url.path %}bg-accent text-accent-foreground{% endif %}">
-                        Tickets
-                    </a>
-                    <a href="/admin/validate" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 {% if '/validate' in request.url.path %}bg-accent text-accent-foreground{% endif %}">
-                        Validar
-                    </a>
-                    <a href="/admin/access" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 {% if '/access' in request.url.path %}bg-accent text-accent-foreground{% endif %}">
-                        Accesos
-                    </a>
+                <div class="flex items-center space-x-1" id="navbar-menu">
+                    <!-- Menú para ADMIN -->
+                    <div id="admin-menu" class="flex items-center space-x-1" style="display: none;">
+                        <a href="/admin" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 {% if request.url.path == '/admin' %}bg-accent text-accent-foreground{% endif %}">
+                            Dashboard
+                        </a>
+                        <a href="/admin/users" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 {% if '/users' in request.url.path %}bg-accent text-accent-foreground{% endif %}">
+                            Usuarios
+                        </a>
+                        <a href="/admin/events" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 {% if '/events' in request.url.path %}bg-accent text-accent-foreground{% endif %}">
+                            Eventos
+                        </a>
+                        <a href="/admin/tickets" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 {% if '/tickets' in request.url.path %}bg-accent text-accent-foreground{% endif %}">
+                            Tickets
+                        </a>
+                        <a href="/admin/validate" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 {% if '/validate' in request.url.path %}bg-accent text-accent-foreground{% endif %}">
+                            Validar
+                        </a>
+                        <a href="/admin/access" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 {% if '/access' in request.url.path %}bg-accent text-accent-foreground{% endif %}">
+                            Accesos
+                        </a>
+                    </div>
+
+                    <!-- Menú para VALIDATOR -->
+                    <div id="validator-menu" class="flex items-center space-x-1" style="display: none;">
+                        <a href="/admin/validate" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 {% if '/validate' in request.url.path %}bg-accent text-accent-foreground{% endif %}">
+                            Validar Tickets
+                        </a>
+                    </div>
+
                     <button onclick="logout()" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-destructive hover:text-destructive-foreground h-9 px-4 py-2">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
@@ -123,28 +134,48 @@
         const originalFetch = window.fetch;
         window.fetch = function(...args) {
             const token = localStorage.getItem('access_token');
-            if (token && args[1]) {
-                args[1].headers = {
-                    ...args[1].headers,
-                    'Authorization': `Bearer ${token}`
-                };
-            } else if (token) {
-                args[1] = {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
+            if (token) {
+                // Si hay argumentos de configuración
+                if (args[1]) {
+                    // Crear headers si no existen
+                    if (!args[1].headers) {
+                        args[1].headers = {};
                     }
-                };
+                    // Agregar Authorization header
+                    args[1].headers['Authorization'] = `Bearer ${token}`;
+                } else {
+                    // Crear objeto de configuración si no existe
+                    args[1] = {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    };
+                }
             }
             return originalFetch.apply(this, args);
         };
 
-        // Verificar autenticación al cargar la página
+        // Verificar autenticación y mostrar menú según rol
         window.addEventListener('DOMContentLoaded', () => {
             const token = localStorage.getItem('access_token');
+            const userRole = localStorage.getItem('user_role');
             const isLoginPage = window.location.pathname === '/login';
 
             if (!token && !isLoginPage) {
                 window.location.href = '/login';
+            }
+
+            // Mostrar menú según el rol
+            if (userRole === 'admin') {
+                document.getElementById('admin-menu').style.display = 'flex';
+            } else if (userRole === 'validator') {
+                document.getElementById('validator-menu').style.display = 'flex';
+
+                // Si el validador intenta acceder a páginas de admin, redirigir a validación
+                const restrictedPaths = ['/admin', '/admin/users', '/admin/events', '/admin/tickets', '/admin/access'];
+                if (restrictedPaths.includes(window.location.pathname)) {
+                    window.location.href = '/admin/validate';
+                }
             }
         });
     </script>
