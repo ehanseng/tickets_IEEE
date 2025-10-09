@@ -310,6 +310,51 @@ def get_event(
     return event
 
 
+@app.get("/events/{event_id}/tickets")
+def get_event_tickets(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Obtener todos los tickets de un evento con información del usuario"""
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    # Obtener tickets con información del usuario
+    tickets = db.query(
+        models.Ticket,
+        models.User
+    ).join(
+        models.User, models.Ticket.user_id == models.User.id
+    ).filter(
+        models.Ticket.event_id == event_id
+    ).all()
+
+    result = []
+    for ticket, user in tickets:
+        result.append({
+            "ticket_id": ticket.id,
+            "ticket_code": ticket.ticket_code,
+            "user_name": user.name,
+            "user_email": user.email,
+            "user_identification": user.identification,
+            "companions": ticket.companions,
+            "total_people": 1 + ticket.companions,
+            "is_used": ticket.is_used,
+            "used_at": ticket.used_at.isoformat() if ticket.used_at else None,
+            "created_at": ticket.created_at.isoformat()
+        })
+
+    return {
+        "event_id": event_id,
+        "event_name": event.name,
+        "total_tickets": len(result),
+        "tickets_used": sum(1 for t in result if t["is_used"]),
+        "tickets": result
+    }
+
+
 # ========== ENDPOINTS DE TICKETS ==========
 
 @app.post("/tickets/", response_model=schemas.TicketResponse, status_code=status.HTTP_201_CREATED)
