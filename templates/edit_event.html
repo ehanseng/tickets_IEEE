@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Evento - Sistema de Tickets{% endblock %}
+
+{% block content %}
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div class="p-6">
+        <div class="mb-6">
+            <h2 class="text-3xl font-bold tracking-tight">Editar Evento</h2>
+            <p class="text-sm text-muted-foreground mt-2">Modificar información del evento</p>
+        </div>
+
+        <form id="editEventForm" class="space-y-4 max-w-2xl">
+            <div class="space-y-2">
+                <label for="name" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Nombre del Evento *</label>
+                <input type="text" id="name" name="name" value="{{ event.name }}" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+            </div>
+
+            <div class="space-y-2">
+                <label for="description" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Descripción</label>
+                <textarea id="description" name="description" rows="3" class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">{{ event.description or '' }}</textarea>
+            </div>
+
+            <div class="space-y-2">
+                <label for="location" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Ubicación *</label>
+                <input type="text" id="location" name="location" value="{{ event.location }}" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+            </div>
+
+            <div class="space-y-2">
+                <label for="event_date" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Fecha y Hora *</label>
+                <input type="datetime-local" id="event_date" name="event_date" value="{{ event.event_date.strftime('%Y-%m-%dT%H:%M') }}" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+            </div>
+
+            <div class="space-y-2">
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" id="is_active" name="is_active" {% if event.is_active %}checked{% endif %} class="rounded border-gray-300 text-primary focus:ring-primary">
+                    <span class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Evento Activo</span>
+                </label>
+                <p class="text-xs text-muted-foreground">Los eventos inactivos no aparecerán en la lista de selección al generar tickets</p>
+            </div>
+
+            <div id="message" class="mt-4"></div>
+
+            <div class="flex items-center space-x-4 pt-4">
+                <button type="submit" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+                    Guardar Cambios
+                </button>
+                <a href="/admin/events" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('editEventForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = {
+            name: document.getElementById('name').value,
+            description: document.getElementById('description').value || null,
+            location: document.getElementById('location').value,
+            event_date: document.getElementById('event_date').value,
+            is_active: document.getElementById('is_active').checked
+        };
+
+        try {
+            const response = await fetch('/events/{{ event.id }}', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('message').innerHTML =
+                    '<div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">Evento actualizado exitosamente</div>';
+                setTimeout(() => {
+                    window.location.href = '/admin/events';
+                }, 1500);
+            } else {
+                document.getElementById('message').innerHTML =
+                    `<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error: ${data.detail}</div>`;
+            }
+        } catch (error) {
+            document.getElementById('message').innerHTML =
+                '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error al actualizar evento</div>';
+        }
+    });
+</script>
+{% endblock %}

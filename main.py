@@ -319,6 +319,35 @@ def get_event(
     return event
 
 
+@app.put("/events/{event_id}", response_model=schemas.EventResponse)
+def update_event(
+    event_id: int,
+    event_update: schemas.EventUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Actualizar un evento"""
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    # Actualizar solo los campos proporcionados
+    if event_update.name is not None:
+        event.name = event_update.name
+    if event_update.description is not None:
+        event.description = event_update.description
+    if event_update.location is not None:
+        event.location = event_update.location
+    if event_update.event_date is not None:
+        event.event_date = event_update.event_date
+    if event_update.is_active is not None:
+        event.is_active = event_update.is_active
+
+    db.commit()
+    db.refresh(event)
+    return event
+
+
 @app.get("/events/{event_id}/tickets")
 def get_event_tickets(
     event_id: int,
@@ -838,6 +867,23 @@ async def admin_events(
     return templates.TemplateResponse("events.html", {
         "request": request,
         "events": events_list
+    })
+
+
+@app.get("/admin/events/{event_id}/edit", response_class=HTMLResponse)
+async def admin_edit_event(
+    request: Request,
+    event_id: int,
+    db: Session = Depends(get_db)
+):
+    """Página para editar un evento"""
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    return templates.TemplateResponse("edit_event.html", {
+        "request": request,
+        "event": event
     })
 
 

@@ -43,6 +43,15 @@ class EventCreate(BaseModel):
     event_date: datetime
 
 
+class EventUpdate(BaseModel):
+    """Schema para actualizar evento"""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    location: Optional[str] = None
+    event_date: Optional[datetime] = None
+    is_active: Optional[bool] = None
+
+
 class EventResponse(BaseModel):
     """Schema para respuesta de evento"""
     id: int
