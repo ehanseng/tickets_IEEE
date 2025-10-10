@@ -1,0 +1,21 @@
+# Configuración para Apache (si aplica)
+# Redirigir todo el tráfico a la aplicación Python
+
+# Si tienes Passenger (común en cPanel)
+PassengerEnabled on
+PassengerAppRoot /home/ieeetadeo2006/ticket
+PassengerAppType wsgi
+PassengerStartupFile passenger_wsgi.py
+
+# Si no funciona Passenger, intentar con CGI
+# AddHandler cgi-script .py
+# Options +ExecCGI
+
+# Prevenir listado de directorios
+Options -Indexes
+
+# Página de inicio por defecto (si la aplicación no responde)
+DirectoryIndex index.html index.php
+
+# Configuración de Python (si el servidor lo soporta)
+AddHandler application/x-httpd-python .py
