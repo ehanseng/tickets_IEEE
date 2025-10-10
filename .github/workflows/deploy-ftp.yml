@@ -1,0 +1,50 @@
+name: Deploy via FTP to ticket.ieeetadeo.org
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  ftp-deploy:
+    name: FTP Deploy to Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🚀 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 📤 Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
+          server-dir: ${{ secrets.FTP_REMOTE_PATH }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/tickets.db
+            **/qr_codes/*.png
+            **/__pycache__/
+            **/*.pyc
+            **/.env
+            **/deploy_package.zip
+            **/ssh_commands.txt
+            **/explore_server.ps1
+            **/deploy_to_server.sh
+            **/upload_via_sftp.ps1
+            **/MANUAL_DEPLOYMENT_STEPS.md
+            **/GITHUB_DEPLOY_COMMANDS.md
+            **/upload_via_sftp.ps1
+            **/.github/**
+
+      - name: ✅ Deployment Complete
+        run: |
+          echo "🎉 Deployment completed successfully!"
+          echo "📦 Files uploaded to ticket.ieeetadeo.org"
+          echo "🌐 Application URL: https://ticket.ieeetadeo.org"
