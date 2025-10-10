@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  tickets-ieee:
+    build: .
+    container_name: tickets-ieee
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./tickets.db:/app/tickets.db
+      - ./qr_codes:/app/qr_codes
+    env_file:
+      - .env
+    environment:
+      - BASE_URL=${BASE_URL:-http://localhost:8000}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

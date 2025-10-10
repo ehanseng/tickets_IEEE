@@ -21,3 +21,11 @@ wheels/
 
 # QR Codes (generated files)
 qr_codes/*.png
+
+# Logs
+logs/
+*.log
+
+# Backups
+backups/
+backup_*.db

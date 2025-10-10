@@ -1,0 +1,13 @@
+# Archivo de requisitos para compatibilidad con pip
+# Este proyecto usa uv como gestor de paquetes principal
+# Para instalar: uv sync
+
+fastapi>=0.115.12
+uvicorn[standard]>=0.34.0
+sqlalchemy>=2.0.37
+pydantic>=2.10.6
+python-multipart>=0.0.20
+qrcode[pil]>=8.0
+pillow>=11.1.0
+jinja2>=3.1.5
+cryptography>=44.0.0
