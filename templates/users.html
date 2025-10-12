@@ -125,23 +125,22 @@
                             </span>
                         </td>
                         <td class="p-4 align-middle">
-                            {% set birthday_status = user.get('birthday_status', {}) %}
-                            {% if birthday_status and birthday_status.get('days_until') is not none %}
-                                {% if birthday_status.get('is_today') %}
+                            {% if user.birthday_status and user.birthday_status['days_until'] is not none %}
+                                {% if user.birthday_status['is_today'] %}
                                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-semibold">
-                                        🎂 ¡Hoy!
+                                        Hoy
                                     </span>
-                                {% elif birthday_status.get('is_this_week') %}
+                                {% elif user.birthday_status['is_this_week'] %}
                                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-yellow-100 text-yellow-800 text-xs font-semibold">
-                                        🎈 En {{ birthday_status.get('days_until') }} día{% if birthday_status.get('days_until') != 1 %}s{% endif %}
+                                        En {{ user.birthday_status['days_until'] }} día{% if user.birthday_status['days_until'] != 1 %}s{% endif %}
                                     </span>
-                                {% elif birthday_status.get('is_this_month') %}
+                                {% elif user.birthday_status['is_this_month'] %}
                                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-100 text-blue-800 text-xs font-medium">
-                                        En {{ birthday_status.get('days_until') }} días
+                                        En {{ user.birthday_status['days_until'] }} días
                                     </span>
                                 {% else %}
                                     <span class="text-muted-foreground text-xs">
-                                        {{ birthday_status.get('date_str') }}
+                                        {{ user.birthday_status['date_str'] }}
                                     </span>
                                 {% endif %}
                             {% else %}
