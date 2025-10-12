@@ -55,6 +55,7 @@ class UserCreate(BaseModel):
     """Schema para crear usuario"""
     name: str
     email: EmailStr
+    country_code: Optional[str] = "+57"
     phone: Optional[str] = None
     identification: Optional[str] = None  # Cédula
     university_id: Optional[int] = None  # ID de universidad
@@ -65,6 +66,7 @@ class UserUpdate(BaseModel):
     """Schema para actualizar usuario"""
     name: Optional[str] = None
     email: Optional[EmailStr] = None
+    country_code: Optional[str] = None
     phone: Optional[str] = None
     identification: Optional[str] = None
     university_id: Optional[int] = None
@@ -77,6 +79,7 @@ class UserResponse(BaseModel):
     id: int
     name: str
     email: str
+    country_code: Optional[str]
     phone: Optional[str]
     identification: Optional[str]
     university_id: Optional[int]

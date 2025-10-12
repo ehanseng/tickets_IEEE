@@ -57,6 +57,7 @@ class UserPasswordReset(BaseModel):
 class UserUpdateProfile(BaseModel):
     """Actualización de perfil de usuario"""
     name: Optional[str] = None
+    country_code: Optional[str] = None
     phone: Optional[str] = None
     identification: Optional[str] = None
     birthday: Optional[datetime] = None
@@ -295,6 +296,9 @@ async def update_profile(
     """Actualiza el perfil del usuario autenticado"""
     if profile_data.name is not None:
         current_user.name = profile_data.name
+
+    if profile_data.country_code is not None:
+        current_user.country_code = profile_data.country_code
 
     if profile_data.phone is not None:
         current_user.phone = profile_data.phone

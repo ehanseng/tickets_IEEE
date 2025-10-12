@@ -149,7 +149,7 @@
                         </td>
                         <td class="p-4 align-middle text-right">
                             <div class="flex justify-end gap-1">
-                                <button onclick="editUser({{ user.id }}, '{{ user.name }}', '{{ user.email }}', '{{ user.identification or '' }}', {{ user.university_id or 'null' }}, '{{ user.phone or '' }}', {{ 'true' if user.is_ieee_member else 'false' }}, '{{ user.birthday.strftime('%Y-%m-%d') if user.birthday else '' }}')" class="inline-flex items-center justify-center rounded text-xs font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-7 w-7" title="Editar usuario">
+                                <button onclick="editUser({{ user.id }}, '{{ user.name }}', '{{ user.email }}', '{{ user.identification or '' }}', {{ user.university_id or 'null' }}, '{{ user.country_code or '+57' }}', '{{ user.phone or '' }}', {{ 'true' if user.is_ieee_member else 'false' }}, '{{ user.birthday.strftime('%Y-%m-%d') if user.birthday else '' }}')" class="inline-flex items-center justify-center rounded text-xs font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-7 w-7" title="Editar usuario">
                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                     </svg>
@@ -217,7 +217,31 @@
 
                 <div class="space-y-2">
                     <label for="phone" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Teléfono</label>
-                    <input type="tel" id="phone" name="phone" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                    <div class="flex gap-2">
+                        <select id="country_code" name="country_code" class="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                            <option value="+57">🇨🇴 +57</option>
+                            <option value="+1">🇺🇸 +1</option>
+                            <option value="+52">🇲🇽 +52</option>
+                            <option value="+54">🇦🇷 +54</option>
+                            <option value="+55">🇧🇷 +55</option>
+                            <option value="+56">🇨🇱 +56</option>
+                            <option value="+51">🇵🇪 +51</option>
+                            <option value="+58">🇻🇪 +58</option>
+                            <option value="+593">🇪🇨 +593</option>
+                            <option value="+591">🇧🇴 +591</option>
+                            <option value="+595">🇵🇾 +595</option>
+                            <option value="+598">🇺🇾 +598</option>
+                            <option value="+507">🇵🇦 +507</option>
+                            <option value="+506">🇨🇷 +506</option>
+                            <option value="+503">🇸🇻 +503</option>
+                            <option value="+502">🇬🇹 +502</option>
+                            <option value="+504">🇭🇳 +504</option>
+                            <option value="+505">🇳🇮 +505</option>
+                            <option value="+53">🇨🇺 +53</option>
+                            <option value="+34">🇪🇸 +34</option>
+                        </select>
+                        <input type="tel" id="phone" name="phone" placeholder="3001234567" class="flex h-10 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                    </div>
                 </div>
 
                 <div class="space-y-2">
@@ -349,6 +373,7 @@
             email: document.getElementById('email').value,
             identification: document.getElementById('identification').value || null,
             university_id: universityId ? parseInt(universityId) : null,
+            country_code: document.getElementById('country_code').value || '+57',
             phone: document.getElementById('phone').value || null,
             birthday: birthdayValue ? birthdayValue + 'T00:00:00' : null,
             is_ieee_member: document.getElementById('is_ieee_member').checked
@@ -396,7 +421,7 @@
         }
     });
 
-    function editUser(id, name, email, identification, universityId, phone, isIeeeMember, birthday) {
+    function editUser(id, name, email, identification, universityId, countryCode, phone, isIeeeMember, birthday) {
         isEditMode = true;
         document.getElementById('modalTitle').textContent = 'Editar Usuario';
         document.getElementById('submitBtn').textContent = 'Actualizar Usuario';
@@ -407,6 +432,7 @@
         document.getElementById('email').value = email;
         document.getElementById('identification').value = identification || '';
         document.getElementById('university_id').value = universityId || '';
+        document.getElementById('country_code').value = countryCode || '+57';
         document.getElementById('phone').value = phone || '';
         document.getElementById('birthday').value = birthday || '';
         document.getElementById('is_ieee_member').checked = isIeeeMember;

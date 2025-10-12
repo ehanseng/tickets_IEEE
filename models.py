@@ -34,6 +34,7 @@ class User(Base):
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=True)  # Contraseña hasheada
+    country_code = Column(String, nullable=True, default="+57")  # Código de país para teléfono
     phone = Column(String, nullable=True)
     identification = Column(String, nullable=True)  # Cédula
     birthday = Column(DateTime, nullable=True)  # Fecha de cumpleaños

@@ -391,6 +391,8 @@ def update_user(
         user.name = user_update.name
     if user_update.email is not None:
         user.email = user_update.email
+    if user_update.country_code is not None:
+        user.country_code = user_update.country_code
     if user_update.phone is not None:
         user.phone = user_update.phone
     if user_update.identification is not None:
@@ -1016,6 +1018,7 @@ async def admin_users(
             'id': user.id,
             'name': user.name,
             'email': user.email,
+            'country_code': user.country_code,
             'phone': user.phone,
             'identification': user.identification,
             'university_id': user.university_id,

@@ -64,7 +64,31 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                            <input type="tel" id="phone" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <div class="flex gap-2">
+                                <select id="country_code" class="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    <option value="+57">🇨🇴 +57</option>
+                                    <option value="+1">🇺🇸 +1</option>
+                                    <option value="+52">🇲🇽 +52</option>
+                                    <option value="+54">🇦🇷 +54</option>
+                                    <option value="+55">🇧🇷 +55</option>
+                                    <option value="+56">🇨🇱 +56</option>
+                                    <option value="+51">🇵🇪 +51</option>
+                                    <option value="+58">🇻🇪 +58</option>
+                                    <option value="+593">🇪🇨 +593</option>
+                                    <option value="+591">🇧🇴 +591</option>
+                                    <option value="+595">🇵🇾 +595</option>
+                                    <option value="+598">🇺🇾 +598</option>
+                                    <option value="+507">🇵🇦 +507</option>
+                                    <option value="+506">🇨🇷 +506</option>
+                                    <option value="+503">🇸🇻 +503</option>
+                                    <option value="+502">🇬🇹 +502</option>
+                                    <option value="+504">🇭🇳 +504</option>
+                                    <option value="+505">🇳🇮 +505</option>
+                                    <option value="+53">🇨🇺 +53</option>
+                                    <option value="+34">🇪🇸 +34</option>
+                                </select>
+                                <input type="tel" id="phone" placeholder="3001234567" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Identificación</label>
@@ -162,6 +186,7 @@
                     document.getElementById('userName').textContent = currentProfile.name;
                     document.getElementById('name').value = currentProfile.name || '';
                     document.getElementById('email').value = currentProfile.email || '';
+                    document.getElementById('country_code').value = currentProfile.country_code || '+57';
                     document.getElementById('phone').value = currentProfile.phone || '';
                     document.getElementById('identification').value = currentProfile.identification || '';
                     if (currentProfile.birthday) {
@@ -258,6 +283,7 @@
                     },
                     body: JSON.stringify({
                         name: document.getElementById('name').value,
+                        country_code: document.getElementById('country_code').value || '+57',
                         phone: document.getElementById('phone').value || null,
                         identification: document.getElementById('identification').value || null,
                         birthday: document.getElementById('birthday').value || null,
