@@ -68,6 +68,7 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = None
     identification: Optional[str] = None
     university_id: Optional[int] = None
+    birthday: Optional[datetime] = None
     is_ieee_member: Optional[bool] = None
 
 

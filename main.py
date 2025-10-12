@@ -397,6 +397,8 @@ def update_user(
         user.identification = user_update.identification
     if user_update.university_id is not None:
         user.university_id = user_update.university_id
+    if user_update.birthday is not None:
+        user.birthday = user_update.birthday
     if user_update.is_ieee_member is not None:
         user.is_ieee_member = user_update.is_ieee_member
 
