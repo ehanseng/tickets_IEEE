@@ -17,7 +17,7 @@
             {% for event in events %}
             <div class="rounded-lg border bg-white">
                 <!-- Header del evento (clickeable) -->
-                <div class="p-4 cursor-pointer hover:bg-slate-50 transition-colors" onclick="toggleEventDetails({{ event.id }})">
+                <div class="p-2 cursor-pointer hover:bg-slate-50 transition-colors" onclick="toggleEventDetails({{ event.id }})">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-4">
                             <svg class="w-5 h-5 text-muted-foreground transition-transform duration-200" id="icon-{{ event.id }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,7 +44,7 @@
 
                 <!-- Detalles del evento (desplegable) -->
                 <div id="details-{{ event.id }}" class="hidden border-t">
-                    <div class="p-4">
+                    <div class="p-2">
                         <div class="flex items-center justify-between mb-4">
                             <h4 class="font-semibold">Tickets del Evento</h4>
                             <div id="stats-{{ event.id }}" class="text-sm text-muted-foreground">

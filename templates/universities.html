@@ -337,19 +337,19 @@
 
             return `
                 <tr class="border-b transition-colors hover:bg-muted/50">
-                    <td class="p-4 align-middle">${uni.id}</td>
-                    <td class="p-4 align-middle font-medium">${uni.name}</td>
-                    <td class="p-4 align-middle text-muted-foreground">${uni.short_name || '-'}</td>
-                    <td class="p-4 align-middle text-center">
+                    <td class="p-2 align-middle">${uni.id}</td>
+                    <td class="p-2 align-middle font-medium">${uni.name}</td>
+                    <td class="p-2 align-middle text-muted-foreground">${uni.short_name || '-'}</td>
+                    <td class="p-2 align-middle text-center">
                         ${ieeeButton}
                     </td>
-                    <td class="p-4 align-middle text-center">
+                    <td class="p-2 align-middle text-center">
                         ${uni.is_active
                             ? '<span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-green-100 text-green-800 border-green-200">Activa</span>'
                             : '<span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-gray-100 text-gray-800 border-gray-200">Inactiva</span>'
                         }
                     </td>
-                    <td class="p-4 align-middle text-right">
+                    <td class="p-2 align-middle text-right">
                         <div class="flex justify-end gap-1">
                             <button onclick='editUniversity(${JSON.stringify(uni)})' class="inline-flex items-center justify-center rounded text-xs font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-7 w-7" title="Editar universidad">
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -87,10 +87,10 @@
                 <tbody class="[&_tr:last-child]:border-0" id="ticketsTableBody">
                     {% for ticket in tickets %}
                     <tr class="border-b transition-colors hover:bg-muted/50" data-event-id="{{ ticket.event_id if ticket.event_id is defined else '' }}">
-                        <td class="p-4 align-middle">{{ ticket.id }}</td>
-                        <td class="p-4 align-middle font-medium">{{ ticket.user_name }}</td>
-                        <td class="p-4 align-middle">{{ ticket.event_name }}</td>
-                        <td class="p-4 align-middle">
+                        <td class="p-2 align-middle">{{ ticket.id }}</td>
+                        <td class="p-2 align-middle font-medium">{{ ticket.user_name }}</td>
+                        <td class="p-2 align-middle">{{ ticket.event_name }}</td>
+                        <td class="p-2 align-middle">
                             {% set comp = ticket.companions if ticket.companions is defined else 0 %}
                             <div class="flex items-center gap-2">
                                 <strong class="text-primary">{{ 1 + comp }}</strong>
@@ -108,7 +108,7 @@
                                 </span>
                             </div>
                         </td>
-                        <td class="p-4 align-middle">
+                        <td class="p-2 align-middle">
                             <div class="flex items-center gap-2">
                                 <code class="relative rounded bg-muted px-2 py-1 font-mono text-xs max-w-[120px] overflow-hidden text-ellipsis"
                                       title="{{ ticket.ticket_code }}">
@@ -122,8 +122,8 @@
                                 </button>
                             </div>
                         </td>
-                        <td class="p-4 align-middle">{{ ticket.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
-                        <td class="p-4 align-middle">
+                        <td class="p-2 align-middle">{{ ticket.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td class="p-2 align-middle">
                             {% if ticket.is_used %}
                             <span class="inline-flex items-center rounded-full border border-transparent bg-red-100 text-red-700 px-2.5 py-0.5 text-xs font-semibold" id="status-{{ ticket.id }}">Usado</span>
                             <br>
@@ -132,7 +132,7 @@
                             <span class="inline-flex items-center rounded-full border border-transparent bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-xs font-semibold" id="status-{{ ticket.id }}">Disponible</span>
                             {% endif %}
                         </td>
-                        <td class="p-4 align-middle">
+                        <td class="p-2 align-middle">
                             <div class="flex flex-wrap gap-1">
                                 <button class="inline-flex items-center justify-center rounded text-xs font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-7 w-7" title="Ver ticket"
                                         onclick="viewTicket({{ ticket.id }}, '{{ ticket.ticket_code }}')">
