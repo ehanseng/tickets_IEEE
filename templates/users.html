@@ -17,6 +17,27 @@
                 Registrar Usuario
             </button>
         </div>
+
+        <!-- Barra de búsqueda y filtros -->
+        <div class="mt-4 flex gap-4 items-center">
+            <div class="flex-1 relative">
+                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Buscar por nombre, email, cédula o universidad..."
+                    class="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    onkeyup="filterUsers()"
+                >
+            </div>
+            <select id="ieeeFilter" onchange="filterUsers()" class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <option value="all">Todos los usuarios</option>
+                <option value="ieee">Solo miembros IEEE</option>
+                <option value="non-ieee">Solo no miembros IEEE</option>
+            </select>
+        </div>
     </div>
     <div class="p-6 pt-0">
         {% if users %}
@@ -24,24 +45,71 @@
             <table class="w-full caption-bottom text-sm">
                 <thead class="[&_tr]:border-b">
                     <tr class="border-b transition-colors hover:bg-muted/50">
-                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">ID</th>
-                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nombre</th>
-                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(0)">
+                            <div class="flex items-center gap-1">
+                                ID
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                </svg>
+                            </div>
+                        </th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(1)">
+                            <div class="flex items-center gap-1">
+                                Nombre
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                </svg>
+                            </div>
+                        </th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(2)">
+                            <div class="flex items-center gap-1">
+                                Email
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                </svg>
+                            </div>
+                        </th>
                         <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Cédula</th>
-                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Universidad</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(4)">
+                            <div class="flex items-center gap-1">
+                                Universidad
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                </svg>
+                            </div>
+                        </th>
+                        <th class="h-12 px-4 text-center align-middle font-medium text-muted-foreground">IEEE</th>
                         <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Teléfono</th>
-                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Tickets</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(7)">
+                            <div class="flex items-center gap-1">
+                                Tickets
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                </svg>
+                            </div>
+                        </th>
                         <th class="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="[&_tr:last-child]:border-0">
+                <tbody class="[&_tr:last-child]:border-0" id="usersTableBody">
                     {% for user in users %}
                     <tr class="border-b transition-colors hover:bg-muted/50">
                         <td class="p-4 align-middle">{{ user.id }}</td>
                         <td class="p-4 align-middle font-medium">{{ user.name }}</td>
                         <td class="p-4 align-middle">{{ user.email }}</td>
                         <td class="p-4 align-middle text-muted-foreground">{{ user.identification or '-' }}</td>
-                        <td class="p-4 align-middle text-muted-foreground">{{ user.university or '-' }}</td>
+                        <td class="p-4 align-middle text-muted-foreground" title="{{ user.university.name if user.university else '' }}">
+                            {{ user.university.short_name if user.university and user.university.short_name else (user.university.name if user.university else '-') }}
+                        </td>
+                        <td class="p-4 align-middle text-center">
+                            {% if user.is_ieee_member %}
+                            <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800 border-blue-200">
+                                ✓
+                            </span>
+                            {% else %}
+                            <span class="text-muted-foreground">-</span>
+                            {% endif %}
+                        </td>
                         <td class="p-4 align-middle text-muted-foreground">{{ user.phone or '-' }}</td>
                         <td class="p-4 align-middle">
                             <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary text-primary-foreground">
@@ -49,12 +117,16 @@
                             </span>
                         </td>
                         <td class="p-4 align-middle text-right">
-                            <div class="flex justify-end gap-2">
-                                <button onclick="editUser({{ user.id }}, '{{ user.name }}', '{{ user.email }}', '{{ user.identification or '' }}', '{{ user.university or '' }}', '{{ user.phone or '' }}')" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3">
-                                    Editar
+                            <div class="flex justify-end gap-1">
+                                <button onclick="editUser({{ user.id }}, '{{ user.name }}', '{{ user.email }}', '{{ user.identification or '' }}', {{ user.university_id or 'null' }}, '{{ user.phone or '' }}', {{ 'true' if user.is_ieee_member else 'false' }})" class="inline-flex items-center justify-center rounded text-xs font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-7 w-7" title="Editar usuario">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
                                 </button>
-                                <button onclick="deleteUser({{ user.id }}, '{{ user.name }}', {{ user.ticket_count }})" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-destructive text-destructive-foreground hover:bg-destructive/90 h-8 px-3">
-                                    Borrar
+                                <button onclick="deleteUser({{ user.id }}, '{{ user.name }}', {{ user.ticket_count }})" class="inline-flex items-center justify-center rounded text-xs font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 bg-destructive text-destructive-foreground hover:bg-destructive/90 h-7 w-7" title="Eliminar usuario">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
                                 </button>
                             </div>
                         </td>
@@ -79,7 +151,7 @@
     <div class="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div class="flex flex-col space-y-1.5 p-6 border-b">
             <div class="flex items-center justify-between">
-                <h3 class="text-lg font-semibold leading-none tracking-tight">Registrar Nuevo Usuario</h3>
+                <h3 id="modalTitle" class="text-lg font-semibold leading-none tracking-tight">Registrar Nuevo Usuario</h3>
                 <button onclick="closeModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -89,6 +161,7 @@
         </div>
         <div class="p-6">
             <form id="userForm" class="space-y-4">
+                <input type="hidden" id="userId" name="userId">
                 <div class="space-y-2">
                     <label for="name" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Nombre Completo *</label>
                     <input type="text" id="name" name="name" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
@@ -105,8 +178,10 @@
                 </div>
 
                 <div class="space-y-2">
-                    <label for="university" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Universidad</label>
-                    <input type="text" id="university" name="university" placeholder="Ej: Universidad Tadeo Lozano" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                    <label for="university_id" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Universidad</label>
+                    <select id="university_id" name="university_id" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <option value="">Seleccione una universidad</option>
+                    </select>
                 </div>
 
                 <div class="space-y-2">
@@ -114,79 +189,356 @@
                     <input type="tel" id="phone" name="phone" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
                 </div>
 
-                <button type="submit" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full">
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" id="is_ieee_member" name="is_ieee_member" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <label for="is_ieee_member" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Miembro activo de IEEE
+                    </label>
+                </div>
+
+                <button type="submit" id="submitBtn" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full">
                     Registrar Usuario
                 </button>
             </form>
-
-            <div id="message" class="mt-4"></div>
         </div>
     </div>
 </div>
+
+<!-- Notificación flotante para mensajes -->
+<div id="notification" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] w-11/12 max-w-md shadow-lg rounded-lg transition-all duration-300"></div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+    let isEditMode = false;
+    let universities = [];
+
+    // Cargar universidades al iniciar
+    async function loadUniversities() {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/universities/', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                universities = await response.json();
+                populateUniversitySelect();
+            }
+        } catch (error) {
+            console.error('Error al cargar universidades:', error);
+        }
+    }
+
+    function populateUniversitySelect() {
+        const select = document.getElementById('university_id');
+        const currentValue = select.value;
+
+        // Limpiar opciones existentes excepto la primera
+        select.innerHTML = '<option value="">Seleccione una universidad</option>';
+
+        // Agregar universidades
+        universities.forEach(uni => {
+            const option = document.createElement('option');
+            option.value = uni.id;
+            option.textContent = uni.name;
+            select.appendChild(option);
+        });
+
+        // Restaurar valor si existía
+        if (currentValue) {
+            select.value = currentValue;
+        }
+    }
+
+    // Cargar universidades al cargar la página
+    window.addEventListener('DOMContentLoaded', loadUniversities);
+
+    // Función para mostrar notificación flotante
+    function showNotification(message, type = 'success') {
+        const notification = document.getElementById('notification');
+        const bgColor = type === 'success' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200';
+        const textColor = type === 'success' ? 'text-green-900' : 'text-red-900';
+
+        notification.innerHTML = `
+            <div class="border ${bgColor} px-4 py-3 ${textColor} flex items-center justify-between">
+                <span class="font-medium">${message}</span>
+                <button onclick="hideNotification()" class="ml-4 text-current opacity-70 hover:opacity-100">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+
+        notification.classList.remove('hidden');
+
+        // Auto-ocultar después de 3 segundos
+        setTimeout(() => {
+            hideNotification();
+        }, 3000);
+    }
+
+    function hideNotification() {
+        const notification = document.getElementById('notification');
+        notification.classList.add('hidden');
+    }
+
     function openModal() {
+        isEditMode = false;
+        document.getElementById('modalTitle').textContent = 'Registrar Nuevo Usuario';
+        document.getElementById('submitBtn').textContent = 'Registrar Usuario';
         document.getElementById('userModal').classList.remove('hidden');
     }
 
     function closeModal() {
         document.getElementById('userModal').classList.add('hidden');
         document.getElementById('userForm').reset();
-        document.getElementById('message').innerHTML = '';
+        document.getElementById('userId').value = '';
+        isEditMode = false;
     }
 
     document.getElementById('userForm').addEventListener('submit', async (e) => {
         e.preventDefault();
 
+        const userId = document.getElementById('userId').value;
+        const token = localStorage.getItem('access_token');
+        const universityId = document.getElementById('university_id').value;
         const formData = {
             name: document.getElementById('name').value,
             email: document.getElementById('email').value,
             identification: document.getElementById('identification').value || null,
-            university: document.getElementById('university').value || null,
-            phone: document.getElementById('phone').value || null
+            university_id: universityId ? parseInt(universityId) : null,
+            phone: document.getElementById('phone').value || null,
+            is_ieee_member: document.getElementById('is_ieee_member').checked
         };
 
         try {
-            const response = await fetch('/users/', {
-                method: 'POST',
+            let response;
+            if (isEditMode && userId) {
+                // Actualizar usuario existente
+                response = await fetch(`/users/${userId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+            } else {
+                // Crear nuevo usuario
+                response = await fetch('/users/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+            }
+
+            const data = await response.json();
+
+            if (response.ok) {
+                const successMessage = isEditMode ? '✓ Usuario actualizado exitosamente' : '✓ Usuario registrado exitosamente';
+                showNotification(successMessage, 'success');
+                closeModal();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showNotification(`Error: ${data.detail}`, 'error');
+            }
+        } catch (error) {
+            const errorMessage = isEditMode ? 'Error al actualizar usuario' : 'Error al registrar usuario';
+            showNotification(errorMessage, 'error');
+        }
+    });
+
+    function editUser(id, name, email, identification, universityId, phone, isIeeeMember) {
+        isEditMode = true;
+        document.getElementById('modalTitle').textContent = 'Editar Usuario';
+        document.getElementById('submitBtn').textContent = 'Actualizar Usuario';
+
+        // Llenar el formulario con los datos del usuario
+        document.getElementById('userId').value = id;
+        document.getElementById('name').value = name;
+        document.getElementById('email').value = email;
+        document.getElementById('identification').value = identification || '';
+        document.getElementById('university_id').value = universityId || '';
+        document.getElementById('phone').value = phone || '';
+        document.getElementById('is_ieee_member').checked = isIeeeMember;
+
+        // Abrir el modal
+        document.getElementById('userModal').classList.remove('hidden');
+    }
+
+    async function deleteUser(id, name, ticketCount) {
+        if (ticketCount > 0) {
+            showNotification(`No se puede eliminar "${name}" porque tiene ${ticketCount} tickets asociados`, 'error');
+            return;
+        }
+
+        if (!confirm(`¿Estás seguro de que quieres eliminar al usuario "${name}"?`)) {
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`/users/${id}`, {
+                method: 'DELETE',
                 headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData)
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
             });
 
             const data = await response.json();
 
             if (response.ok) {
-                document.getElementById('message').innerHTML =
-                    '<div class="rounded-lg border bg-green-50 px-4 py-3 text-sm text-green-900">Usuario registrado exitosamente</div>';
+                showNotification('✓ Usuario eliminado exitosamente', 'success');
                 setTimeout(() => {
                     window.location.reload();
                 }, 1500);
             } else {
-                document.getElementById('message').innerHTML =
-                    `<div class="rounded-lg border bg-red-50 px-4 py-3 text-sm text-red-900">Error: ${data.detail}</div>`;
+                showNotification(`Error: ${data.detail}`, 'error');
             }
         } catch (error) {
-            document.getElementById('message').innerHTML =
-                '<div class="rounded-lg border bg-red-50 px-4 py-3 text-sm text-red-900">Error al registrar usuario</div>';
+            showNotification('Error al eliminar usuario', 'error');
         }
-    });
-
-    function editUser(id, name, email, identification, university, phone) {
-        alert('Función de edición en desarrollo');
     }
 
-    function deleteUser(id, name, ticketCount) {
-        if (ticketCount > 0) {
-            alert(`No se puede eliminar el usuario "${name}" porque tiene ${ticketCount} tickets asociados.`);
-            return;
+    // Función de búsqueda y filtrado
+    function filterUsers() {
+        const searchInput = document.getElementById('searchInput').value.toLowerCase();
+        const ieeeFilter = document.getElementById('ieeeFilter').value;
+        const tbody = document.getElementById('usersTableBody');
+        const rows = tbody.getElementsByTagName('tr');
+
+        let visibleCount = 0;
+
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+
+            // Saltar el mensaje de "no resultados" si existe
+            if (row.id === 'noResultsMessage') continue;
+
+            const cells = row.getElementsByTagName('td');
+
+            if (cells.length === 0) continue;
+
+            // Obtener texto de las columnas relevantes con verificación
+            const id = cells[0] ? cells[0].textContent.toLowerCase() : '';
+            const name = cells[1] ? cells[1].textContent.toLowerCase() : '';
+            const email = cells[2] ? cells[2].textContent.toLowerCase() : '';
+            const identification = cells[3] ? cells[3].textContent.toLowerCase() : '';
+            const university = cells[4] ? cells[4].textContent.toLowerCase() : '';
+            const phone = cells[6] ? cells[6].textContent.toLowerCase() : '';
+
+            // Verificar si es miembro IEEE (buscar el span con checkmark)
+            const ieeeCell = cells[5];
+            const isIeeeMember = ieeeCell ? ieeeCell.innerHTML.includes('✓') : false;
+
+            // Filtrar por texto de búsqueda
+            const matchesSearch = searchInput === '' ||
+                name.includes(searchInput) ||
+                email.includes(searchInput) ||
+                identification.includes(searchInput) ||
+                university.includes(searchInput) ||
+                phone.includes(searchInput) ||
+                id.includes(searchInput);
+
+            // Filtrar por estado IEEE
+            const matchesIeeeFilter =
+                ieeeFilter === 'all' ||
+                (ieeeFilter === 'ieee' && isIeeeMember) ||
+                (ieeeFilter === 'non-ieee' && !isIeeeMember);
+
+            // Mostrar u ocultar fila
+            if (matchesSearch && matchesIeeeFilter) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
         }
-        if (confirm(`¿Estás seguro de que quieres eliminar al usuario "${name}"?`)) {
-            alert('Función de eliminación en desarrollo');
+
+        // Mostrar mensaje si no hay resultados
+        showFilterMessage(visibleCount);
+    }
+
+    function showFilterMessage(count) {
+        const tbody = document.getElementById('usersTableBody');
+        let messageRow = document.getElementById('noResultsMessage');
+
+        if (count === 0) {
+            // Si no hay resultados y no existe el mensaje, crearlo
+            if (!messageRow) {
+                messageRow = document.createElement('tr');
+                messageRow.id = 'noResultsMessage';
+                messageRow.innerHTML = `
+                    <td colspan="9" class="p-8 text-center text-muted-foreground">
+                        <svg class="mx-auto h-12 w-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        No se encontraron usuarios que coincidan con tu búsqueda
+                    </td>
+                `;
+                tbody.appendChild(messageRow);
+            }
+        } else {
+            // Si hay resultados, eliminar el mensaje si existe
+            if (messageRow) {
+                messageRow.parentNode.removeChild(messageRow);
+            }
         }
+    }
+
+    // Función de ordenamiento
+    let sortDirection = {};
+
+    function sortTable(columnIndex) {
+        const tbody = document.getElementById('usersTableBody');
+        const rows = Array.from(tbody.getElementsByTagName('tr')).filter(row =>
+            row.id !== 'noResultsMessage' && row.style.display !== 'none'
+        );
+
+        // Determinar dirección de ordenamiento
+        if (!sortDirection[columnIndex]) {
+            sortDirection[columnIndex] = 'asc';
+        } else {
+            sortDirection[columnIndex] = sortDirection[columnIndex] === 'asc' ? 'desc' : 'asc';
+        }
+
+        const direction = sortDirection[columnIndex];
+
+        rows.sort((a, b) => {
+            const cellA = a.getElementsByTagName('td')[columnIndex];
+            const cellB = b.getElementsByTagName('td')[columnIndex];
+
+            let valueA = cellA.textContent.trim();
+            let valueB = cellB.textContent.trim();
+
+            // Para columnas numéricas (ID y Tickets)
+            if (columnIndex === 0 || columnIndex === 7) {
+                valueA = parseInt(valueA) || 0;
+                valueB = parseInt(valueB) || 0;
+            }
+
+            // Comparación
+            if (valueA < valueB) {
+                return direction === 'asc' ? -1 : 1;
+            }
+            if (valueA > valueB) {
+                return direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+
+        // Reordenar las filas en el DOM
+        rows.forEach(row => tbody.appendChild(row));
     }
 </script>
 {% endblock %}

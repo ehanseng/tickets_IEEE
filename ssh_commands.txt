@@ -1,0 +1,22 @@
+Comandos para ejecutar manualmente en el servidor
+===================================================
+
+1. Conectarse:
+   ssh svrvpsefjkcv@72.167.151.233
+   Contraseña: OzsO$n63ddME
+
+2. Explorar estructura:
+   pwd
+   ls -la
+   ls -la ~ | grep -E 'public_html|www|domains|httpdocs|htdocs'
+   find ~ -maxdepth 3 -type d -name '*ieeetadeo*' 2>/dev/null
+   find ~ -maxdepth 3 -type d -name 'ticket' 2>/dev/null
+
+3. Verificar software instalado:
+   which python3
+   python3 --version
+   which nginx
+   which git
+   sudo -l
+
+4. Copiar y pegar los resultados aquí para continuar

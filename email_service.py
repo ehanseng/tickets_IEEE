@@ -31,6 +31,64 @@ class EmailService:
         else:
             print("AVISO - SMTP no configurado - Los correos se simularan")
 
+    def send_email(
+        self,
+        to_email: str,
+        subject: str,
+        html_content: str,
+        text_content: Optional[str] = None
+    ) -> bool:
+        """
+        Envía un correo genérico con contenido HTML
+
+        Args:
+            to_email: Email del destinatario
+            subject: Asunto del correo
+            html_content: Contenido HTML del correo
+            text_content: Contenido de texto plano (opcional)
+
+        Returns:
+            bool: True si el correo se envió correctamente, False en caso contrario
+        """
+        try:
+            # Crear mensaje
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = f'{self.from_name} <{self.from_email}>'
+            msg['To'] = to_email
+
+            # Si no hay texto plano, crear uno simple del HTML
+            if not text_content:
+                # Crear versión simple quitando etiquetas HTML básicas
+                import re
+                text_content = re.sub('<[^<]+?>', '', html_content)
+
+            # Adjuntar partes
+            part1 = MIMEText(text_content, 'plain', 'utf-8')
+            part2 = MIMEText(html_content, 'html', 'utf-8')
+
+            msg.attach(part1)
+            msg.attach(part2)
+
+            # Enviar correo
+            if not self.smtp_user or not self.smtp_password:
+                print("⚠️  SMTP no configurado - El correo NO se enviará")
+                print(f"📧 Correo simulado enviado a: {to_email}")
+                print(f"📬 Asunto: {subject}")
+                return True  # Retornar True en desarrollo para no bloquear
+
+            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                server.starttls()
+                server.login(self.smtp_user, self.smtp_password)
+                server.send_message(msg)
+
+            print(f"[OK] Correo enviado exitosamente a {to_email}")
+            return True
+
+        except Exception as e:
+            print(f"[ERROR] Error al enviar correo: {str(e)}")
+            return False
+
     def send_ticket_email(
         self,
         to_email: str,
@@ -271,17 +329,174 @@ Este correo fue generado automáticamente por el Sistema de Tickets IEEE Tadeo.
                 server.login(self.smtp_user, self.smtp_password)
                 server.send_message(msg)
 
-            print(f"✅ Correo enviado exitosamente a {to_email}")
+            print(f"[OK] Correo enviado exitosamente a {to_email}")
             return True
 
         except Exception as e:
-            print(f"❌ Error al enviar correo: {str(e)}")
+            print(f"[ERROR] Error al enviar correo: {str(e)}")
             # En desarrollo, imprimir la información pero no fallar
             print(f"📧 Información del ticket:")
             print(f"   Email: {to_email}")
             print(f"   PIN: {access_pin}")
             print(f"   URL: {ticket_url}")
             return False
+
+    def send_birthday_email(self, to_email: str, user_name: str) -> bool:
+        """
+        Envía un correo de felicitación de cumpleaños
+
+        Args:
+            to_email: Email del destinatario
+            user_name: Nombre del usuario
+
+        Returns:
+            bool: True si el correo se envió correctamente, False en caso contrario
+        """
+        subject = f"¡Feliz Cumpleaños {user_name}! 🎉 - IEEE Tadeo"
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {{
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    margin: 0;
+                    padding: 20px;
+                }}
+                .container {{
+                    max-width: 600px;
+                    margin: 0 auto;
+                    background: white;
+                    border-radius: 16px;
+                    overflow: hidden;
+                    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                }}
+                .header {{
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 40px 30px;
+                    text-align: center;
+                }}
+                .header h1 {{
+                    margin: 0;
+                    font-size: 32px;
+                    font-weight: 700;
+                }}
+                .emoji {{
+                    font-size: 60px;
+                    margin: 20px 0;
+                }}
+                .content {{
+                    padding: 40px 30px;
+                    text-align: center;
+                }}
+                .greeting {{
+                    font-size: 24px;
+                    color: #333;
+                    margin-bottom: 20px;
+                    font-weight: 600;
+                }}
+                .message {{
+                    font-size: 16px;
+                    color: #666;
+                    line-height: 1.8;
+                    margin: 20px 0;
+                }}
+                .highlight {{
+                    color: #667eea;
+                    font-weight: 600;
+                }}
+                .balloons {{
+                    font-size: 48px;
+                    margin: 20px 0;
+                    animation: float 3s ease-in-out infinite;
+                }}
+                @keyframes float {{
+                    0%, 100% {{ transform: translateY(0px); }}
+                    50% {{ transform: translateY(-20px); }}
+                }}
+                .footer {{
+                    background: #f8f9fa;
+                    padding: 30px;
+                    text-align: center;
+                    border-top: 1px solid #e9ecef;
+                }}
+                .footer p {{
+                    margin: 5px 0;
+                    color: #6c757d;
+                    font-size: 14px;
+                }}
+                .signature {{
+                    margin-top: 20px;
+                    font-weight: 600;
+                    color: #495057;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <div class="emoji">🎂</div>
+                    <h1>¡Feliz Cumpleaños!</h1>
+                </div>
+
+                <div class="content">
+                    <div class="balloons">🎈🎉🎊🎁</div>
+
+                    <p class="greeting">¡Hola {user_name}!</p>
+
+                    <p class="message">
+                        En este día tan especial, todo el equipo de <span class="highlight">IEEE Tadeo</span>
+                        quiere desearte un <strong>muy feliz cumpleaños</strong>.
+                    </p>
+
+                    <p class="message">
+                        Esperamos que este nuevo año de vida esté lleno de alegría, éxito y
+                        grandes experiencias. Gracias por ser parte de nuestra comunidad.
+                    </p>
+
+                    <p class="message">
+                        ¡Que este día esté lleno de momentos inolvidables! 🎉
+                    </p>
+
+                    <div class="balloons">🥳🎈🎊</div>
+                </div>
+
+                <div class="footer">
+                    <p class="signature">Con cariño,</p>
+                    <p class="signature">El equipo de IEEE Tadeo</p>
+                    <p style="margin-top: 20px;">
+                        Sistema de Tickets - IEEE Tadeo<br>
+                        <a href="https://ticket.ieeetadeo.org" style="color: #667eea;">ticket.ieeetadeo.org</a>
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        text_content = f"""
+¡Feliz Cumpleaños {user_name}! 🎉
+
+En este día tan especial, todo el equipo de IEEE Tadeo quiere desearte un muy feliz cumpleaños.
+
+Esperamos que este nuevo año de vida esté lleno de alegría, éxito y grandes experiencias.
+Gracias por ser parte de nuestra comunidad.
+
+¡Que este día esté lleno de momentos inolvidables!
+
+Con cariño,
+El equipo de IEEE Tadeo
+
+Sistema de Tickets - IEEE Tadeo
+https://ticket.ieeetadeo.org
+        """
+
+        return self.send_email(to_email, subject, html_content, text_content)
 
 
 # Instancia global del servicio

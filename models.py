@@ -5,6 +5,27 @@ from database import Base
 import enum
 
 
+class University(Base):
+    """Modelo de Universidad"""
+    __tablename__ = "universities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, unique=True)
+    short_name = Column(String, nullable=True)  # Nombre corto o siglas
+    is_active = Column(Boolean, default=True)
+    has_ieee_branch = Column(Boolean, default=False)  # Tiene rama IEEE
+    ieee_contact_email = Column(String, nullable=True)  # Email de contacto de la rama IEEE
+    ieee_facebook = Column(String, nullable=True)  # Facebook de la rama IEEE
+    ieee_instagram = Column(String, nullable=True)  # Instagram de la rama IEEE
+    ieee_twitter = Column(String, nullable=True)  # Twitter de la rama IEEE
+    ieee_tiktok = Column(String, nullable=True)  # TikTok de la rama IEEE
+    ieee_website = Column(String, nullable=True)  # Sitio web de la rama IEEE
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relación con usuarios
+    users = relationship("User", back_populates="university")
+
+
 class User(Base):
     """Modelo de Usuario"""
     __tablename__ = "users"
@@ -12,13 +33,19 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=True)  # Contraseña hasheada
     phone = Column(String, nullable=True)
     identification = Column(String, nullable=True)  # Cédula
-    university = Column(String, nullable=True)  # Universidad
+    birthday = Column(DateTime, nullable=True)  # Fecha de cumpleaños
+    university_id = Column(Integer, ForeignKey("universities.id"), nullable=True)  # Universidad (FK)
+    is_ieee_member = Column(Boolean, default=False)  # Miembro activo de IEEE
+    password_reset_token = Column(String, nullable=True)  # Token para recuperar contraseña
+    password_reset_expires = Column(DateTime, nullable=True)  # Expiración del token
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    # Relación con tickets
+    # Relaciones
     tickets = relationship("Ticket", back_populates="user")
+    university = relationship("University", back_populates="users")
 
 
 class Event(Base):

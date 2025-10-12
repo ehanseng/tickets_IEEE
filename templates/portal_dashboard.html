@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Portal - Sistema de Tickets IEEE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-gray-900">Mi Portal</h1>
+                <div class="flex items-center gap-4">
+                    <span id="userName" class="text-gray-600"></span>
+                    <button onclick="logout()" class="text-red-600 hover:text-red-800">
+                        Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <!-- Tabs -->
+        <div class="bg-white rounded-lg shadow-sm mb-6">
+            <div class="border-b border-gray-200">
+                <nav class="flex -mb-px">
+                    <button onclick="switchTab('tickets')" id="ticketsTab" class="tab-button active px-6 py-3 border-b-2 border-blue-500 font-medium text-blue-600">
+                        Mis Tickets
+                    </button>
+                    <button onclick="switchTab('profile')" id="profileTab" class="tab-button px-6 py-3 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                        Mi Perfil
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Tickets Tab -->
+        <div id="ticketsContent" class="tab-content">
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Mis Tickets</h2>
+                <div id="ticketsList" class="space-y-4">
+                    <p class="text-gray-500">Cargando...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Tab -->
+        <div id="profileContent" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-6">Mi Perfil</h2>
+                <form id="profileForm" class="space-y-4 max-w-2xl">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre Completo</label>
+                            <input type="text" id="name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" id="email" disabled class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                            <input type="tel" id="phone" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Identificación</label>
+                            <input type="text" id="identification" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</label>
+                            <input type="date" id="birthday" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Universidad</label>
+                            <select id="university" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="">Cargando...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 pt-4">
+                        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                            Guardar Cambios
+                        </button>
+                        <button type="button" onclick="showChangePassword()" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300">
+                            Cambiar Contraseña
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de cambio de contraseña -->
+    <div id="passwordModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Cambiar Contraseña</h2>
+            <form id="passwordForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña Actual</label>
+                    <input type="password" id="currentPassword" required class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nueva Contraseña</label>
+                    <input type="password" id="newPassword" required class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closePasswordModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg">Cancelar</button>
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notificaciones -->
+    <div id="notification" class="hidden fixed top-4 right-4 max-w-md bg-white shadow-lg rounded-lg p-4 z-50"></div>
+
+    <script>
+        // Variables globales
+        let currentProfile = {};
+        let universities = [];
+
+        // Verificar autenticación
+        const token = localStorage.getItem('user_access_token');
+        if (!token) {
+            window.location.href = '/portal/login';
+        }
+
+        // Cargar datos iniciales
+        loadProfile();
+        loadTickets();
+        loadUniversities();
+
+        // Funciones de tabs
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active', 'border-blue-500', 'text-blue-600');
+                btn.classList.add('border-transparent', 'text-gray-500');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+
+            if (tab === 'tickets') {
+                document.getElementById('ticketsTab').classList.add('active', 'border-blue-500', 'text-blue-600');
+                document.getElementById('ticketsContent').classList.remove('hidden');
+            } else {
+                document.getElementById('profileTab').classList.add('active', 'border-blue-500', 'text-blue-600');
+                document.getElementById('profileContent').classList.remove('hidden');
+            }
+        }
+
+        // Cargar perfil
+        async function loadProfile() {
+            try {
+                const response = await fetch('/portal/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    currentProfile = await response.json();
+                    document.getElementById('userName').textContent = currentProfile.name;
+                    document.getElementById('name').value = currentProfile.name || '';
+                    document.getElementById('email').value = currentProfile.email || '';
+                    document.getElementById('phone').value = currentProfile.phone || '';
+                    document.getElementById('identification').value = currentProfile.identification || '';
+                    if (currentProfile.birthday) {
+                        // Convertir la fecha al formato YYYY-MM-DD para el input date
+                        const date = new Date(currentProfile.birthday);
+                        document.getElementById('birthday').value = date.toISOString().split('T')[0];
+                    }
+                    if (currentProfile.university_id) {
+                        document.getElementById('university').value = currentProfile.university_id;
+                    }
+                }
+            } catch (error) {
+                console.error('Error cargando perfil:', error);
+            }
+        }
+
+        // Cargar tickets
+        async function loadTickets() {
+            try {
+                const response = await fetch('/portal/tickets', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const tickets = await response.json();
+                    renderTickets(tickets);
+                }
+            } catch (error) {
+                console.error('Error cargando tickets:', error);
+            }
+        }
+
+        // Renderizar tickets
+        function renderTickets(tickets) {
+            const container = document.getElementById('ticketsList');
+            if (tickets.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">No tienes tickets registrados.</p>';
+                return;
+            }
+
+            container.innerHTML = tickets.map(ticket => `
+                <div class="border rounded-lg p-4 hover:bg-gray-50">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-lg">${ticket.event_name}</h3>
+                            <p class="text-sm text-gray-600">${new Date(ticket.event_date).toLocaleString()}</p>
+                            <p class="text-sm text-gray-600">${ticket.event_location}</p>
+                            <p class="text-sm text-gray-600 mt-2">Código: <strong>${ticket.ticket_code}</strong></p>
+                            <p class="text-sm text-gray-600">Acompañantes: ${ticket.companions}</p>
+                        </div>
+                        <span class="${ticket.is_used ? 'bg-gray-100 text-gray-800' : 'bg-green-100 text-green-800'} px-3 py-1 rounded-full text-sm">
+                            ${ticket.is_used ? 'Usado' : 'Activo'}
+                        </span>
+                    </div>
+                    ${ticket.unique_url ? `
+                        <a href="/portal/ticket/${ticket.unique_url}" target="_blank" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-medium">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                            Ver Ticket Completo
+                        </a>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        // Cargar universidades
+        async function loadUniversities() {
+            try {
+                const response = await fetch('/universities/?active_only=true');
+                if (response.ok) {
+                    universities = await response.json();
+                    const select = document.getElementById('university');
+                    select.innerHTML = '<option value="">Seleccionar universidad</option>' +
+                        universities.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+                    if (currentProfile.university_id) {
+                        select.value = currentProfile.university_id;
+                    }
+                }
+            } catch (error) {
+                console.error('Error cargando universidades:', error);
+            }
+        }
+
+        // Guardar perfil
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch('/portal/profile', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: document.getElementById('name').value,
+                        phone: document.getElementById('phone').value || null,
+                        identification: document.getElementById('identification').value || null,
+                        birthday: document.getElementById('birthday').value || null,
+                        university_id: parseInt(document.getElementById('university').value) || null
+                    })
+                });
+                if (response.ok) {
+                    showNotification('Perfil actualizado exitosamente', 'success');
+                    loadProfile();
+                }
+            } catch (error) {
+                showNotification('Error al actualizar perfil', 'error');
+            }
+        });
+
+        // Cambiar contraseña
+        document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch('/portal/auth/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        current_password: document.getElementById('currentPassword').value,
+                        new_password: document.getElementById('newPassword').value
+                    })
+                });
+                if (response.ok) {
+                    showNotification('Contraseña actualizada exitosamente', 'success');
+                    closePasswordModal();
+                    document.getElementById('passwordForm').reset();
+                } else {
+                    const data = await response.json();
+                    showNotification(data.detail, 'error');
+                }
+            } catch (error) {
+                showNotification('Error al cambiar contraseña', 'error');
+            }
+        });
+
+        function showChangePassword() {
+            document.getElementById('passwordModal').classList.remove('hidden');
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').classList.add('hidden');
+        }
+
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `fixed top-4 right-4 max-w-md shadow-lg rounded-lg p-4 z-50 ${type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`;
+            notification.classList.remove('hidden');
+            setTimeout(() => notification.classList.add('hidden'), 3000);
+        }
+
+        function logout() {
+            localStorage.removeItem('user_access_token');
+            localStorage.removeItem('user_data');
+            window.location.href = '/portal/login';
+        }
+    </script>
+</body>
+</html>

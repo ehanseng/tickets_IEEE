@@ -1,0 +1,645 @@
+{% extends "base.html" %}
+
+{% block title %}Universidades - Sistema de Tickets{% endblock %}
+
+{% block content %}
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div class="flex flex-col space-y-1.5 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-2xl font-semibold leading-none tracking-tight">Gestión de Universidades</h3>
+                <p class="text-sm text-muted-foreground mt-1">Administra el catálogo de universidades del sistema</p>
+            </div>
+            <button onclick="openModal()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Agregar Universidad
+            </button>
+        </div>
+
+        <!-- Barra de búsqueda y filtros -->
+        <div class="mt-4 flex gap-4 items-center">
+            <div class="flex-1 relative">
+                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Buscar por nombre o siglas..."
+                    class="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    onkeyup="filterUniversities()"
+                >
+            </div>
+            <select id="statusFilter" onchange="filterUniversities()" class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <option value="all">Todas</option>
+                <option value="active">Solo activas</option>
+                <option value="inactive">Solo inactivas</option>
+            </select>
+        </div>
+    </div>
+    <div class="p-6 pt-0">
+        <div class="relative w-full overflow-auto">
+            <table class="w-full caption-bottom text-sm" id="universitiesTable">
+                <thead class="[&_tr]:border-b">
+                    <tr class="border-b transition-colors hover:bg-muted/50">
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(0)">
+                            <div class="flex items-center gap-1">
+                                ID
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                </svg>
+                            </div>
+                        </th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(1)">
+                            <div class="flex items-center gap-1">
+                                Nombre
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                </svg>
+                            </div>
+                        </th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(2)">
+                            <div class="flex items-center gap-1">
+                                Nombre Corto
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                </svg>
+                            </div>
+                        </th>
+                        <th class="h-12 px-4 text-center align-middle font-medium text-muted-foreground">IEEE</th>
+                        <th class="h-12 px-4 text-center align-middle font-medium text-muted-foreground">Estado</th>
+                        <th class="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="[&_tr:last-child]:border-0" id="universitiesBody">
+                    <tr>
+                        <td colspan="5" class="p-4 text-center text-muted-foreground">Cargando...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para crear/editar universidad -->
+<div id="universityModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <h3 id="modalTitle" class="text-lg font-semibold leading-none tracking-tight">Agregar Universidad</h3>
+                <button onclick="closeModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="p-6">
+            <form id="universityForm" class="space-y-4">
+                <input type="hidden" id="universityId" name="universityId">
+                <div class="space-y-2">
+                    <label for="name" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Nombre Completo *</label>
+                    <input type="text" id="name" name="name" required placeholder="Ej: Universidad Nacional de Colombia" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                </div>
+
+                <div class="space-y-2">
+                    <label for="short_name" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Nombre Corto o Siglas</label>
+                    <input type="text" id="short_name" name="short_name" placeholder="Ej: UNAL" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" id="has_ieee_branch" name="has_ieee_branch" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2" onchange="toggleIeeeFields()">
+                    <label for="has_ieee_branch" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Tiene rama IEEE
+                    </label>
+                </div>
+
+                <div id="ieeeContactFields" class="space-y-4 hidden">
+                    <div class="space-y-2">
+                        <label for="ieee_contact_email" class="text-sm font-medium leading-none text-muted-foreground">Email de contacto IEEE</label>
+                        <input type="email" id="ieee_contact_email" name="ieee_contact_email" placeholder="ejemplo@universidad.edu" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="ieee_website" class="text-sm font-medium leading-none text-muted-foreground">Sitio web IEEE</label>
+                        <input type="url" id="ieee_website" name="ieee_website" placeholder="https://..." class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="ieee_facebook" class="text-sm font-medium leading-none text-muted-foreground">Usuario Facebook</label>
+                        <input type="text" id="ieee_facebook" name="ieee_facebook" placeholder="ieeeunal" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="ieee_instagram" class="text-sm font-medium leading-none text-muted-foreground">Usuario Instagram</label>
+                        <input type="text" id="ieee_instagram" name="ieee_instagram" placeholder="ieeeunal" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="ieee_twitter" class="text-sm font-medium leading-none text-muted-foreground">Usuario Twitter/X</label>
+                        <input type="text" id="ieee_twitter" name="ieee_twitter" placeholder="IEEEUNAL" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="ieee_tiktok" class="text-sm font-medium leading-none text-muted-foreground">Usuario TikTok</label>
+                        <input type="text" id="ieee_tiktok" name="ieee_tiktok" placeholder="ieeeunal" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" id="is_active" name="is_active" checked class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <label for="is_active" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Universidad activa
+                    </label>
+                </div>
+
+                <button type="submit" id="submitBtn" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full">
+                    Guardar Universidad
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Notificación flotante para mensajes -->
+<div id="notification" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] w-11/12 max-w-md shadow-lg rounded-lg transition-all duration-300"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let isEditMode = false;
+    let universities = [];
+
+    // Función para mostrar notificación flotante
+    function showNotification(message, type = 'success') {
+        const notification = document.getElementById('notification');
+        const bgColor = type === 'success' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200';
+        const textColor = type === 'success' ? 'text-green-900' : 'text-red-900';
+
+        notification.innerHTML = `
+            <div class="border ${bgColor} px-4 py-3 ${textColor} flex items-center justify-between">
+                <span class="font-medium">${message}</span>
+                <button onclick="hideNotification()" class="ml-4 text-current opacity-70 hover:opacity-100">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+
+        notification.classList.remove('hidden');
+
+        setTimeout(() => {
+            hideNotification();
+        }, 3000);
+    }
+
+    function hideNotification() {
+        const notification = document.getElementById('notification');
+        notification.classList.add('hidden');
+    }
+
+    // Cargar universidades
+    async function loadUniversities() {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/universities/?active_only=false', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                universities = await response.json();
+                renderUniversities();
+            }
+        } catch (error) {
+            console.error('Error al cargar universidades:', error);
+            showNotification('Error al cargar universidades', 'error');
+        }
+    }
+
+    function renderUniversities() {
+        const tbody = document.getElementById('universitiesBody');
+
+        if (universities.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="p-4 text-center text-muted-foreground">No hay universidades registradas</td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = universities.map((uni, index) => {
+            // Construir detalles de contacto para el acordeón
+            let accordionContent = '';
+            if (uni.has_ieee_branch) {
+                const contactDetails = [];
+
+                if (uni.ieee_contact_email) {
+                    contactDetails.push(`
+                        <div class="flex items-center gap-2">
+                            <svg class="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                            </svg>
+                            <span class="text-sm"><strong>Email:</strong> <a href="mailto:${uni.ieee_contact_email}" class="text-primary hover:underline">${uni.ieee_contact_email}</a></span>
+                        </div>
+                    `);
+                }
+
+                if (uni.ieee_website) {
+                    contactDetails.push(`
+                        <div class="flex items-center gap-2">
+                            <svg class="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                            </svg>
+                            <span class="text-sm"><strong>Sitio web:</strong> <a href="${uni.ieee_website}" target="_blank" class="text-primary hover:underline">${uni.ieee_website}</a></span>
+                        </div>
+                    `);
+                }
+
+                if (uni.ieee_facebook) {
+                    contactDetails.push(`
+                        <div class="flex items-center gap-2">
+                            <svg class="h-4 w-4 text-muted-foreground" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                            </svg>
+                            <span class="text-sm"><strong>Facebook:</strong> <a href="https://facebook.com/${uni.ieee_facebook}" target="_blank" class="text-primary hover:underline">@${uni.ieee_facebook}</a></span>
+                        </div>
+                    `);
+                }
+
+                if (uni.ieee_instagram) {
+                    contactDetails.push(`
+                        <div class="flex items-center gap-2">
+                            <svg class="h-4 w-4 text-muted-foreground" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                            </svg>
+                            <span class="text-sm"><strong>Instagram:</strong> <a href="https://instagram.com/${uni.ieee_instagram}" target="_blank" class="text-primary hover:underline">@${uni.ieee_instagram}</a></span>
+                        </div>
+                    `);
+                }
+
+                if (uni.ieee_twitter) {
+                    contactDetails.push(`
+                        <div class="flex items-center gap-2">
+                            <svg class="h-4 w-4 text-muted-foreground" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                            </svg>
+                            <span class="text-sm"><strong>Twitter/X:</strong> <a href="https://twitter.com/${uni.ieee_twitter}" target="_blank" class="text-primary hover:underline">@${uni.ieee_twitter}</a></span>
+                        </div>
+                    `);
+                }
+
+                if (uni.ieee_tiktok) {
+                    contactDetails.push(`
+                        <div class="flex items-center gap-2">
+                            <svg class="h-4 w-4 text-muted-foreground" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/>
+                            </svg>
+                            <span class="text-sm"><strong>TikTok:</strong> <a href="https://tiktok.com/@${uni.ieee_tiktok}" target="_blank" class="text-primary hover:underline">@${uni.ieee_tiktok}</a></span>
+                        </div>
+                    `);
+                }
+
+                if (contactDetails.length > 0) {
+                    accordionContent = `
+                        <tr id="accordion-${uni.id}" class="hidden border-b bg-muted/20">
+                            <td colspan="6" class="p-4">
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <h4 class="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                                        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 10 5.293 7.707a1 1 0 010-1.414zM11 12a1 1 0 100 2h3a1 1 0 100-2h-3z"/>
+                                        </svg>
+                                        Información de contacto IEEE
+                                    </h4>
+                                    <div class="space-y-2">
+                                        ${contactDetails.join('')}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+
+            const ieeeButton = uni.has_ieee_branch && accordionContent ? `
+                <button onclick="toggleAccordion(${uni.id})" class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200 cursor-pointer">
+                    <svg id="icon-${uni.id}" class="h-3 w-3 mr-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                    ✓
+                </button>
+            ` : uni.has_ieee_branch ? '<span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800 border-blue-200">✓</span>' : '<span class="text-muted-foreground">-</span>';
+
+            return `
+                <tr class="border-b transition-colors hover:bg-muted/50">
+                    <td class="p-4 align-middle">${uni.id}</td>
+                    <td class="p-4 align-middle font-medium">${uni.name}</td>
+                    <td class="p-4 align-middle text-muted-foreground">${uni.short_name || '-'}</td>
+                    <td class="p-4 align-middle text-center">
+                        ${ieeeButton}
+                    </td>
+                    <td class="p-4 align-middle text-center">
+                        ${uni.is_active
+                            ? '<span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-green-100 text-green-800 border-green-200">Activa</span>'
+                            : '<span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-gray-100 text-gray-800 border-gray-200">Inactiva</span>'
+                        }
+                    </td>
+                    <td class="p-4 align-middle text-right">
+                        <div class="flex justify-end gap-2">
+                            <button onclick='editUniversity(${JSON.stringify(uni)})' class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3">
+                                Editar
+                            </button>
+                            <button onclick="deleteUniversity(${uni.id}, '${uni.name}')" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-destructive text-destructive-foreground hover:bg-destructive/90 h-8 px-3">
+                                Borrar
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                ${accordionContent}
+            `;
+        }).join('');
+    }
+
+    // Función para toggle del acordeón
+    function toggleAccordion(universityId) {
+        const accordion = document.getElementById(`accordion-${universityId}`);
+        const icon = document.getElementById(`icon-${universityId}`);
+
+        if (accordion.classList.contains('hidden')) {
+            accordion.classList.remove('hidden');
+            icon.style.transform = 'rotate(180deg)';
+        } else {
+            accordion.classList.add('hidden');
+            icon.style.transform = 'rotate(0deg)';
+        }
+    }
+
+    function openModal() {
+        isEditMode = false;
+        document.getElementById('modalTitle').textContent = 'Agregar Universidad';
+        document.getElementById('submitBtn').textContent = 'Guardar Universidad';
+        document.getElementById('universityForm').reset();
+        document.getElementById('is_active').checked = true;
+        document.getElementById('universityModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('universityModal').classList.add('hidden');
+        document.getElementById('universityForm').reset();
+        document.getElementById('universityId').value = '';
+        isEditMode = false;
+    }
+
+    // Función para mostrar/ocultar campos de contacto IEEE
+    function toggleIeeeFields() {
+        const hasIeeeBranch = document.getElementById('has_ieee_branch').checked;
+        const ieeeFields = document.getElementById('ieeeContactFields');
+
+        if (hasIeeeBranch) {
+            ieeeFields.classList.remove('hidden');
+        } else {
+            ieeeFields.classList.add('hidden');
+        }
+    }
+
+    document.getElementById('universityForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const universityId = document.getElementById('universityId').value;
+        const token = localStorage.getItem('access_token');
+        const formData = {
+            name: document.getElementById('name').value,
+            short_name: document.getElementById('short_name').value || null,
+            has_ieee_branch: document.getElementById('has_ieee_branch').checked,
+            ieee_contact_email: document.getElementById('ieee_contact_email').value || null,
+            ieee_website: document.getElementById('ieee_website').value || null,
+            ieee_facebook: document.getElementById('ieee_facebook').value || null,
+            ieee_instagram: document.getElementById('ieee_instagram').value || null,
+            ieee_twitter: document.getElementById('ieee_twitter').value || null,
+            ieee_tiktok: document.getElementById('ieee_tiktok').value || null,
+            is_active: document.getElementById('is_active').checked
+        };
+
+        try {
+            let response;
+            if (isEditMode && universityId) {
+                response = await fetch(`/universities/${universityId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+            } else {
+                response = await fetch('/universities/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+            }
+
+            const data = await response.json();
+
+            if (response.ok) {
+                const successMessage = isEditMode ? '✓ Universidad actualizada exitosamente' : '✓ Universidad creada exitosamente';
+                showNotification(successMessage, 'success');
+                closeModal();
+                loadUniversities();
+            } else {
+                showNotification(`Error: ${data.detail}`, 'error');
+            }
+        } catch (error) {
+            const errorMessage = isEditMode ? 'Error al actualizar universidad' : 'Error al crear universidad';
+            showNotification(errorMessage, 'error');
+        }
+    });
+
+    function editUniversity(university) {
+        isEditMode = true;
+        document.getElementById('modalTitle').textContent = 'Editar Universidad';
+        document.getElementById('submitBtn').textContent = 'Actualizar Universidad';
+
+        document.getElementById('universityId').value = university.id;
+        document.getElementById('name').value = university.name;
+        document.getElementById('short_name').value = university.short_name || '';
+        document.getElementById('has_ieee_branch').checked = university.has_ieee_branch || false;
+        document.getElementById('ieee_contact_email').value = university.ieee_contact_email || '';
+        document.getElementById('ieee_website').value = university.ieee_website || '';
+        document.getElementById('ieee_facebook').value = university.ieee_facebook || '';
+        document.getElementById('ieee_instagram').value = university.ieee_instagram || '';
+        document.getElementById('ieee_twitter').value = university.ieee_twitter || '';
+        document.getElementById('ieee_tiktok').value = university.ieee_tiktok || '';
+        document.getElementById('is_active').checked = university.is_active;
+
+        // Mostrar campos IEEE si tiene rama
+        toggleIeeeFields();
+
+        document.getElementById('universityModal').classList.remove('hidden');
+    }
+
+    async function deleteUniversity(id, name) {
+        if (!confirm(`¿Estás seguro de que quieres eliminar la universidad "${name}"?`)) {
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`/universities/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showNotification('✓ Universidad eliminada exitosamente', 'success');
+                loadUniversities();
+            } else {
+                showNotification(`Error: ${data.detail}`, 'error');
+            }
+        } catch (error) {
+            showNotification('Error al eliminar universidad', 'error');
+        }
+    }
+
+    // Cargar universidades al cargar la página
+    window.addEventListener('DOMContentLoaded', loadUniversities);
+
+    // Función de búsqueda y filtrado
+    function filterUniversities() {
+        const searchInput = document.getElementById('searchInput').value.toLowerCase();
+        const statusFilter = document.getElementById('statusFilter').value;
+        const tbody = document.getElementById('universitiesBody');
+        const rows = tbody.getElementsByTagName('tr');
+
+        let visibleCount = 0;
+
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+
+            // Saltar el mensaje de "no resultados" si existe
+            if (row.id === 'noResultsMessage') continue;
+
+            const cells = row.getElementsByTagName('td');
+
+            if (cells.length === 0) continue;
+
+            // Obtener texto de las columnas relevantes
+            const id = cells[0] ? cells[0].textContent.toLowerCase() : '';
+            const name = cells[1] ? cells[1].textContent.toLowerCase() : '';
+            const shortName = cells[2] ? cells[2].textContent.toLowerCase() : '';
+
+            // Verificar estado (buscar si tiene el badge de "Activa")
+            const statusCell = cells[3];
+            const isActive = statusCell ? statusCell.innerHTML.includes('Activa') : false;
+
+            // Filtrar por texto de búsqueda
+            const matchesSearch = searchInput === '' ||
+                name.includes(searchInput) ||
+                shortName.includes(searchInput) ||
+                id.includes(searchInput);
+
+            // Filtrar por estado
+            const matchesStatusFilter =
+                statusFilter === 'all' ||
+                (statusFilter === 'active' && isActive) ||
+                (statusFilter === 'inactive' && !isActive);
+
+            // Mostrar u ocultar fila
+            if (matchesSearch && matchesStatusFilter) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        }
+
+        // Mostrar mensaje si no hay resultados
+        showFilterMessage(visibleCount);
+    }
+
+    function showFilterMessage(count) {
+        const tbody = document.getElementById('universitiesBody');
+        let messageRow = document.getElementById('noResultsMessage');
+
+        if (count === 0) {
+            // Si no hay resultados y no existe el mensaje, crearlo
+            if (!messageRow) {
+                messageRow = document.createElement('tr');
+                messageRow.id = 'noResultsMessage';
+                messageRow.innerHTML = `
+                    <td colspan="5" class="p-8 text-center text-muted-foreground">
+                        <svg class="mx-auto h-12 w-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        No se encontraron universidades que coincidan con tu búsqueda
+                    </td>
+                `;
+                tbody.appendChild(messageRow);
+            }
+        } else {
+            // Si hay resultados, eliminar el mensaje si existe
+            if (messageRow) {
+                messageRow.parentNode.removeChild(messageRow);
+            }
+        }
+    }
+
+    // Función de ordenamiento
+    let sortDirection = {};
+
+    function sortTable(columnIndex) {
+        const tbody = document.getElementById('universitiesBody');
+        const rows = Array.from(tbody.getElementsByTagName('tr')).filter(row =>
+            row.id !== 'noResultsMessage' && row.style.display !== 'none'
+        );
+
+        // Determinar dirección de ordenamiento
+        if (!sortDirection[columnIndex]) {
+            sortDirection[columnIndex] = 'asc';
+        } else {
+            sortDirection[columnIndex] = sortDirection[columnIndex] === 'asc' ? 'desc' : 'asc';
+        }
+
+        const direction = sortDirection[columnIndex];
+
+        rows.sort((a, b) => {
+            const cellA = a.getElementsByTagName('td')[columnIndex];
+            const cellB = b.getElementsByTagName('td')[columnIndex];
+
+            let valueA = cellA ? cellA.textContent.trim() : '';
+            let valueB = cellB ? cellB.textContent.trim() : '';
+
+            // Para columna ID (numérica)
+            if (columnIndex === 0) {
+                valueA = parseInt(valueA) || 0;
+                valueB = parseInt(valueB) || 0;
+            }
+
+            // Comparación
+            if (valueA < valueB) {
+                return direction === 'asc' ? -1 : 1;
+            }
+            if (valueA > valueB) {
+                return direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+
+        // Reordenar las filas en el DOM
+        rows.forEach(row => tbody.appendChild(row));
+    }
+</script>
+{% endblock %}

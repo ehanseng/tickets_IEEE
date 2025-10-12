@@ -11,7 +11,10 @@
             Escanea el codigo QR o ingresa manualmente el codigo del ticket para validar el acceso al evento.
         </p>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Resultado de validación - Posición superior para visibilidad -->
+        <div id="validationResult"></div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
             <!-- Opción 1: Escanear QR -->
             <div class="space-y-4">
                 <h3 class="text-xl font-semibold">Escanear QR</h3>
@@ -38,8 +41,6 @@
                 </form>
             </div>
         </div>
-
-        <div id="validationResult" class="mt-8"></div>
     </div>
 </div>
 
@@ -57,30 +58,30 @@
     .validation-success {
         background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         color: white;
-        padding: 2rem;
+        padding: 1.5rem;
         border-radius: 0.75rem;
-        margin-top: 1.25rem;
+        margin-bottom: 1rem;
         animation: slideIn 0.5s ease-out;
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2), 0 4px 6px -4px rgb(0 0 0 / 0.2);
     }
 
     .validation-error {
         background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         color: white;
-        padding: 2rem;
+        padding: 1.5rem;
         border-radius: 0.75rem;
-        margin-top: 1.25rem;
+        margin-bottom: 1rem;
         animation: slideIn 0.5s ease-out;
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2), 0 4px 6px -4px rgb(0 0 0 / 0.2);
     }
 
     .validation-info {
-        background: hsl(var(--muted));
+        background: rgba(255, 255, 255, 0.2);
         padding: 1rem;
         border-radius: 0.5rem;
         margin-top: 1rem;
-        border-left: 4px solid hsl(var(--primary));
-        color: hsl(var(--foreground));
+        border-left: 4px solid white;
+        color: white;
     }
 
     @keyframes slideIn {
@@ -96,10 +97,34 @@
 
     #reader {
         position: relative;
+        max-height: 350px;
     }
 
     #reader video {
         border-radius: 0.75rem;
+        max-height: 350px;
+    }
+
+    /* Hacer el mensaje más visible en móviles */
+    @media (max-width: 768px) {
+        .validation-success h3,
+        .validation-error h3 {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .validation-success p,
+        .validation-error p {
+            font-size: 1rem;
+        }
+
+        #reader {
+            max-height: 250px;
+        }
+
+        #reader video {
+            max-height: 250px;
+        }
     }
 </style>
 {% endblock %}
@@ -235,15 +260,13 @@
 
             resultHTML = `
                 <div class="validation-success">
-                    <h3 class="text-4xl font-bold mb-4">ACCESO PERMITIDO</h3>
-                    <p class="text-xl mb-5">${data.message}</p>
+                    <h3 class="text-4xl font-bold mb-3">✓ ACCESO PERMITIDO</h3>
                     <div class="validation-info">
-                        <p class="mb-2"><strong>Usuario:</strong> ${data.user.name}</p>
-                        <p class="mb-2"><strong>Email:</strong> ${data.user.email}</p>
-                        <p class="mb-2"><strong>Evento:</strong> ${data.event.name}</p>
-                        <p class="mb-4"><strong>Ubicacion:</strong> ${data.event.location}</p>
-                        <div class="mt-4 p-4 bg-white rounded-lg border-2 border-emerald-500">
-                            <p class="text-lg font-bold text-emerald-700 mb-1">Total de personas: ${totalPeople}</p>
+                        <p class="mb-1 text-lg"><strong>${data.user.name}</strong></p>
+                        <p class="mb-1 text-sm opacity-90">${data.user.email}</p>
+                        <p class="mb-3 text-sm opacity-90"><strong>Evento:</strong> ${data.event.name}</p>
+                        <div class="mt-3 p-3 bg-white rounded-lg border-2 border-emerald-500">
+                            <p class="text-2xl font-bold text-emerald-700 mb-1">Total: ${totalPeople} persona${totalPeople !== 1 ? 's' : ''}</p>
                             <p class="text-sm text-muted-foreground">
                                 (1 titular + ${companions} acompañante${companions !== 1 ? 's' : ''})
                             </p>
@@ -257,8 +280,8 @@
         } else {
             resultHTML = `
                 <div class="validation-error">
-                    <h3 class="text-4xl font-bold mb-4">ACCESO DENEGADO</h3>
-                    <p class="text-xl">${data.message}</p>
+                    <h3 class="text-4xl font-bold mb-3">✗ ACCESO DENEGADO</h3>
+                    <p class="text-lg">${data.message}</p>
                 </div>
             `;
 

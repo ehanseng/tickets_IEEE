@@ -12,7 +12,18 @@
       "Bash(curl http://127.0.0.1:8000/login)",
       "Bash(curl -X POST http://127.0.0.1:8000/auth/validators -H \"Content-Type: application/json\" -H \"Authorization: Bearer test\" -d \"{\"\"username\"\":\"\"test\"\",\"\"email\"\":\"\"test@test.com\"\",\"\"password\"\":\"\"test123\"\",\"\"full_name\"\":\"\"Test User\"\",\"\"role\"\":\"\"validator\"\"}\")",
       "Bash(curl -X POST http://127.0.0.1:8000/auth/login -H \"Content-Type: application/json\" -d \"{\"\"username\"\":\"\"admin\"\",\"\"password\"\":\"\"admin123\"\"}\")",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git reset:*)",
+      "Bash(where lftp)",
+      "Bash(where curl)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(ping:*)",
+      "Bash(python:*)",
+      "Bash(taskkill:*)",
+      "Bash(where python)",
+      "Bash(powershell:*)",
+      "Bash(pip install:*)"
     ],
     "deny": [],
     "ask": []

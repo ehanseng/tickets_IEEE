@@ -3,13 +3,62 @@ from datetime import datetime
 from typing import Optional
 
 
+# Schemas de Universidad
+class UniversityCreate(BaseModel):
+    """Schema para crear universidad"""
+    name: str
+    short_name: Optional[str] = None
+    has_ieee_branch: bool = False
+    ieee_contact_email: Optional[str] = None
+    ieee_facebook: Optional[str] = None
+    ieee_instagram: Optional[str] = None
+    ieee_twitter: Optional[str] = None
+    ieee_tiktok: Optional[str] = None
+    ieee_website: Optional[str] = None
+
+
+class UniversityUpdate(BaseModel):
+    """Schema para actualizar universidad"""
+    name: Optional[str] = None
+    short_name: Optional[str] = None
+    is_active: Optional[bool] = None
+    has_ieee_branch: Optional[bool] = None
+    ieee_contact_email: Optional[str] = None
+    ieee_facebook: Optional[str] = None
+    ieee_instagram: Optional[str] = None
+    ieee_twitter: Optional[str] = None
+    ieee_tiktok: Optional[str] = None
+    ieee_website: Optional[str] = None
+
+
+class UniversityResponse(BaseModel):
+    """Schema para respuesta de universidad"""
+    id: int
+    name: str
+    short_name: Optional[str]
+    is_active: bool
+    has_ieee_branch: bool
+    ieee_contact_email: Optional[str]
+    ieee_facebook: Optional[str]
+    ieee_instagram: Optional[str]
+    ieee_twitter: Optional[str]
+    ieee_tiktok: Optional[str]
+    ieee_website: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Schemas de Usuario
 class UserCreate(BaseModel):
     """Schema para crear usuario"""
     name: str
     email: EmailStr
     phone: Optional[str] = None
     identification: Optional[str] = None  # Cédula
-    university: Optional[str] = None  # Universidad
+    university_id: Optional[int] = None  # ID de universidad
+    is_ieee_member: bool = False  # Miembro activo de IEEE
 
 
 class UserUpdate(BaseModel):
@@ -18,7 +67,8 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     identification: Optional[str] = None
-    university: Optional[str] = None
+    university_id: Optional[int] = None
+    is_ieee_member: Optional[bool] = None
 
 
 class UserResponse(BaseModel):
@@ -28,8 +78,10 @@ class UserResponse(BaseModel):
     email: str
     phone: Optional[str]
     identification: Optional[str]
-    university: Optional[str]
+    university_id: Optional[int]
+    is_ieee_member: bool
     created_at: datetime
+    university: Optional[UniversityResponse] = None
 
     class Config:
         from_attributes = True
