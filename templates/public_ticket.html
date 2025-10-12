@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Ticket - IEEE Tadeo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(214.3 31.8% 91.4%)",
+                        input: "hsl(214.3 31.8% 91.4%)",
+                        ring: "hsl(222.2 84% 4.9%)",
+                        background: "hsl(0 0% 100%)",
+                        foreground: "hsl(222.2 84% 4.9%)",
+                        primary: {
+                            DEFAULT: "hsl(222.2 47.4% 11.2%)",
+                            foreground: "hsl(210 40% 98%)",
+                        },
+                        secondary: {
+                            DEFAULT: "hsl(210 40% 96.1%)",
+                            foreground: "hsl(222.2 47.4% 11.2%)",
+                        },
+                        destructive: {
+                            DEFAULT: "hsl(0 84.2% 60.2%)",
+                            foreground: "hsl(210 40% 98%)",
+                        },
+                        muted: {
+                            DEFAULT: "hsl(210 40% 96.1%)",
+                            foreground: "hsl(215.4 16.3% 46.9%)",
+                        },
+                        accent: {
+                            DEFAULT: "hsl(210 40% 96.1%)",
+                            foreground: "hsl(222.2 47.4% 11.2%)",
+                        },
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50">
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-md">
+            <!-- Loader -->
+            <div id="loader" class="bg-white rounded-lg border shadow-sm p-6 text-center">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                <p class="mt-4 text-slate-600">Cargando ticket...</p>
+            </div>
+
+            <!-- Error -->
+            <div id="error" class="hidden bg-white rounded-lg border shadow-sm p-6 text-center">
+                <div class="mx-auto h-16 w-16 text-destructive mb-4 flex items-center justify-center">
+                    <svg class="h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-900 mb-2">Ticket no encontrado</h2>
+                <p class="text-slate-600">El enlace que intentas acceder no es válido o ha expirado.</p>
+            </div>
+
+            <!-- Card para mostrar ticket -->
+            <div id="ticket-card" class="hidden bg-white rounded-lg border shadow-sm p-6">
+                <div class="space-y-6">
+                    <!-- Header -->
+                    <div class="text-center border-b pb-4">
+                        <h1 class="text-2xl font-bold text-slate-900" id="event-name"></h1>
+                        <p class="text-sm text-slate-600 mt-1" id="event-location"></p>
+                        <p class="text-sm text-slate-600" id="event-date"></p>
+                    </div>
+
+                    <!-- QR Code -->
+                    <div class="flex justify-center py-4">
+                        <img id="qr-code" src="" alt="QR Code" class="w-64 h-64 border rounded-lg" />
+                    </div>
+
+                    <!-- Código del Ticket -->
+                    <div class="text-center border-t pt-4">
+                        <p class="text-sm text-slate-600 mb-1">Código del Ticket</p>
+                        <p id="ticket-code" class="text-lg font-mono font-bold text-primary break-all px-2"></p>
+                    </div>
+
+                    <!-- Usuario Info -->
+                    <div class="space-y-3 border-t pt-4">
+                        <h2 class="font-semibold text-lg text-slate-900">Información del Titular</h2>
+                        <div class="grid grid-cols-1 gap-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-slate-600">Nombre:</span>
+                                <span class="font-medium text-slate-900" id="user-name"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-600">Acompañantes:</span>
+                                <span class="font-medium text-slate-900" id="companions"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ticket Status -->
+                    <div class="border-t pt-4">
+                        <div id="ticket-status" class="text-center p-4 rounded-md"></div>
+                    </div>
+
+                    <!-- Descripción del evento -->
+                    <div id="description-section" class="hidden border-t pt-4">
+                        <h2 class="font-semibold text-sm text-slate-900 mb-2">Sobre el Evento</h2>
+                        <p class="text-sm text-slate-600" id="event-description"></p>
+                    </div>
+
+                    <!-- Footer con enlace al portal -->
+                    <div class="border-t pt-4 text-center">
+                        <a href="/portal/login" class="text-primary hover:underline text-sm">
+                            Ir al Portal de Usuarios
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Obtener unique_url de la ruta
+        const uniqueUrl = "{{ unique_url }}";
+
+        // Cargar información del ticket
+        async function loadTicket() {
+            try {
+                const response = await fetch(`/portal/api/public/ticket/${uniqueUrl}`);
+
+                if (!response.ok) {
+                    showError();
+                    return;
+                }
+
+                const ticket = await response.json();
+                displayTicket(ticket);
+            } catch (error) {
+                console.error('Error cargando ticket:', error);
+                showError();
+            }
+        }
+
+        function displayTicket(ticket) {
+            // Ocultar loader y mostrar ticket
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('ticket-card').classList.remove('hidden');
+
+            // Llenar información del evento
+            document.getElementById('event-name').textContent = ticket.event.name;
+            document.getElementById('event-location').textContent = ticket.event.location;
+            document.getElementById('event-date').textContent = new Date(ticket.event.date).toLocaleString('es-CO', {
+                dateStyle: 'full',
+                timeStyle: 'short'
+            });
+
+            // Código del ticket
+            document.getElementById('ticket-code').textContent = ticket.ticket_code;
+
+            // Información del usuario
+            document.getElementById('user-name').textContent = ticket.user_name;
+            document.getElementById('companions').textContent = ticket.companions;
+
+            // Mostrar QR Code
+            if (ticket.qr_path && ticket.ticket_code) {
+                const qrImg = document.getElementById('qr-code');
+                qrImg.src = `/api/qr/${ticket.ticket_code}`;
+
+                qrImg.onerror = function() {
+                    console.error('Error cargando QR');
+                    this.src = '';
+                    this.alt = 'Código QR no disponible';
+                    this.classList.add('hidden');
+                };
+            }
+
+            // Mostrar estado del ticket
+            const statusDiv = document.getElementById('ticket-status');
+            if (ticket.is_used) {
+                statusDiv.className = 'text-center p-4 rounded-md bg-green-50 border border-green-200';
+                statusDiv.innerHTML = `
+                    <p class="text-green-800 font-semibold">✓ Ticket Validado</p>
+                    <p class="text-sm text-green-600 mt-1">Validado el ${new Date(ticket.used_at).toLocaleString('es-CO')}</p>
+                `;
+            } else {
+                statusDiv.className = 'text-center p-4 rounded-md bg-blue-50 border border-blue-200';
+                statusDiv.innerHTML = `
+                    <p class="text-blue-800 font-semibold">Ticket Válido</p>
+                    <p class="text-sm text-blue-600 mt-1">Presenta este código QR en la entrada del evento</p>
+                `;
+            }
+
+            // Descripción del evento
+            if (ticket.event.description) {
+                document.getElementById('description-section').classList.remove('hidden');
+                document.getElementById('event-description').textContent = ticket.event.description;
+            }
+        }
+
+        function showError() {
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('error').classList.remove('hidden');
+        }
+
+        // Cargar al iniciar
+        loadTicket();
+    </script>
+</body>
+</html>
