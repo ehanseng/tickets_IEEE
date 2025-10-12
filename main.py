@@ -1020,6 +1020,7 @@ async def admin_users(
             'identification': user.identification,
             'university_id': user.university_id,
             'is_ieee_member': user.is_ieee_member,
+            'birthday': user.birthday,
             'created_at': user.created_at,
             'ticket_count': ticket_count,
             'university': university,
