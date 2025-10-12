@@ -125,27 +125,36 @@
                             </span>
                         </td>
                         <td class="p-4 align-middle">
-                            {% if user.birthday_status and user.birthday_status['days_until'] is not none %}
-                                {% if user.birthday_status['is_today'] %}
-                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-semibold">
-                                        Hoy
-                                    </span>
-                                {% elif user.birthday_status['is_this_week'] %}
-                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-yellow-100 text-yellow-800 text-xs font-semibold">
-                                        En {{ user.birthday_status['days_until'] }} día{% if user.birthday_status['days_until'] != 1 %}s{% endif %}
-                                    </span>
-                                {% elif user.birthday_status['is_this_month'] %}
-                                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-100 text-blue-800 text-xs font-medium">
-                                        En {{ user.birthday_status['days_until'] }} días
-                                    </span>
-                                {% else %}
-                                    <span class="text-muted-foreground text-xs">
-                                        {{ user.birthday_status['date_str'] }}
-                                    </span>
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1">
+                                    {% if user.birthday_status and user.birthday_status['days_until'] is not none %}
+                                        {% if user.birthday_status['is_today'] %}
+                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-semibold">
+                                                Hoy
+                                            </span>
+                                        {% elif user.birthday_status['is_this_week'] %}
+                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-yellow-100 text-yellow-800 text-xs font-semibold">
+                                                En {{ user.birthday_status['days_until'] }} día{% if user.birthday_status['days_until'] != 1 %}s{% endif %}
+                                            </span>
+                                        {% elif user.birthday_status['is_this_month'] %}
+                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-100 text-blue-800 text-xs font-medium">
+                                                En {{ user.birthday_status['days_until'] }} días
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted-foreground text-xs">
+                                                {{ user.birthday_status['date_str'] }}
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted-foreground text-xs">-</span>
+                                    {% endif %}
+                                </div>
+                                {% if user.birthday %}
+                                    <button onclick="sendBirthdayGreeting({{ user.id }}, '{{ user.name }}')" class="inline-flex items-center justify-center rounded text-xs font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:bg-green-700 h-6 w-6" title="Enviar felicitación (Email + WhatsApp)">
+                                        🎂
+                                    </button>
                                 {% endif %}
-                            {% else %}
-                                <span class="text-muted-foreground text-xs">-</span>
-                            {% endif %}
+                            </div>
                         </td>
                         <td class="p-4 align-middle text-right">
                             <div class="flex justify-end gap-1">
@@ -439,6 +448,57 @@
 
         // Abrir el modal
         document.getElementById('userModal').classList.remove('hidden');
+    }
+
+    async function sendBirthdayGreeting(userId, userName) {
+        if (!confirm(`¿Enviar felicitación de cumpleaños a ${userName}?\n\nSe enviará por Email y WhatsApp (si tiene número registrado).`)) {
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('access_token');
+            showNotification(`Enviando felicitación a ${userName}...`, 'success');
+
+            const response = await fetch(`/users/${userId}/send-birthday`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                const details = data.details;
+                let message = `Felicitación enviada a ${userName}:\n`;
+
+                if (details.email_sent) {
+                    message += '\n✓ Email enviado';
+                }
+                if (details.whatsapp_sent) {
+                    message += '\n✓ WhatsApp enviado';
+                }
+                if (details.errors && details.errors.length > 0) {
+                    message += '\n\nAvisos: ' + details.errors.join(', ');
+                }
+
+                alert(message);
+                showNotification('✓ Felicitación enviada correctamente', 'success');
+            } else {
+                const errorDetails = data.detail || data;
+                let errorMsg = `Error al enviar felicitación`;
+
+                if (errorDetails.details && errorDetails.details.errors) {
+                    errorMsg += ':\n' + errorDetails.details.errors.join('\n');
+                }
+
+                showNotification(errorMsg, 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showNotification('Error de conexión al enviar felicitación', 'error');
+        }
     }
 
     async function deleteUser(id, name, ticketCount) {

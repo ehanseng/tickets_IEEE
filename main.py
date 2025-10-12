@@ -438,6 +438,79 @@ def delete_user(
     }
 
 
+@app.post("/users/{user_id}/send-birthday")
+def send_birthday_greeting(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Enviar mensaje de cumpleaños manual (email + WhatsApp)"""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    results = {
+        "user_id": user_id,
+        "user_name": user.name,
+        "email_sent": False,
+        "whatsapp_sent": False,
+        "errors": []
+    }
+
+    # 1. Enviar email
+    try:
+        email_success = email_service.send_birthday_email(
+            to_email=user.email,
+            user_name=user.name
+        )
+        results["email_sent"] = email_success
+        if not email_success:
+            results["errors"].append("No se pudo enviar el email")
+    except Exception as e:
+        results["errors"].append(f"Error en email: {str(e)}")
+
+    # 2. Enviar WhatsApp (si tiene teléfono)
+    if user.phone and user.country_code:
+        try:
+            from whatsapp_client import send_birthday_whatsapp, WhatsAppClient
+
+            # Verificar que WhatsApp esté disponible
+            whatsapp_client = WhatsAppClient()
+            if whatsapp_client.is_ready():
+                whatsapp_success = send_birthday_whatsapp(
+                    phone=user.phone,
+                    country_code=user.country_code,
+                    user_name=user.name
+                )
+                results["whatsapp_sent"] = whatsapp_success
+                if not whatsapp_success:
+                    results["errors"].append("No se pudo enviar WhatsApp")
+            else:
+                results["errors"].append("Servicio de WhatsApp no disponible")
+
+        except Exception as e:
+            results["errors"].append(f"Error en WhatsApp: {str(e)}")
+    else:
+        results["errors"].append("Usuario sin número de teléfono")
+
+    # Determinar el resultado general
+    if results["email_sent"] or results["whatsapp_sent"]:
+        return {
+            "success": True,
+            "message": "Mensaje de cumpleaños enviado",
+            "details": results
+        }
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "success": False,
+                "message": "No se pudo enviar ningún mensaje",
+                "details": results
+            }
+        )
+
+
 # ========== ENDPOINTS DE EVENTOS ==========
 
 @app.post("/events/", response_model=schemas.EventResponse, status_code=status.HTTP_201_CREATED)
