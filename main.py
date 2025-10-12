@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi import FastAPI, Depends, HTTPException, status, Request, File, UploadFile, Form
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -1199,6 +1199,138 @@ async def admin_validate(
     return templates.TemplateResponse("validate.html", {
         "request": request
     })
+
+
+@app.get("/admin/messages", response_class=HTMLResponse)
+async def admin_messages(
+    request: Request
+):
+    """Página de envío de mensajes masivos"""
+    return templates.TemplateResponse("messages.html", {
+        "request": request
+    })
+
+
+@app.post("/messages/bulk-send")
+async def bulk_send_messages(
+    user_ids: str = Form(...),
+    subject: str = Form(...),
+    message: str = Form(...),
+    link: str = Form(""),
+    link_text: str = Form(""),
+    send_email: str = Form("false"),
+    send_whatsapp: str = Form("false"),
+    image: UploadFile = File(None),
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Enviar mensajes masivos a usuarios seleccionados"""
+    import json
+    import shutil
+    from pathlib import Path
+
+    # Parsear IDs de usuarios
+    try:
+        user_id_list = json.loads(user_ids)
+    except:
+        raise HTTPException(status_code=400, detail="Formato de IDs inválido")
+
+    # Convertir booleanos
+    send_email_bool = send_email.lower() == "true"
+    send_whatsapp_bool = send_whatsapp.lower() == "true"
+
+    if not send_email_bool and not send_whatsapp_bool:
+        raise HTTPException(status_code=400, detail="Debes seleccionar al menos un canal de envío")
+
+    # Guardar imagen si fue proporcionada
+    image_path = None
+    if image and image.filename:
+        # Crear directorio para imágenes de mensajes si no existe
+        upload_dir = Path("static/message_images")
+        upload_dir.mkdir(parents=True, exist_ok=True)
+
+        # Guardar archivo
+        file_extension = Path(image.filename).suffix
+        image_filename = f"msg_{datetime.now().strftime('%Y%m%d_%H%M%S')}{file_extension}"
+        image_path = upload_dir / image_filename
+
+        with image_path.open("wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+
+        # Convertir a URL relativa
+        image_url = f"/static/message_images/{image_filename}"
+    else:
+        image_url = None
+
+    # Obtener usuarios
+    users = db.query(models.User).filter(models.User.id.in_(user_id_list)).all()
+
+    if not users:
+        raise HTTPException(status_code=404, detail="No se encontraron usuarios")
+
+    sent_count = 0
+    failed_count = 0
+    errors = []
+
+    for user in users:
+        # Personalizar mensaje con el nombre del usuario
+        display_name = user.nick if user.nick else user.name.split()[0]
+        personalized_message = message.replace("{nombre}", display_name)
+
+        # Enviar por email
+        if send_email_bool:
+            try:
+                success = email_service.send_bulk_message(
+                    to_email=user.email,
+                    user_name=display_name,
+                    subject=subject,
+                    message=personalized_message,
+                    link=link if link else None,
+                    link_text=link_text if link_text else None,
+                    image_url=image_url
+                )
+                if success:
+                    sent_count += 1
+                else:
+                    failed_count += 1
+                    errors.append(f"Email fallido para {user.email}")
+            except Exception as e:
+                failed_count += 1
+                errors.append(f"Error email {user.email}: {str(e)}")
+
+        # Enviar por WhatsApp
+        if send_whatsapp_bool and user.phone and user.country_code:
+            try:
+                from whatsapp_client import send_bulk_whatsapp, WhatsAppClient
+
+                whatsapp_client = WhatsAppClient()
+                if whatsapp_client.is_ready():
+                    success = send_bulk_whatsapp(
+                        phone=user.phone,
+                        country_code=user.country_code,
+                        user_name=display_name,
+                        subject=subject,
+                        message=personalized_message,
+                        link=link if link else None
+                    )
+                    if success:
+                        sent_count += 1
+                    else:
+                        failed_count += 1
+                        errors.append(f"WhatsApp fallido para {user.phone}")
+                else:
+                    errors.append(f"WhatsApp no disponible para {user.name}")
+            except Exception as e:
+                failed_count += 1
+                errors.append(f"Error WhatsApp {user.phone}: {str(e)}")
+
+    return {
+        "success": True,
+        "sent_count": sent_count,
+        "failed_count": failed_count,
+        "total_users": len(users),
+        "errors": errors if errors else None
+    }
 
 
 # ========== ENDPOINTS PÚBLICOS DE TICKETS ==========

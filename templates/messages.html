@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+
+{% block title %}Mensajes Masivos - Sistema de Tickets{% endblock %}
+
+{% block content %}
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div class="flex flex-col space-y-1.5 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-2xl font-semibold leading-none tracking-tight">Envío de Mensajes Masivos</h3>
+                <p class="text-sm text-muted-foreground mt-1">Envía mensajes personalizados a múltiples usuarios por Email y/o WhatsApp</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="p-6 pt-0">
+        <form id="messageForm" class="space-y-6">
+            <!-- Sección 1: Selección de destinatarios -->
+            <div class="rounded-lg border p-4">
+                <h4 class="font-semibold mb-4 flex items-center gap-2">
+                    <svg class="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    1. Selecciona los destinatarios
+                </h4>
+
+                <div class="space-y-4">
+                    <!-- Filtros rápidos -->
+                    <div class="flex gap-2 flex-wrap">
+                        <button type="button" onclick="selectAllUsers()" class="inline-flex items-center justify-center rounded-md text-xs font-medium border border-input bg-background hover:bg-accent h-8 px-3">
+                            Seleccionar todos
+                        </button>
+                        <button type="button" onclick="selectNone()" class="inline-flex items-center justify-center rounded-md text-xs font-medium border border-input bg-background hover:bg-accent h-8 px-3">
+                            Deseleccionar todos
+                        </button>
+                        <button type="button" onclick="selectIeeeMembers()" class="inline-flex items-center justify-center rounded-md text-xs font-medium border border-input bg-background hover:bg-accent h-8 px-3">
+                            Solo miembros IEEE
+                        </button>
+                        <button type="button" onclick="selectWithPhone()" class="inline-flex items-center justify-center rounded-md text-xs font-medium border border-input bg-background hover:bg-accent h-8 px-3">
+                            Solo con teléfono
+                        </button>
+                    </div>
+
+                    <!-- Buscador -->
+                    <div class="relative">
+                        <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        <input
+                            type="text"
+                            id="userSearch"
+                            placeholder="Buscar usuarios por nombre o email..."
+                            class="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm"
+                            onkeyup="filterUsers()"
+                        >
+                    </div>
+
+                    <!-- Lista de usuarios con checkboxes -->
+                    <div class="border rounded-md max-h-64 overflow-y-auto" id="usersList">
+                        <div class="p-4 text-center text-muted-foreground">Cargando usuarios...</div>
+                    </div>
+
+                    <!-- Contador de seleccionados -->
+                    <div class="text-sm text-muted-foreground">
+                        <span id="selectedCount">0</span> usuario(s) seleccionado(s)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección 2: Canal de envío -->
+            <div class="rounded-lg border p-4">
+                <h4 class="font-semibold mb-4 flex items-center gap-2">
+                    <svg class="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                    </svg>
+                    2. Selecciona el canal de envío
+                </h4>
+
+                <div class="flex gap-4">
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="sendEmail" name="sendEmail" checked class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-ring">
+                        <span class="text-sm font-medium flex items-center gap-2">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                            </svg>
+                            Enviar por Email
+                        </span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="sendWhatsapp" name="sendWhatsapp" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-ring">
+                        <span class="text-sm font-medium flex items-center gap-2">
+                            <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                            </svg>
+                            Enviar por WhatsApp
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Sección 3: Contenido del mensaje -->
+            <div class="rounded-lg border p-4">
+                <h4 class="font-semibold mb-4 flex items-center gap-2">
+                    <svg class="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                    3. Escribe tu mensaje
+                </h4>
+
+                <div class="space-y-4">
+                    <div class="space-y-2">
+                        <label for="subject" class="text-sm font-medium">Asunto del mensaje *</label>
+                        <input
+                            type="text"
+                            id="subject"
+                            name="subject"
+                            required
+                            placeholder="Ej: Invitación al próximo evento de IEEE"
+                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="message" class="text-sm font-medium">Mensaje *</label>
+                        <textarea
+                            id="message"
+                            name="message"
+                            required
+                            rows="6"
+                            placeholder="Escribe tu mensaje aquí... Puedes usar {nombre} para personalizar con el nombre del usuario."
+                            class="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        ></textarea>
+                        <p class="text-xs text-muted-foreground">💡 Usa <code class="bg-muted px-1 rounded">{nombre}</code> para incluir el nombre del destinatario</p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="link" class="text-sm font-medium">Enlace (opcional)</label>
+                        <input
+                            type="url"
+                            id="link"
+                            name="link"
+                            placeholder="https://ejemplo.com"
+                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="linkText" class="text-sm font-medium">Texto del enlace (opcional)</label>
+                        <input
+                            type="text"
+                            id="linkText"
+                            name="linkText"
+                            placeholder="Ej: Ver más información"
+                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="image" class="text-sm font-medium">Imagen (opcional)</label>
+                        <input
+                            type="file"
+                            id="image"
+                            name="image"
+                            accept="image/*"
+                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
+                        >
+                        <p class="text-xs text-muted-foreground">Formatos aceptados: JPG, PNG, GIF (máx. 5MB)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <div class="flex gap-3 justify-end">
+                <button type="button" onclick="previewMessage()" class="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input bg-background hover:bg-accent h-10 px-4">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    Vista previa
+                </button>
+                <button type="submit" id="sendBtn" class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                    </svg>
+                    Enviar mensajes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal de vista previa -->
+<div id="previewModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between p-6 border-b">
+            <h3 class="text-lg font-semibold">Vista previa del mensaje</h3>
+            <button onclick="closePreview()" class="rounded-sm opacity-70 hover:opacity-100">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6" id="previewContent">
+            <!-- Contenido de la vista previa -->
+        </div>
+    </div>
+</div>
+
+<!-- Notificación flotante -->
+<div id="notification" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] w-11/12 max-w-md shadow-lg rounded-lg transition-all duration-300"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let allUsers = [];
+    let selectedUserIds = new Set();
+
+    // Cargar usuarios al iniciar
+    async function loadUsers() {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/users/', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                allUsers = await response.json();
+                renderUsers();
+            }
+        } catch (error) {
+            console.error('Error al cargar usuarios:', error);
+            showNotification('Error al cargar usuarios', 'error');
+        }
+    }
+
+    function renderUsers() {
+        const container = document.getElementById('usersList');
+
+        if (allUsers.length === 0) {
+            container.innerHTML = '<div class="p-4 text-center text-muted-foreground">No hay usuarios disponibles</div>';
+            return;
+        }
+
+        container.innerHTML = allUsers.map(user => `
+            <div class="p-2 border-b hover:bg-muted/50 user-item" data-user-id="${user.id}" data-name="${user.name.toLowerCase()}" data-email="${user.email.toLowerCase()}" data-ieee="${user.is_ieee_member}" data-phone="${user.phone ? 'yes' : 'no'}">
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="checkbox" class="user-checkbox h-4 w-4 rounded border-gray-300 text-primary" value="${user.id}" onchange="updateSelection()">
+                    <div class="flex-1">
+                        <div class="text-sm font-medium">${user.name}</div>
+                        <div class="text-xs text-muted-foreground flex items-center gap-2">
+                            <span>${user.email}</span>
+                            ${user.is_ieee_member ? '<span class="inline-flex items-center rounded-full border px-1.5 py-0.5 text-xs bg-blue-100 text-blue-800">IEEE</span>' : ''}
+                            ${user.phone ? '<span class="inline-flex items-center rounded-full border px-1.5 py-0.5 text-xs bg-green-100 text-green-800">📱</span>' : ''}
+                        </div>
+                    </div>
+                </label>
+            </div>
+        `).join('');
+    }
+
+    function updateSelection() {
+        selectedUserIds.clear();
+        document.querySelectorAll('.user-checkbox:checked').forEach(cb => {
+            selectedUserIds.add(parseInt(cb.value));
+        });
+        document.getElementById('selectedCount').textContent = selectedUserIds.size;
+    }
+
+    function selectAllUsers() {
+        document.querySelectorAll('.user-checkbox').forEach(cb => {
+            if (cb.closest('.user-item').style.display !== 'none') {
+                cb.checked = true;
+            }
+        });
+        updateSelection();
+    }
+
+    function selectNone() {
+        document.querySelectorAll('.user-checkbox').forEach(cb => cb.checked = false);
+        updateSelection();
+    }
+
+    function selectIeeeMembers() {
+        selectNone();
+        document.querySelectorAll('.user-item[data-ieee="true"]').forEach(item => {
+            if (item.style.display !== 'none') {
+                item.querySelector('.user-checkbox').checked = true;
+            }
+        });
+        updateSelection();
+    }
+
+    function selectWithPhone() {
+        selectNone();
+        document.querySelectorAll('.user-item[data-phone="yes"]').forEach(item => {
+            if (item.style.display !== 'none') {
+                item.querySelector('.user-checkbox').checked = true;
+            }
+        });
+        updateSelection();
+    }
+
+    function filterUsers() {
+        const search = document.getElementById('userSearch').value.toLowerCase();
+        document.querySelectorAll('.user-item').forEach(item => {
+            const name = item.dataset.name;
+            const email = item.dataset.email;
+            const matches = name.includes(search) || email.includes(search);
+            item.style.display = matches ? '' : 'none';
+        });
+    }
+
+    function previewMessage() {
+        const subject = document.getElementById('subject').value;
+        const message = document.getElementById('message').value;
+        const link = document.getElementById('link').value;
+        const linkText = document.getElementById('linkText').value;
+
+        if (!subject || !message) {
+            showNotification('Por favor completa el asunto y mensaje', 'error');
+            return;
+        }
+
+        const previewHtml = `
+            <div class="bg-white rounded-lg border">
+                <div class="bg-primary text-white p-4">
+                    <h2 class="text-xl font-bold">${subject}</h2>
+                </div>
+                <div class="p-6">
+                    <p class="whitespace-pre-wrap">${message.replace('{nombre}', '<strong class="text-primary">[Nombre del Usuario]</strong>')}</p>
+                    ${link ? `<div class="mt-4"><a href="${link}" class="inline-flex items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 h-10 px-4 py-2">${linkText || 'Ver más'}</a></div>` : ''}
+                </div>
+                <div class="p-4 bg-muted text-sm text-muted-foreground border-t">
+                    <p>IEEE Student Branch UTADEO</p>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('previewContent').innerHTML = previewHtml;
+        document.getElementById('previewModal').classList.remove('hidden');
+    }
+
+    function closePreview() {
+        document.getElementById('previewModal').classList.add('hidden');
+    }
+
+    // Enviar mensajes
+    document.getElementById('messageForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        if (selectedUserIds.size === 0) {
+            showNotification('Debes seleccionar al menos un destinatario', 'error');
+            return;
+        }
+
+        const sendEmail = document.getElementById('sendEmail').checked;
+        const sendWhatsapp = document.getElementById('sendWhatsapp').checked;
+
+        if (!sendEmail && !sendWhatsapp) {
+            showNotification('Debes seleccionar al menos un canal de envío', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('user_ids', JSON.stringify(Array.from(selectedUserIds)));
+        formData.append('subject', document.getElementById('subject').value);
+        formData.append('message', document.getElementById('message').value);
+        formData.append('link', document.getElementById('link').value || '');
+        formData.append('link_text', document.getElementById('linkText').value || '');
+        formData.append('send_email', sendEmail);
+        formData.append('send_whatsapp', sendWhatsapp);
+
+        const imageFile = document.getElementById('image').files[0];
+        if (imageFile) {
+            formData.append('image', imageFile);
+        }
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<svg class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Enviando...';
+
+            const response = await fetch('/messages/bulk-send', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showNotification(`✓ Mensajes enviados exitosamente a ${data.sent_count} usuario(s)`, 'success');
+                document.getElementById('messageForm').reset();
+                selectNone();
+            } else {
+                showNotification(`Error: ${data.detail}`, 'error');
+            }
+        } catch (error) {
+            showNotification('Error al enviar mensajes', 'error');
+        } finally {
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg> Enviar mensajes';
+        }
+    });
+
+    function showNotification(message, type = 'success') {
+        const notification = document.getElementById('notification');
+        const bgColor = type === 'success' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200';
+        const textColor = type === 'success' ? 'text-green-900' : 'text-red-900';
+
+        notification.innerHTML = `
+            <div class="border ${bgColor} px-4 py-3 ${textColor} flex items-center justify-between">
+                <span class="font-medium">${message}</span>
+                <button onclick="hideNotification()" class="ml-4 text-current opacity-70 hover:opacity-100">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+        notification.classList.remove('hidden');
+        setTimeout(() => hideNotification(), 5000);
+    }
+
+    function hideNotification() {
+        document.getElementById('notification').classList.add('hidden');
+    }
+
+    // Cargar usuarios al inicio
+    window.addEventListener('DOMContentLoaded', loadUsers);
+</script>
+{% endblock %}

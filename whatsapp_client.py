@@ -207,3 +207,53 @@ IEEE Student Branch UTADEO"""
     else:
         print(f"[ERROR] No se pudo enviar ticket: {result.get('error')}")
         return False
+
+
+def send_bulk_whatsapp(
+    phone: str,
+    country_code: str,
+    user_name: str,
+    subject: str,
+    message: str,
+    link: Optional[str] = None
+) -> bool:
+    """
+    Envía un mensaje masivo personalizado por WhatsApp
+
+    Args:
+        phone: Número de teléfono
+        country_code: Código de país (ej: "+57")
+        user_name: Nombre del usuario (ya personalizado con nick o primer nombre)
+        subject: Asunto/título del mensaje
+        message: Contenido del mensaje
+        link: URL opcional para incluir
+
+    Returns:
+        True si se envió correctamente, False en caso contrario
+    """
+    client = WhatsAppClient()
+
+    if not client.is_ready():
+        print("[ERROR] WhatsApp no está listo")
+        return False
+
+    # Construir mensaje de WhatsApp
+    wa_message = f"""*{subject}*
+
+Hola {user_name},
+
+{message}"""
+
+    if link:
+        wa_message += f"\n\n🔗 {link}"
+
+    wa_message += "\n\n---\nIEEE Student Branch UTADEO"
+
+    result = client.send_message(phone, wa_message, country_code)
+
+    if result.get("success"):
+        print(f"[OK] Mensaje masivo enviado a {user_name} ({country_code}{phone})")
+        return True
+    else:
+        print(f"[ERROR] No se pudo enviar mensaje a {user_name}: {result.get('error')}")
+        return False

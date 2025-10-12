@@ -502,6 +502,133 @@ https://ticket.ieeetadeo.org
 
         return self.send_email(to_email, subject, html_content, text_content)
 
+    def send_bulk_message(
+        self,
+        to_email: str,
+        user_name: str,
+        subject: str,
+        message: str,
+        link: Optional[str] = None,
+        link_text: Optional[str] = None,
+        image_url: Optional[str] = None
+    ) -> bool:
+        """
+        Envía un mensaje masivo personalizado
+
+        Args:
+            to_email: Email del destinatario
+            user_name: Nombre del usuario (ya personalizado con nick o primer nombre)
+            subject: Asunto del mensaje
+            message: Contenido del mensaje
+            link: URL opcional para incluir
+            link_text: Texto del botón del enlace
+            image_url: URL de la imagen opcional
+
+        Returns:
+            bool: True si el correo se envió correctamente
+        """
+        # Crear HTML personalizado
+        image_html = f'<div style="text-align: center; margin: 30px 0;"><img src="{image_url}" alt="Imagen" style="max-width: 100%; height: auto; border-radius: 8px;"/></div>' if image_url else ''
+
+        link_html = f'''
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{link}" style="display: inline-block; background-color: #0066cc; color: white; text-decoration: none; padding: 15px 40px; border-radius: 6px; font-weight: 600;">{link_text or "Ver más"}</a>
+        </div>
+        ''' if link else ''
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {{
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    background: #f5f5f5;
+                    margin: 0;
+                    padding: 20px;
+                }}
+                .container {{
+                    max-width: 600px;
+                    margin: 0 auto;
+                    background: white;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                }}
+                .header {{
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 30px;
+                    text-align: center;
+                }}
+                .header h1 {{
+                    margin: 0;
+                    font-size: 24px;
+                    font-weight: 600;
+                }}
+                .content {{
+                    padding: 40px 30px;
+                }}
+                .message-text {{
+                    font-size: 16px;
+                    color: #333;
+                    line-height: 1.8;
+                    white-space: pre-wrap;
+                    margin: 20px 0;
+                }}
+                .footer {{
+                    background: #f8f9fa;
+                    padding: 20px 30px;
+                    text-align: center;
+                    border-top: 1px solid #e9ecef;
+                    color: #6c757d;
+                    font-size: 14px;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>{subject}</h1>
+                </div>
+
+                <div class="content">
+                    <p style="font-size: 18px; color: #333; margin-bottom: 20px;">Hola <strong>{user_name}</strong>,</p>
+
+                    {image_html}
+
+                    <div class="message-text">{message}</div>
+
+                    {link_html}
+                </div>
+
+                <div class="footer">
+                    <p style="margin: 5px 0; font-weight: 600;">IEEE Student Branch UTADEO</p>
+                    <p style="margin: 5px 0;">Sistema de Tickets</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        text_content = f"""
+{subject}
+
+Hola {user_name},
+
+{message}
+
+{f'Enlace: {link}' if link else ''}
+
+---
+IEEE Student Branch UTADEO
+Sistema de Tickets
+        """
+
+        return self.send_email(to_email, subject, html_content, text_content)
+
 
 # Instancia global del servicio
 email_service = EmailService()
