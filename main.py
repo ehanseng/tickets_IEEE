@@ -323,16 +323,36 @@ def create_user(
     return db_user
 
 
-@app.get("/users/", response_model=List[schemas.UserResponse])
+@app.get("/users/")
 def list_users(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(require_admin)
 ):
-    """Listar todos los usuarios"""
+    """Listar todos los usuarios con información de cumpleaños"""
+    from birthday_utils import get_birthday_status
+
     users = db.query(models.User).offset(skip).limit(limit).all()
-    return users
+
+    # Enriquecer respuesta con información de cumpleaños
+    users_with_birthday = []
+    for user in users:
+        user_dict = {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "phone": user.phone,
+            "identification": user.identification,
+            "university_id": user.university_id,
+            "is_ieee_member": user.is_ieee_member,
+            "created_at": user.created_at,
+            "birthday": user.birthday,
+            "birthday_status": get_birthday_status(user.birthday)
+        }
+        users_with_birthday.append(user_dict)
+
+    return users_with_birthday
 
 
 @app.get("/users/{user_id}", response_model=schemas.UserResponse)
@@ -970,6 +990,8 @@ async def admin_users(
     db: Session = Depends(get_db)
 ):
     """Página de gestión de usuarios"""
+    from birthday_utils import get_birthday_status
+
     # Obtener usuarios con conteo de tickets
     users = db.query(
         models.User,
@@ -985,6 +1007,9 @@ async def admin_users(
                 models.University.id == user.university_id
             ).first()
 
+        # Obtener información del cumpleaños
+        birthday_status = get_birthday_status(user.birthday)
+
         user_dict = {
             'id': user.id,
             'name': user.name,
@@ -995,7 +1020,8 @@ async def admin_users(
             'is_ieee_member': user.is_ieee_member,
             'created_at': user.created_at,
             'ticket_count': ticket_count,
-            'university': university
+            'university': university,
+            'birthday_status': birthday_status
         }
         users_list.append(type('User', (), user_dict))
 
