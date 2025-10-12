@@ -23,7 +23,8 @@
       "Bash(taskkill:*)",
       "Bash(where python)",
       "Bash(powershell:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []

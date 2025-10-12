@@ -1,298 +1,182 @@
-# 🚀 Comandos para Despliegue con GitHub
+# 🚀 Flujo de Despliegue con GitHub
 
-## PASO 1: Conectar al Servidor
+Este proyecto usa **GitHub + Túnel SSH** para el despliegue. No se usa SFTP ni FTP.
+
+## 📋 Flujo de Trabajo
+
+### 1. Desarrollo Local
+
 ```bash
-ssh svrvpsefjkcv@72.167.151.233
-# Contraseña: OzsO$n63ddME
+# Hacer cambios en tu código local
+# Probar localmente
+uv run uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
----
+### 2. Commit y Push a GitHub
 
-## PASO 2: Cambiar al Usuario Correcto
 ```bash
-# Intentar cambiar a usuario ieeetadeo2006
+# Agregar cambios
+git add .
+
+# Hacer commit
+git commit -m "Descripción de los cambios"
+
+# Push a GitHub
+git push origin master
+```
+
+### 3. Actualizar en el Servidor
+
+```bash
+# Conectar al servidor vía SSH
+ssh svrvpsefjkcv@72.167.151.233
+
+# Cambiar al usuario correcto (si es necesario)
 sudo su - ieeetadeo2006
 
-# Si pide contraseña y no funciona, contacta al admin
-```
-
----
-
-## PASO 3: Encontrar Directorio Ticket
-```bash
-# Ver dónde estás
-pwd
-
-# Listar contenido
-ls -la
-
-# Buscar directorio ticket
-find ~ -maxdepth 4 -name 'ticket' -type d 2>/dev/null
-
-# Opciones comunes (prueba una por una):
-cd ~/public_html/ticket
-# O
+# Ir al directorio del proyecto
 cd ~/domains/ieeetadeo.org/public_html/ticket
-# O
-cd ~/public_html/ieeetadeo.org/ticket
-# O
-cd ~/www/ieeetadeo.org/ticket
 
-# Verificar que estás en el lugar correcto
-pwd
-```
+# Obtener últimos cambios de GitHub
+git pull origin master
 
----
-
-## PASO 4: Verificar Git
-```bash
-# Verificar si git está instalado
-which git
-git --version
-
-# Si no está instalado:
-# CentOS/AlmaLinux/Rocky:
-sudo yum install git -y
-
-# Ubuntu/Debian:
-sudo apt install git -y
-```
-
----
-
-## PASO 5: Clonar Repositorio
-```bash
-# Ver contenido actual
-ls -la
-
-# IMPORTANTE: Si hay archivos, hacer backup primero
-mkdir ~/backup_ticket_$(date +%Y%m%d_%H%M%S)
-cp -r * ~/backup_ticket_$(date +%Y%m%d_%H%M%S)/ 2>/dev/null
-
-# Si la carpeta está vacía, clonar directamente:
-git clone https://github.com/ehanseng/tickets_IEEE.git .
-
-# Si la carpeta NO está vacía y quieres reemplazar todo:
-rm -rf * .git 2>/dev/null  # ¡CUIDADO! Esto borra todo
-git clone https://github.com/ehanseng/tickets_IEEE.git .
-
-# Verificar que se clonó correctamente
-ls -la
-# Deberías ver: main.py, models.py, templates/, etc.
-```
-
----
-
-## PASO 6: Configurar Variables de Entorno
-```bash
-# Copiar ejemplo de .env
-cp .env.example .env
-
-# Editar archivo .env
-nano .env
-
-# Presiona estas teclas en nano:
-# - Edita las líneas con tus credenciales
-# - Ctrl + O para guardar
-# - Enter para confirmar
-# - Ctrl + X para salir
-```
-
-**Contenido del .env:**
-```env
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=tu-email@gmail.com
-SMTP_PASSWORD=xxxx-xxxx-xxxx-xxxx
-FROM_EMAIL=tu-email@gmail.com
-FROM_NAME=IEEE Tadeo - Sistema de Tickets
-BASE_URL=https://ticket.ieeetadeo.org
-```
-
----
-
-## PASO 7: Instalar uv (Gestor de Paquetes)
-```bash
-# Verificar si uv ya está instalado
-which uv
-
-# Si no está, instalar:
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Recargar el PATH
-source $HOME/.cargo/env
-
-# Verificar instalación
-uv --version
-```
-
----
-
-## PASO 8: Verificar Python
-```bash
-# Verificar Python
-python3 --version
-
-# Si es menor a 3.10, puede funcionar pero idealmente necesitas 3.13+
-# Para instalar Python 3.13 (requiere permisos sudo):
-
-# CentOS/AlmaLinux/Rocky:
-sudo yum install python3.13 -y
-
-# Ubuntu/Debian:
-sudo apt install python3.13 -y
-```
-
----
-
-## PASO 9: Instalar Dependencias
-```bash
-# Estar en el directorio del proyecto
-cd ~/ruta/al/directorio/ticket
-
-# Instalar dependencias con uv
+# Si hay nuevas dependencias, actualizar
 uv sync
 
-# Si uv no funciona, usar pip:
-python3 -m pip install -r requirements.txt --user
-```
-
----
-
-## PASO 10: Crear Directorios Necesarios
-```bash
-# Crear directorio para QR codes
-mkdir -p qr_codes
-
-# Dar permisos
-chmod 755 qr_codes
-```
-
----
-
-## PASO 11: Probar la Aplicación
-```bash
-# Opción 1: Ejecución simple (para probar)
-uv run python main.py
-
-# Opción 2: Con uvicorn (mejor para producción)
-uv run uvicorn main:app --host 0.0.0.0 --port 8000
-
-# Opción 3: Con screen (mantiene corriendo después de desconectar)
+# Reiniciar el servidor
+screen -X -S tickets quit
 screen -S tickets
 uv run uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2
 # Presiona Ctrl+A luego D para desconectar
-# Para volver: screen -r tickets
-# Para matar: screen -X -S tickets quit
 ```
 
----
+## 🔧 Comandos Útiles
 
-## PASO 12: Verificar que Funciona
+### Ver logs del servidor
 
-Abre en navegador:
-- http://ticket.ieeetadeo.org:8000/admin
-- http://72.167.151.233:8000/admin
+```bash
+# Reconectar a la sesión screen
+screen -r tickets
 
-Si funciona, verás el panel de administración!
+# Salir sin matar el servidor
+# Presiona Ctrl+A luego D
+```
 
----
+### Verificar estado
 
-## 🔄 ACTUALIZACIONES FUTURAS
+```bash
+# Ver si el servidor está corriendo
+ps aux | grep uvicorn
 
-Para actualizar la aplicación desde GitHub:
+# Ver qué proceso usa el puerto 8000
+netstat -tulpn | grep :8000
+# o
+lsof -i :8000
+```
+
+### Reiniciar el servidor
+
+```bash
+# Matar el servidor actual
+screen -X -S tickets quit
+
+# Iniciar de nuevo
+screen -S tickets
+uv run uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2
+# Ctrl+A, D
+```
+
+## 🔄 Migrar Base de Datos
+
+Cuando hay cambios en el modelo de datos:
 
 ```bash
 # Conectar al servidor
 ssh svrvpsefjkcv@72.167.151.233
 sudo su - ieeetadeo2006
+cd ~/domains/ieeetadeo.org/public_html/ticket
 
-# Ir al directorio
-cd ~/ruta/al/directorio/ticket
+# Ejecutar script de migración
+uv run python migrate_add_birthday.py
+# o el nombre del script de migración correspondiente
+```
 
-# Obtener últimos cambios
+## 🎂 Configurar Correos de Cumpleaños (Cron Job)
+
+```bash
+# Editar crontab
+crontab -e
+
+# Agregar esta línea para enviar correos a las 8:00 AM diariamente
+0 8 * * * cd ~/domains/ieeetadeo.org/public_html/ticket && ~/.cargo/bin/uv run python birthday_checker.py >> ~/domains/ieeetadeo.org/public_html/ticket/birthday_logs.txt 2>&1
+
+# Guardar y salir (Ctrl+O, Enter, Ctrl+X)
+
+# Verificar que se guardó
+crontab -l
+
+# Ver logs de cumpleaños
+tail -f ~/domains/ieeetadeo.org/public_html/ticket/birthday_logs.txt
+```
+
+## 📝 Notas Importantes
+
+- **Siempre usa GitHub** para subir cambios, no SFTP ni FTP
+- **Haz commit localmente** antes de probar en el servidor
+- **Prueba primero local** antes de push a GitHub
+- El servidor usa **túnel SSH** para acceso desde fuera
+- La base de datos **SQLite (tickets.db)** está en el servidor y no se sube a GitHub (está en .gitignore)
+
+## ❌ Solución de Problemas
+
+### Error: git pull falla con conflictos
+
+```bash
+# Ver estado
+git status
+
+# Si hay cambios locales no deseados, descartarlos
+git reset --hard origin/master
+
+# Si hay cambios importantes, hacer stash
+git stash
 git pull origin master
+git stash pop
+```
 
-# Actualizar dependencias
-uv sync
+### Error: Puerto 8000 ocupado
 
-# Reiniciar aplicación
-# Si usas screen:
+```bash
+# Matar proceso en puerto 8000
 screen -X -S tickets quit
-screen -S tickets
-uv run uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2
-# Ctrl+A, D para desconectar
 
-# Si usas systemd (después de configurar):
-sudo systemctl restart tickets-ieee
-```
-
----
-
-## ❌ SOLUCIÓN DE PROBLEMAS
-
-### Error: Permission denied
-```bash
-# Verificar permisos
-ls -la
-# Cambiar propietario si es necesario
-sudo chown -R ieeetadeo2006:ieeetadeo2006 .
-```
-
-### Error: git command not found
-```bash
-sudo yum install git -y  # CentOS
-sudo apt install git -y  # Ubuntu
-```
-
-### Error: uv command not found
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source $HOME/.cargo/env
-```
-
-### Error: Port 8000 already in use
-```bash
-# Encontrar qué proceso está usando el puerto
-sudo lsof -i :8000
-# Matar ese proceso
+# O encontrar PID y matar
+lsof -i :8000
 kill -9 <PID>
 ```
 
-### No puedo cambiar a usuario ieeetadeo2006
-**Contacta al administrador del servidor** y pídele:
-1. Acceso SSH con usuario ieeetadeo2006
-2. O que ejecute estos comandos por ti
-3. O que te agregue al grupo de ieeetadeo2006
+### Error: No se encuentran módulos
+
+```bash
+# Reinstalar dependencias
+uv sync
+
+# O forzar reinstalación
+rm -rf .venv
+uv sync
+```
+
+## ✅ Checklist de Despliegue
+
+- [ ] Cambios probados localmente
+- [ ] Commit hecho con mensaje descriptivo
+- [ ] Push a GitHub exitoso
+- [ ] Conectado al servidor vía SSH
+- [ ] `git pull` ejecutado en el servidor
+- [ ] Migraciones ejecutadas (si aplica)
+- [ ] Servidor reiniciado
+- [ ] Verificado en el navegador que funciona
 
 ---
 
-## 📞 SIGUIENTE PASO DESPUÉS DE FUNCIONAR
-
-Una vez que la aplicación funcione en puerto 8000, necesitarás:
-
-1. **Configurar Nginx/Apache** para que funcione en puerto 80/443
-2. **Obtener certificado SSL** para HTTPS
-3. **Configurar systemd** para auto-inicio
-
-Ver [DEPLOYMENT.md](DEPLOYMENT.md) para instrucciones detalladas.
-
----
-
-## ✅ CHECKLIST
-
-- [ ] Conectado al servidor
-- [ ] Cambiado a usuario ieeetadeo2006
-- [ ] Navegado a directorio ticket
-- [ ] Git instalado
-- [ ] Repositorio clonado
-- [ ] Archivo .env configurado
-- [ ] uv instalado
-- [ ] Dependencias instaladas
-- [ ] Directorios creados
-- [ ] Aplicación iniciada
-- [ ] Verificado en navegador
-
----
-
-**¡Listo! Ahora ejecuta los comandos paso a paso y pégame aquí los resultados para ayudarte con cualquier error.** 🚀
+**¿Necesitas ayuda?** Revisa los logs del servidor con `screen -r tickets` o los logs de cumpleaños con `tail -f birthday_logs.txt`
