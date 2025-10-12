@@ -41,9 +41,14 @@ app = FastAPI(
 
 # Configurar archivos estáticos
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/qr_codes", StaticFiles(directory="qr_codes"), name="qr_codes")
 
 # Configurar templates
 templates = Jinja2Templates(directory="templates")
+
+# Importar rutas del portal de usuarios
+from user_portal_routes import router as user_portal_router
+app.include_router(user_portal_router)
 
 
 # ========== ENDPOINTS DE AUTENTICACIÓN ==========
@@ -164,6 +169,139 @@ def update_validator(
     return validator
 
 
+# ========== ENDPOINTS DE UNIVERSIDADES ==========
+
+@app.post("/universities/", response_model=schemas.UniversityResponse, status_code=status.HTTP_201_CREATED)
+def create_university(
+    university: schemas.UniversityCreate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Crear una nueva universidad (solo ADMIN)"""
+    # Verificar si el nombre ya existe
+    existing = db.query(models.University).filter(models.University.name == university.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Universidad ya existe")
+
+    db_university = models.University(**university.model_dump())
+    db.add(db_university)
+    db.commit()
+    db.refresh(db_university)
+    return db_university
+
+
+@app.get("/universities/", response_model=List[schemas.UniversityResponse])
+def list_universities(
+    skip: int = 0,
+    limit: int = 200,
+    active_only: bool = True,
+    db: Session = Depends(get_db)
+):
+    """Listar universidades (público para formularios)"""
+    query = db.query(models.University)
+    if active_only:
+        query = query.filter(models.University.is_active == True)
+    universities = query.order_by(models.University.name).offset(skip).limit(limit).all()
+    return universities
+
+
+@app.get("/universities/{university_id}", response_model=schemas.UniversityResponse)
+def get_university(
+    university_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Obtener una universidad por ID"""
+    university = db.query(models.University).filter(models.University.id == university_id).first()
+    if not university:
+        raise HTTPException(status_code=404, detail="Universidad no encontrada")
+    return university
+
+
+@app.put("/universities/{university_id}", response_model=schemas.UniversityResponse)
+def update_university(
+    university_id: int,
+    university_update: schemas.UniversityUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Actualizar una universidad (solo ADMIN)"""
+    university = db.query(models.University).filter(models.University.id == university_id).first()
+    if not university:
+        raise HTTPException(status_code=404, detail="Universidad no encontrada")
+
+    # Actualizar campos
+    if university_update.name is not None:
+        # Verificar que el nombre no esté en uso
+        existing = db.query(models.University).filter(
+            models.University.name == university_update.name,
+            models.University.id != university_id
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="El nombre ya está en uso")
+        university.name = university_update.name
+
+    if university_update.short_name is not None:
+        university.short_name = university_update.short_name
+
+    if university_update.is_active is not None:
+        university.is_active = university_update.is_active
+
+    if university_update.has_ieee_branch is not None:
+        university.has_ieee_branch = university_update.has_ieee_branch
+
+    if university_update.ieee_contact_email is not None:
+        university.ieee_contact_email = university_update.ieee_contact_email
+
+    if university_update.ieee_facebook is not None:
+        university.ieee_facebook = university_update.ieee_facebook
+
+    if university_update.ieee_instagram is not None:
+        university.ieee_instagram = university_update.ieee_instagram
+
+    if university_update.ieee_twitter is not None:
+        university.ieee_twitter = university_update.ieee_twitter
+
+    if university_update.ieee_tiktok is not None:
+        university.ieee_tiktok = university_update.ieee_tiktok
+
+    if university_update.ieee_website is not None:
+        university.ieee_website = university_update.ieee_website
+
+    db.commit()
+    db.refresh(university)
+    return university
+
+
+@app.delete("/universities/{university_id}")
+def delete_university(
+    university_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Eliminar una universidad (solo ADMIN)"""
+    university = db.query(models.University).filter(models.University.id == university_id).first()
+    if not university:
+        raise HTTPException(status_code=404, detail="Universidad no encontrada")
+
+    # Verificar si hay usuarios asociados
+    user_count = db.query(models.User).filter(models.User.university_id == university_id).count()
+    if user_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No se puede eliminar la universidad porque tiene {user_count} usuario(s) asociado(s)"
+        )
+
+    db.delete(university)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "Universidad eliminada exitosamente",
+        "university_id": university_id
+    }
+
+
 # ========== ENDPOINTS DE USUARIOS ==========
 
 @app.post("/users/", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
@@ -237,8 +375,10 @@ def update_user(
         user.phone = user_update.phone
     if user_update.identification is not None:
         user.identification = user_update.identification
-    if user_update.university is not None:
-        user.university = user_update.university
+    if user_update.university_id is not None:
+        user.university_id = user_update.university_id
+    if user_update.is_ieee_member is not None:
+        user.is_ieee_member = user_update.is_ieee_member
 
     db.commit()
     db.refresh(user)
@@ -830,6 +970,7 @@ async def admin_users(
     db: Session = Depends(get_db)
 ):
     """Página de gestión de usuarios"""
+    # Obtener usuarios con conteo de tickets
     users = db.query(
         models.User,
         func.count(models.Ticket.id).label('ticket_count')
@@ -837,13 +978,40 @@ async def admin_users(
 
     users_list = []
     for user, ticket_count in users:
-        user_dict = user.__dict__.copy()
-        user_dict['ticket_count'] = ticket_count
+        # Cargar la universidad manualmente si existe
+        university = None
+        if user.university_id:
+            university = db.query(models.University).filter(
+                models.University.id == user.university_id
+            ).first()
+
+        user_dict = {
+            'id': user.id,
+            'name': user.name,
+            'email': user.email,
+            'phone': user.phone,
+            'identification': user.identification,
+            'university_id': user.university_id,
+            'is_ieee_member': user.is_ieee_member,
+            'created_at': user.created_at,
+            'ticket_count': ticket_count,
+            'university': university
+        }
         users_list.append(type('User', (), user_dict))
 
     return templates.TemplateResponse("users.html", {
         "request": request,
         "users": users_list
+    })
+
+
+@app.get("/admin/universities", response_class=HTMLResponse)
+async def admin_universities(
+    request: Request
+):
+    """Página de gestión de universidades"""
+    return templates.TemplateResponse("universities.html", {
+        "request": request
     })
 
 
@@ -1041,3 +1209,20 @@ async def root(request: Request):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+# Endpoint para servir QR codes (alternativa a archivos estáticos)
+from fastapi.responses import FileResponse
+import os
+
+@app.get("/api/qr/{ticket_code}")
+async def get_qr_code(ticket_code: str):
+    """Sirve el código QR de un ticket"""
+    # Usar ruta absoluta desde el directorio de la aplicación
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    qr_path = os.path.join(base_dir, "qr_codes", f"{ticket_code}.png")
+
+    if os.path.exists(qr_path):
+        return FileResponse(qr_path, media_type="image/png")
+    else:
+        raise HTTPException(status_code=404, detail=f"QR code not found: {ticket_code}")
