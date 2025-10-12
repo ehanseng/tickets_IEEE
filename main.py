@@ -461,7 +461,8 @@ def send_birthday_greeting(
     try:
         email_success = email_service.send_birthday_email(
             to_email=user.email,
-            user_name=user.name
+            user_name=user.name,
+            nick=user.nick
         )
         results["email_sent"] = email_success
         if not email_success:
@@ -480,7 +481,8 @@ def send_birthday_greeting(
                 whatsapp_success = send_birthday_whatsapp(
                     phone=user.phone,
                     country_code=user.country_code,
-                    user_name=user.name
+                    user_name=user.name,
+                    nick=user.nick
                 )
                 results["whatsapp_sent"] = whatsapp_success
                 if not whatsapp_success:
@@ -1090,6 +1092,7 @@ async def admin_users(
         user_dict = {
             'id': user.id,
             'name': user.name,
+            'nick': user.nick,
             'email': user.email,
             'country_code': user.country_code,
             'phone': user.phone,

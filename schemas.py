@@ -54,6 +54,7 @@ class UniversityResponse(BaseModel):
 class UserCreate(BaseModel):
     """Schema para crear usuario"""
     name: str
+    nick: Optional[str] = None  # Apodo o forma corta de llamar al usuario
     email: EmailStr
     country_code: Optional[str] = "+57"
     phone: Optional[str] = None
@@ -65,6 +66,7 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     """Schema para actualizar usuario"""
     name: Optional[str] = None
+    nick: Optional[str] = None
     email: Optional[EmailStr] = None
     country_code: Optional[str] = None
     phone: Optional[str] = None
@@ -78,6 +80,7 @@ class UserResponse(BaseModel):
     """Schema para respuesta de usuario"""
     id: int
     name: str
+    nick: Optional[str]
     email: str
     country_code: Optional[str]
     phone: Optional[str]

@@ -158,7 +158,7 @@
                         </td>
                         <td class="p-4 align-middle text-right">
                             <div class="flex justify-end gap-1">
-                                <button onclick="editUser({{ user.id }}, '{{ user.name }}', '{{ user.email }}', '{{ user.identification or '' }}', {{ user.university_id or 'null' }}, '{{ user.country_code or '+57' }}', '{{ user.phone or '' }}', {{ 'true' if user.is_ieee_member else 'false' }}, '{{ user.birthday.strftime('%Y-%m-%d') if user.birthday else '' }}')" class="inline-flex items-center justify-center rounded text-xs font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-7 w-7" title="Editar usuario">
+                                <button onclick="editUser({{ user.id }}, '{{ user.name }}', '{{ user.nick or '' }}', '{{ user.email }}', '{{ user.identification or '' }}', {{ user.university_id or 'null' }}, '{{ user.country_code or '+57' }}', '{{ user.phone or '' }}', {{ 'true' if user.is_ieee_member else 'false' }}, '{{ user.birthday.strftime('%Y-%m-%d') if user.birthday else '' }}')" class="inline-flex items-center justify-center rounded text-xs font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-7 w-7" title="Editar usuario">
                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                     </svg>
@@ -205,6 +205,11 @@
                 <div class="space-y-2">
                     <label for="name" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Nombre Completo *</label>
                     <input type="text" id="name" name="name" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                </div>
+
+                <div class="space-y-2">
+                    <label for="nick" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Apodo / Nick</label>
+                    <input type="text" id="nick" name="nick" placeholder="Forma corta de llamar (opcional)" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
                 </div>
 
                 <div class="space-y-2">
@@ -379,6 +384,7 @@
 
         const formData = {
             name: document.getElementById('name').value,
+            nick: document.getElementById('nick').value || null,
             email: document.getElementById('email').value,
             identification: document.getElementById('identification').value || null,
             university_id: universityId ? parseInt(universityId) : null,
@@ -430,7 +436,7 @@
         }
     });
 
-    function editUser(id, name, email, identification, universityId, countryCode, phone, isIeeeMember, birthday) {
+    function editUser(id, name, nick, email, identification, universityId, countryCode, phone, isIeeeMember, birthday) {
         isEditMode = true;
         document.getElementById('modalTitle').textContent = 'Editar Usuario';
         document.getElementById('submitBtn').textContent = 'Actualizar Usuario';
@@ -438,6 +444,7 @@
         // Llenar el formulario con los datos del usuario
         document.getElementById('userId').value = id;
         document.getElementById('name').value = name;
+        document.getElementById('nick').value = nick || '';
         document.getElementById('email').value = email;
         document.getElementById('identification').value = identification || '';
         document.getElementById('university_id').value = universityId || '';

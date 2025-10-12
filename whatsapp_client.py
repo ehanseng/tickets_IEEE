@@ -110,14 +110,15 @@ class WhatsAppClient:
             }
 
 
-def send_birthday_whatsapp(phone: str, country_code: str, user_name: str) -> bool:
+def send_birthday_whatsapp(phone: str, country_code: str, user_name: str, nick: Optional[str] = None) -> bool:
     """
     Envía un mensaje de cumpleaños por WhatsApp
 
     Args:
         phone: Número de teléfono
         country_code: Código de país (ej: "+57")
-        user_name: Nombre del usuario
+        user_name: Nombre completo del usuario
+        nick: Apodo o nombre corto (opcional, si no se proporciona usa el primer nombre)
 
     Returns:
         True si se envió correctamente, False en caso contrario
@@ -129,15 +130,18 @@ def send_birthday_whatsapp(phone: str, country_code: str, user_name: str) -> boo
         print("[ERROR] WhatsApp no está listo. Verifica el servicio.")
         return False
 
-    # Mensaje de cumpleaños
-    message = f"""🎉 ¡Feliz Cumpleaños {user_name}! 🎂
+    # Determinar el nombre a usar: nick, o primer nombre del nombre completo
+    display_name = nick if nick else user_name.split()[0]
 
-Desde IEEE UTADEO queremos desearte un día lleno de alegría y éxito.
+    # Mensaje de cumpleaños
+    message = f"""🎉 ¡Feliz Cumpleaños {display_name}! 🎂
+
+Desde IEEE TADEO queremos desearte un día lleno de alegría y éxito.
 
 ¡Que cumplas muchos más! 🎈✨
 
 ---
-IEEE Student Branch UTADEO"""
+IEEE TADEO Student Branch"""
 
     # Enviar mensaje
     result = client.send_message(phone, message, country_code)

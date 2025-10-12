@@ -341,18 +341,22 @@ Este correo fue generado automáticamente por el Sistema de Tickets IEEE Tadeo.
             print(f"   URL: {ticket_url}")
             return False
 
-    def send_birthday_email(self, to_email: str, user_name: str) -> bool:
+    def send_birthday_email(self, to_email: str, user_name: str, nick: Optional[str] = None) -> bool:
         """
         Envía un correo de felicitación de cumpleaños
 
         Args:
             to_email: Email del destinatario
-            user_name: Nombre del usuario
+            user_name: Nombre completo del usuario
+            nick: Apodo o nombre corto (opcional, si no se proporciona usa el primer nombre)
 
         Returns:
             bool: True si el correo se envió correctamente, False en caso contrario
         """
-        subject = f"¡Feliz Cumpleaños {user_name}! 🎉 - IEEE Tadeo"
+        # Determinar el nombre a usar: nick, o primer nombre del nombre completo
+        display_name = nick if nick else user_name.split()[0]
+
+        subject = f"¡Feliz Cumpleaños {display_name}! 🎉 - IEEE Tadeo"
 
         html_content = f"""
         <!DOCTYPE html>
@@ -447,7 +451,7 @@ Este correo fue generado automáticamente por el Sistema de Tickets IEEE Tadeo.
                 <div class="content">
                     <div class="balloons">🎈🎉🎊🎁</div>
 
-                    <p class="greeting">¡Hola {user_name}!</p>
+                    <p class="greeting">¡Hola {display_name}!</p>
 
                     <p class="message">
                         En este día tan especial, todo el equipo de <span class="highlight">IEEE Tadeo</span>
@@ -480,7 +484,7 @@ Este correo fue generado automáticamente por el Sistema de Tickets IEEE Tadeo.
         """
 
         text_content = f"""
-¡Feliz Cumpleaños {user_name}! 🎉
+¡Feliz Cumpleaños {display_name}! 🎉
 
 En este día tan especial, todo el equipo de IEEE Tadeo quiere desearte un muy feliz cumpleaños.
 
