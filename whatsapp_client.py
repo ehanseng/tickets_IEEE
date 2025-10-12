@@ -136,12 +136,12 @@ def send_birthday_whatsapp(phone: str, country_code: str, user_name: str, nick: 
     # Mensaje de cumpleaños
     message = f"""🎉 ¡Feliz Cumpleaños {display_name}! 🎂
 
-Desde IEEE TADEO queremos desearte un día lleno de alegría y éxito.
+Desde IEEE Tadeo queremos desearte un día lleno de alegría y éxito.
 
 ¡Que cumplas muchos más! 🎈✨
 
 ---
-IEEE TADEO Student Branch"""
+IEEE Tadeo Student Branch"""
 
     # Enviar mensaje
     result = client.send_message(phone, message, country_code)
@@ -197,7 +197,7 @@ Tu registro para *{event_name}* ha sido confirmado.
 ¡Nos vemos en el evento! 🎉
 
 ---
-IEEE Student Branch UTADEO"""
+IEEE Tadeo Student Branch"""
 
     result = client.send_message(phone, message, country_code)
 
@@ -247,7 +247,7 @@ Hola {user_name},
     if link:
         wa_message += f"\n\n🔗 {link}"
 
-    wa_message += "\n\n---\nIEEE Student Branch UTADEO"
+    wa_message += "\n\n---\nIEEE Tadeo Student Branch"
 
     result = client.send_message(phone, wa_message, country_code)
 

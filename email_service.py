@@ -605,7 +605,7 @@ https://ticket.ieeetadeo.org
                 </div>
 
                 <div class="footer">
-                    <p style="margin: 5px 0; font-weight: 600;">IEEE Student Branch UTADEO</p>
+                    <p style="margin: 5px 0; font-weight: 600;">IEEE Tadeo Student Branch</p>
                     <p style="margin: 5px 0;">Sistema de Tickets</p>
                 </div>
             </div>
@@ -623,7 +623,7 @@ Hola {user_name},
 {f'Enlace: {link}' if link else ''}
 
 ---
-IEEE Student Branch UTADEO
+IEEE Tadeo Student Branch
 Sistema de Tickets
         """
 
