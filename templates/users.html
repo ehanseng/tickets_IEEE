@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Usuarios - Sistema de Tickets{% endblock %}
+{% block title %}Usuarios - IEEE Tadeo Control System{% endblock %}
 
 {% block content %}
 <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
@@ -89,11 +89,19 @@
                             </div>
                         </th>
                         <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(8)">
-                            <div class="flex items-center gap-1">
-                                Cumpleaños
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
-                                </svg>
+                            <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-1">
+                                    Cumpleaños
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                    </svg>
+                                </div>
+                                <button id="birthdayCheckInfo" onclick="showBirthdayCheckModal()" class="inline-flex items-center justify-center rounded-full text-xs bg-blue-100 text-blue-800 hover:bg-blue-200 h-5 px-2 transition-colors" title="Ver última verificación automática">
+                                    <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    <span id="lastCheckBadge">...</span>
+                                </button>
                             </div>
                         </th>
                         <th class="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Acciones</th>
@@ -278,6 +286,38 @@
     </div>
 </div>
 
+<!-- Modal para información de verificación de cumpleaños -->
+<div id="birthdayCheckModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-lg">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold leading-none tracking-tight">Sistema de Cumpleaños</h3>
+                <button onclick="closeBirthdayCheckModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="p-6">
+            <div id="birthdayCheckContent" class="space-y-4">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+            <div class="mt-6 flex gap-2">
+                <button onclick="runBirthdayCheckNow()" id="runCheckBtn" class="flex-1 inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Ejecutar Verificación Ahora
+                </button>
+                <button onclick="closeBirthdayCheckModal()" class="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Notificación flotante para mensajes -->
 <div id="notification" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] w-11/12 max-w-md shadow-lg rounded-lg transition-all duration-300"></div>
 {% endblock %}
@@ -328,7 +368,10 @@
     }
 
     // Cargar universidades al cargar la página
-    window.addEventListener('DOMContentLoaded', loadUniversities);
+    window.addEventListener('DOMContentLoaded', () => {
+        loadUniversities();
+        loadBirthdayCheckInfo();
+    });
 
     // Función para mostrar notificación flotante
     function showNotification(message, type = 'success') {
@@ -672,6 +715,208 @@
 
         // Reordenar las filas en el DOM
         rows.forEach(row => tbody.appendChild(row));
+    }
+
+    // ========== FUNCIONES DE VERIFICACIÓN DE CUMPLEAÑOS ==========
+
+    let lastCheckData = null;
+
+    async function loadBirthdayCheckInfo() {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/birthdays/last-check', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                lastCheckData = await response.json();
+                updateBirthdayCheckBadge();
+            } else {
+                console.error(`Error al cargar información de cumpleaños. Status: ${response.status}`);
+                const errorText = await response.text();
+                console.error('Detalles del error:', errorText);
+                document.getElementById('lastCheckBadge').textContent = 'N/A';
+                const badge = document.getElementById('lastCheckBadge').parentElement;
+                badge.title = `No se puede cargar información (${response.status})`;
+            }
+        } catch (error) {
+            console.error('Error de conexión al cargar información de cumpleaños:', error);
+            document.getElementById('lastCheckBadge').textContent = 'Error';
+        }
+    }
+
+    function updateBirthdayCheckBadge() {
+        const badge = document.getElementById('lastCheckBadge');
+
+        if (!lastCheckData || !lastCheckData.has_logs) {
+            badge.textContent = 'Nunca';
+            badge.parentElement.title = 'No hay registros de verificaciones anteriores';
+            return;
+        }
+
+        const lastCheck = lastCheckData.last_check;
+        badge.textContent = lastCheck.time_since;
+
+        // Cambiar color según el tiempo transcurrido
+        const hours = lastCheck.hours_since;
+        const button = badge.parentElement;
+
+        if (hours < 24) {
+            button.className = button.className.replace('bg-blue-100 text-blue-800', 'bg-green-100 text-green-800');
+        } else if (hours < 48) {
+            button.className = button.className.replace('bg-blue-100 text-blue-800', 'bg-yellow-100 text-yellow-800');
+        } else {
+            button.className = button.className.replace('bg-blue-100 text-blue-800', 'bg-red-100 text-red-800');
+        }
+
+        button.title = `Última verificación: ${lastCheck.time_since} | ${lastCheck.birthdays_found} cumpleaños encontrados`;
+    }
+
+    function showBirthdayCheckModal() {
+        const modal = document.getElementById('birthdayCheckModal');
+        const content = document.getElementById('birthdayCheckContent');
+
+        if (!lastCheckData || !lastCheckData.has_logs) {
+            content.innerHTML = `
+                <div class="text-center py-8">
+                    <svg class="mx-auto h-12 w-12 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <p class="text-muted-foreground">No hay registros de ejecuciones anteriores</p>
+                    <p class="text-sm text-muted-foreground mt-2">Ejecuta una verificación manual para comenzar</p>
+                </div>
+            `;
+        } else {
+            const lastCheck = lastCheckData.last_check;
+            const executionDate = new Date(lastCheck.executed_at);
+            const formattedDate = executionDate.toLocaleString('es-CO', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-gray-600">Última ejecución</span>
+                            <span class="text-xs px-2 py-1 rounded-full ${lastCheck.execution_type === 'manual' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
+                                ${lastCheck.execution_type === 'manual' ? 'Manual' : 'Automática'}
+                            </span>
+                        </div>
+                        <p class="text-lg font-semibold">${lastCheck.time_since}</p>
+                        <p class="text-xs text-muted-foreground">${formattedDate}</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-purple-50 rounded-lg p-3">
+                            <p class="text-xs text-purple-600 font-medium">Cumpleaños Encontrados</p>
+                            <p class="text-2xl font-bold text-purple-900">${lastCheck.birthdays_found}</p>
+                        </div>
+                        <div class="bg-blue-50 rounded-lg p-3">
+                            <p class="text-xs text-blue-600 font-medium">WhatsApp Disponible</p>
+                            <p class="text-2xl font-bold text-blue-900">${lastCheck.whatsapp_available ? '✓ Sí' : '✗ No'}</p>
+                        </div>
+                    </div>
+
+                    <div class="border rounded-lg divide-y">
+                        <div class="p-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium">Emails</span>
+                                <span class="text-xs text-muted-foreground">${lastCheck.success_rate.email}</span>
+                            </div>
+                            <div class="flex gap-4 mt-2 text-sm">
+                                <span class="text-green-600">✓ ${lastCheck.emails_sent} enviados</span>
+                                ${lastCheck.emails_failed > 0 ? `<span class="text-red-600">✗ ${lastCheck.emails_failed} fallidos</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="p-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium">WhatsApp</span>
+                                <span class="text-xs text-muted-foreground">${lastCheck.success_rate.whatsapp}</span>
+                            </div>
+                            <div class="flex gap-4 mt-2 text-sm">
+                                <span class="text-green-600">✓ ${lastCheck.whatsapp_sent} enviados</span>
+                                ${lastCheck.whatsapp_failed > 0 ? `<span class="text-red-600">✗ ${lastCheck.whatsapp_failed} fallidos</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    ${lastCheck.notes ? `
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                            <p class="text-xs font-medium text-yellow-800 mb-1">Notas</p>
+                            <p class="text-sm text-yellow-700">${lastCheck.notes}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    function closeBirthdayCheckModal() {
+        document.getElementById('birthdayCheckModal').classList.add('hidden');
+    }
+
+    async function runBirthdayCheckNow() {
+        if (!confirm('¿Ejecutar verificación de cumpleaños ahora?\n\nSe enviarán mensajes a todos los usuarios que cumplan años hoy.')) {
+            return;
+        }
+
+        const runBtn = document.getElementById('runCheckBtn');
+        const originalText = runBtn.innerHTML;
+
+        // Deshabilitar botón y mostrar loading
+        runBtn.disabled = true;
+        runBtn.innerHTML = `
+            <svg class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Ejecutando...
+        `;
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/birthdays/check-now', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                showNotification('✓ Verificación ejecutada exitosamente', 'success');
+
+                // Recargar información
+                await loadBirthdayCheckInfo();
+                showBirthdayCheckModal();
+
+                // Mostrar resultados
+                const result = data.result;
+                alert(`Verificación completada:\n\n` +
+                      `• Cumpleaños encontrados: ${result.birthdays_found}\n` +
+                      `• Emails enviados: ${result.emails_sent}\n` +
+                      `• WhatsApp enviados: ${result.whatsapp_sent}`);
+            } else {
+                showNotification(`Error: ${data.detail || 'No se pudo ejecutar la verificación'}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showNotification('Error de conexión al ejecutar verificación', 'error');
+        } finally {
+            // Restaurar botón
+            runBtn.disabled = false;
+            runBtn.innerHTML = originalText;
+        }
     }
 </script>
 {% endblock %}

@@ -1,14 +1,11 @@
 """
-Servicio para envío de correos electrónicos
+Servicio para envío de correos electrónicos usando Resend
 """
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.image import MIMEImage
-from datetime import datetime
-from typing import Optional
 import os
+from typing import Optional
+from datetime import datetime
 from dotenv import load_dotenv
+import resend
 import base64
 
 # Cargar variables de entorno desde .env
@@ -16,22 +13,20 @@ load_dotenv()
 
 
 class EmailService:
-    """Servicio para enviar correos electrónicos"""
+    """Servicio para enviar correos electrónicos usando Resend"""
 
     def __init__(self):
-        # Configuración SMTP (usar variables de entorno en producción)
-        self.smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
-        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
-        self.smtp_user = os.getenv("SMTP_USER", "")
-        self.smtp_password = os.getenv("SMTP_PASSWORD", "")
-        self.from_email = os.getenv("FROM_EMAIL", self.smtp_user)
+        # Configuración de Resend
+        self.api_key = os.getenv("RESEND_API_KEY", "")
+        self.from_email = os.getenv("FROM_EMAIL", "onboarding@resend.dev")
         self.from_name = os.getenv("FROM_NAME", "IEEE Tadeo - Sistema de Tickets")
 
-        # Mostrar configuración en desarrollo (sin mostrar contraseña)
-        if self.smtp_user:
-            print(f"OK - SMTP configurado: {self.smtp_user} via {self.smtp_host}:{self.smtp_port}")
+        # Configurar Resend
+        if self.api_key:
+            resend.api_key = self.api_key
+            print(f"[OK] Resend configurado: {self.from_email}")
         else:
-            print("AVISO - SMTP no configurado - Los correos se simularan")
+            print("[AVISO] RESEND_API_KEY no configurado - Los correos se simularán")
 
     def send_email(
         self,
@@ -52,39 +47,28 @@ class EmailService:
         Returns:
             bool: True si el correo se envió correctamente, False en caso contrario
         """
-        try:
-            # Crear mensaje
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = f'{self.from_name} <{self.from_email}>'
-            msg['To'] = to_email
+        if not self.api_key:
+            print("⚠️  RESEND_API_KEY no configurado - El correo NO se enviará")
+            print(f"📧 Correo simulado enviado a: {to_email}")
+            print(f"📬 Asunto: {subject}")
+            return True
 
+        try:
             # Si no hay texto plano, crear uno simple del HTML
             if not text_content:
-                # Crear versión simple quitando etiquetas HTML básicas
                 import re
                 text_content = re.sub('<[^<]+?>', '', html_content)
 
-            # Adjuntar partes
-            part1 = MIMEText(text_content, 'plain', 'utf-8')
-            part2 = MIMEText(html_content, 'html', 'utf-8')
+            params = {
+                "from": f"{self.from_name} <{self.from_email}>",
+                "to": [to_email],
+                "subject": subject,
+                "html": html_content,
+                "text": text_content
+            }
 
-            msg.attach(part1)
-            msg.attach(part2)
-
-            # Enviar correo
-            if not self.smtp_user or not self.smtp_password:
-                print("⚠️  SMTP no configurado - El correo NO se enviará")
-                print(f"📧 Correo simulado enviado a: {to_email}")
-                print(f"📬 Asunto: {subject}")
-                return True  # Retornar True en desarrollo para no bloquear
-
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.smtp_user, self.smtp_password)
-                server.send_message(msg)
-
-            print(f"[OK] Correo enviado exitosamente a {to_email}")
+            response = resend.Emails.send(params)
+            print(f"[OK] Correo enviado exitosamente a {to_email} (ID: {response.get('id', 'N/A')})")
             return True
 
         except Exception as e:
@@ -109,18 +93,13 @@ class EmailService:
         Returns:
             bool: True si el correo se envió correctamente, False en caso contrario
         """
-        try:
-            # Crear mensaje
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = f'Tu Ticket para {event_name} - IEEE Tadeo'
-            msg['From'] = f'{self.from_name} <{self.from_email}>'
-            msg['To'] = to_email
+        # Formato de fecha
+        event_date_str = event_date.strftime('%d de %B de %Y a las %H:%M')
 
-            # Formato de fecha
-            event_date_str = event_date.strftime('%d de %B de %Y a las %H:%M')
+        subject = f'Tu Ticket para {event_name} - IEEE Tadeo'
 
-            # Crear contenido HTML
-            html_content = f"""
+        # Crear contenido HTML
+        html_content = f"""
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -278,10 +257,10 @@ class EmailService:
     </div>
 </body>
 </html>
-            """
+        """
 
-            # Crear versión texto plano
-            text_content = f"""
+        # Crear versión texto plano
+        text_content = f"""
 Tu Ticket IEEE Tadeo - {event_name}
 
 Hola {user_name},
@@ -309,39 +288,9 @@ IMPORTANTE:
 
 ---
 Este correo fue generado automáticamente por el Sistema de Tickets IEEE Tadeo.
-            """
+        """
 
-            # Adjuntar partes
-            part1 = MIMEText(text_content, 'plain', 'utf-8')
-            part2 = MIMEText(html_content, 'html', 'utf-8')
-
-            msg.attach(part1)
-            msg.attach(part2)
-
-            # Enviar correo
-            if not self.smtp_user or not self.smtp_password:
-                print("⚠️  SMTP no configurado - El correo NO se enviará")
-                print(f"📧 Correo simulado enviado a: {to_email}")
-                print(f"🔑 PIN: {access_pin}")
-                print(f"🔗 URL: {ticket_url}")
-                return True  # Retornar True en desarrollo para no bloquear
-
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.smtp_user, self.smtp_password)
-                server.send_message(msg)
-
-            print(f"[OK] Correo enviado exitosamente a {to_email}")
-            return True
-
-        except Exception as e:
-            print(f"[ERROR] Error al enviar correo: {str(e)}")
-            # En desarrollo, imprimir la información pero no fallar
-            print(f"📧 Información del ticket:")
-            print(f"   Email: {to_email}")
-            print(f"   PIN: {access_pin}")
-            print(f"   URL: {ticket_url}")
-            return False
+        return self.send_email(to_email, subject, html_content, text_content)
 
     def send_birthday_email(self, to_email: str, user_name: str, nick: Optional[str] = None) -> bool:
         """
@@ -366,121 +315,60 @@ Este correo fue generado automáticamente por el Sistema de Tickets IEEE Tadeo.
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                body {{
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    margin: 0;
-                    padding: 20px;
-                }}
-                .container {{
-                    max-width: 600px;
-                    margin: 0 auto;
-                    background: white;
-                    border-radius: 16px;
-                    overflow: hidden;
-                    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-                }}
-                .header {{
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    padding: 40px 30px;
-                    text-align: center;
-                }}
-                .header h1 {{
-                    margin: 0;
-                    font-size: 32px;
-                    font-weight: 700;
-                }}
-                .emoji {{
-                    font-size: 60px;
-                    margin: 20px 0;
-                }}
-                .content {{
-                    padding: 40px 30px;
-                    text-align: center;
-                }}
-                .greeting {{
-                    font-size: 24px;
-                    color: #333;
-                    margin-bottom: 20px;
-                    font-weight: 600;
-                }}
-                .message {{
-                    font-size: 16px;
-                    color: #666;
-                    line-height: 1.8;
-                    margin: 20px 0;
-                }}
-                .highlight {{
-                    color: #667eea;
-                    font-weight: 600;
-                }}
-                .balloons {{
-                    font-size: 48px;
-                    margin: 20px 0;
-                    animation: float 3s ease-in-out infinite;
-                }}
-                @keyframes float {{
-                    0%, 100% {{ transform: translateY(0px); }}
-                    50% {{ transform: translateY(-20px); }}
-                }}
-                .footer {{
-                    background: #f8f9fa;
-                    padding: 30px;
-                    text-align: center;
-                    border-top: 1px solid #e9ecef;
-                }}
-                .footer p {{
-                    margin: 5px 0;
-                    color: #6c757d;
-                    font-size: 14px;
-                }}
-                .signature {{
-                    margin-top: 20px;
-                    font-weight: 600;
-                    color: #495057;
-                }}
-            </style>
         </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <div class="emoji">🎂</div>
-                    <h1>¡Feliz Cumpleaños!</h1>
-                </div>
+        <body style="font-family: Arial, Helvetica, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; margin: 0 auto;">
+                <tr>
+                    <td>
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <!-- Header -->
+                            <tr>
+                                <td style="background-color: #e91e63; color: #ffffff; padding: 40px 30px; text-align: center;">
+                                    <div style="font-size: 60px; margin-bottom: 10px;">🎂</div>
+                                    <h1 style="margin: 0; font-size: 28px; font-weight: 600;">¡Feliz Cumpleaños!</h1>
+                                </td>
+                            </tr>
 
-                <div class="content">
-                    <div class="balloons">🎈🎉🎊🎁</div>
+                            <!-- Content -->
+                            <tr>
+                                <td style="padding: 40px 30px; text-align: center;">
+                                    <div style="font-size: 48px; margin-bottom: 20px;">🎈🎉🎊🎁</div>
 
-                    <p class="greeting">¡Hola {display_name}!</p>
+                                    <p style="font-size: 22px; color: #333333; margin-bottom: 20px; font-weight: 600;">¡Hola {display_name}!</p>
 
-                    <p class="message">
-                        En este día tan especial, todo el equipo de <span class="highlight">IEEE Tadeo</span>
-                        quiere desearte un <strong>muy feliz cumpleaños</strong>.
-                    </p>
+                                    <p style="font-size: 16px; color: #555555; line-height: 1.8; margin: 20px 0;">
+                                        En este día tan especial, todo el equipo de <strong style="color: #e91e63;">IEEE Tadeo</strong>
+                                        quiere desearte un <strong>muy feliz cumpleaños</strong>.
+                                    </p>
 
-                    <p class="message">
-                        Esperamos que este nuevo año de vida esté lleno de alegría, éxito y
-                        grandes experiencias. Gracias por ser parte de nuestra comunidad.
-                    </p>
+                                    <p style="font-size: 16px; color: #555555; line-height: 1.8; margin: 20px 0;">
+                                        Esperamos que este nuevo año de vida esté lleno de alegría, éxito y
+                                        grandes experiencias. Gracias por ser parte de nuestra comunidad.
+                                    </p>
 
-                    <p class="message">
-                        ¡Que este día esté lleno de momentos inolvidables! 🎉
-                    </p>
+                                    <p style="font-size: 16px; color: #555555; line-height: 1.8; margin: 20px 0;">
+                                        ¡Que este día esté lleno de momentos inolvidables! 🎉
+                                    </p>
 
-                    <div class="balloons">🥳🎈🎊</div>
-                </div>
+                                    <div style="font-size: 48px; margin-top: 20px;">🥳🎈🎊</div>
+                                </td>
+                            </tr>
 
-                <div class="footer">
-                    <p class="signature">Con cariño,</p>
-                    <p class="signature">El equipo de IEEE Tadeo</p>
-                    <p style="margin-top: 20px;">
-                        Sistema de Tickets - IEEE Tadeo<br>
-                        <a href="https://ticket.ieeetadeo.org" style="color: #667eea;">ticket.ieeetadeo.org</a>
-                    </p>
-                </div>
-            </div>
+                            <!-- Footer -->
+                            <tr>
+                                <td style="background-color: #f8f9fa; padding: 30px; text-align: center; border-top: 1px solid #e9ecef;">
+                                    <p style="margin: 5px 0; font-weight: 600; color: #495057; font-size: 15px;">Con cariño,</p>
+                                    <p style="margin: 5px 0; font-weight: 600; color: #495057; font-size: 15px;">El equipo de IEEE Tadeo</p>
+                                    <p style="margin-top: 20px; margin-bottom: 5px; color: #6c757d; font-size: 14px;">IEEE Tadeo Control System</p>
+                                    <p style="margin: 5px 0;">
+                                        <a href="https://ticket.ieeetadeo.org" style="color: #e91e63; text-decoration: none; font-size: 14px;">ticket.ieeetadeo.org</a>
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
         </body>
         </html>
         """
@@ -498,7 +386,7 @@ Gracias por ser parte de nuestra comunidad.
 Con cariño,
 El equipo de IEEE Tadeo
 
-Sistema de Tickets - IEEE Tadeo
+IEEE Tadeo Control System
 https://ticket.ieeetadeo.org
         """
 
@@ -529,102 +417,77 @@ https://ticket.ieeetadeo.org
         Returns:
             bool: True si el correo se envió correctamente
         """
-        # Procesar imagen si existe (extraer datos de la data URL)
-        image_data = None
-        image_type = None
+        # Procesar imagen si existe
+        image_html = ''
+        image_attachment = None
+
         if image_url and image_url.startswith('data:'):
+            # Extraer datos de la imagen
             try:
-                # Formato: data:image/png;base64,iVBORw0KG...
                 header, encoded = image_url.split(',', 1)
-                image_type = header.split(';')[0].split(':')[1]  # Obtener mime type
                 image_data = base64.b64decode(encoded)
+
+                # Usar CID para referenciar la imagen (más compatible con correos universitarios)
+                image_html = '<div style="text-align: center; margin: 30px 0;"><img src="cid:bulk_image" alt="Imagen" style="max-width: 100%; height: auto; border-radius: 8px; display: block; margin: 0 auto;"/></div>'
+                image_attachment = image_data
             except Exception as e:
                 print(f"[WARN] No se pudo procesar la imagen: {e}")
-                image_url = None
 
-        # Crear HTML personalizado
-        # Si hay imagen, usar CID para referenciarla
-        image_html = '<div style="text-align: center; margin: 30px 0;"><img src="cid:message_image" alt="Imagen" style="max-width: 100%; height: auto; border-radius: 8px;"/></div>' if image_data else ''
-
+        # Link con estilos inline más compatibles
         link_html = f'''
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="{link}" style="display: inline-block; background-color: #0066cc; color: white; text-decoration: none; padding: 15px 40px; border-radius: 6px; font-weight: 600;">{link_text or "Ver más"}</a>
-        </div>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+            <tr>
+                <td align="center">
+                    <a href="{link}" style="display: inline-block; background-color: #0066cc; color: #ffffff; text-decoration: none; padding: 15px 40px; border-radius: 6px; font-weight: 600; font-size: 16px;">{link_text or "Ver más"}</a>
+                </td>
+            </tr>
+        </table>
         ''' if link else ''
 
+        # HTML con estilos inline (más compatible)
         html_content = f"""
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                body {{
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                    background: #f5f5f5;
-                    margin: 0;
-                    padding: 20px;
-                }}
-                .container {{
-                    max-width: 600px;
-                    margin: 0 auto;
-                    background: white;
-                    border-radius: 8px;
-                    overflow: hidden;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                }}
-                .header {{
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    padding: 30px;
-                    text-align: center;
-                }}
-                .header h1 {{
-                    margin: 0;
-                    font-size: 24px;
-                    font-weight: 600;
-                }}
-                .content {{
-                    padding: 40px 30px;
-                }}
-                .message-text {{
-                    font-size: 16px;
-                    color: #333;
-                    line-height: 1.8;
-                    white-space: pre-wrap;
-                    margin: 20px 0;
-                }}
-                .footer {{
-                    background: #f8f9fa;
-                    padding: 20px 30px;
-                    text-align: center;
-                    border-top: 1px solid #e9ecef;
-                    color: #6c757d;
-                    font-size: 14px;
-                }}
-            </style>
         </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>{subject}</h1>
-                </div>
+        <body style="font-family: Arial, Helvetica, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; margin: 0 auto;">
+                <tr>
+                    <td>
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <!-- Header -->
+                            <tr>
+                                <td style="background-color: #667eea; color: #ffffff; padding: 30px; text-align: center;">
+                                    <h1 style="margin: 0; font-size: 24px; font-weight: 600;">{subject}</h1>
+                                </td>
+                            </tr>
 
-                <div class="content">
-                    <p style="font-size: 18px; color: #333; margin-bottom: 20px;">Hola <strong>{user_name}</strong>,</p>
+                            <!-- Content -->
+                            <tr>
+                                <td style="padding: 40px 30px;">
+                                    <p style="font-size: 18px; color: #333333; margin-bottom: 20px;">Hola <strong>{user_name}</strong>,</p>
 
-                    {image_html}
+                                    {image_html}
 
-                    <div class="message-text">{message}</div>
+                                    <div style="font-size: 16px; color: #333333; line-height: 1.8; white-space: pre-wrap; margin: 20px 0;">{message}</div>
 
-                    {link_html}
-                </div>
+                                    {link_html}
+                                </td>
+                            </tr>
 
-                <div class="footer">
-                    <p style="margin: 5px 0; font-weight: 600;">IEEE Tadeo Student Branch</p>
-                    <p style="margin: 5px 0;">Sistema de Tickets</p>
-                </div>
-            </div>
+                            <!-- Footer -->
+                            <tr>
+                                <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e9ecef;">
+                                    <p style="margin: 5px 0; font-weight: 600; color: #6c757d; font-size: 14px;">IEEE Tadeo Student Branch</p>
+                                    <p style="margin: 5px 0; color: #6c757d; font-size: 14px;">Sistema de Tickets</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
         </body>
         </html>
         """
@@ -643,50 +506,44 @@ IEEE Tadeo Student Branch
 Sistema de Tickets
         """
 
-        # Si no hay imagen, usar el método normal
-        if not image_data:
-            return self.send_email(to_email, subject, html_content, text_content)
-
-        # Si hay imagen, crear mensaje con adjunto CID
-        try:
-            msg = MIMEMultipart('related')
-            msg['Subject'] = subject
-            msg['From'] = f'{self.from_name} <{self.from_email}>'
-            msg['To'] = to_email
-
-            # Crear contenedor alternativo para texto/HTML
-            msg_alternative = MIMEMultipart('alternative')
-            msg.attach(msg_alternative)
-
-            # Adjuntar texto plano y HTML
-            part_text = MIMEText(text_content, 'plain', 'utf-8')
-            part_html = MIMEText(html_content, 'html', 'utf-8')
-            msg_alternative.attach(part_text)
-            msg_alternative.attach(part_html)
-
-            # Adjuntar imagen con CID
-            img = MIMEImage(image_data)
-            img.add_header('Content-ID', '<message_image>')
-            img.add_header('Content-Disposition', 'inline', filename='image.png')
-            msg.attach(img)
-
-            # Enviar correo
-            if not self.smtp_user or not self.smtp_password:
-                print("⚠️  SMTP no configurado - El correo NO se enviará")
-                print(f"📧 Correo simulado enviado a: {to_email} (con imagen)")
+        # Si hay imagen adjunta, usar Resend con attachments
+        if image_attachment:
+            if not self.api_key:
+                print("⚠️  RESEND_API_KEY no configurado - El correo NO se enviará")
                 return True
 
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.smtp_user, self.smtp_password)
-                server.send_message(msg)
+            try:
+                import re
+                if not text_content:
+                    text_content = re.sub('<[^<]+?>', '', html_content)
 
-            print(f"[OK] Correo con imagen enviado exitosamente a {to_email}")
-            return True
+                # Preparar imagen como adjunto inline
+                params = {
+                    "from": f"{self.from_name} <{self.from_email}>",
+                    "to": [to_email],
+                    "subject": subject,
+                    "html": html_content,
+                    "text": text_content,
+                    "attachments": [
+                        {
+                            "content": base64.b64encode(image_attachment).decode('utf-8'),
+                            "filename": "image.jpg",
+                            "content_id": "bulk_image",
+                            "disposition": "inline"
+                        }
+                    ]
+                }
 
-        except Exception as e:
-            print(f"[ERROR] Error al enviar correo con imagen: {str(e)}")
-            return False
+                response = resend.Emails.send(params)
+                print(f"[OK] Correo con imagen enviado exitosamente a {to_email} (ID: {response.get('id', 'N/A')})")
+                return True
+
+            except Exception as e:
+                print(f"[ERROR] Error al enviar correo con imagen: {str(e)}")
+                return False
+        else:
+            # Sin imagen, usar método normal
+            return self.send_email(to_email, subject, html_content, text_content)
 
 
 # Instancia global del servicio

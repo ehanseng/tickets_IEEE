@@ -127,7 +127,7 @@ def send_birthday_whatsapp(phone: str, country_code: str, user_name: str, nick: 
 
     # Verificar que WhatsApp esté listo
     if not client.is_ready():
-        print("[ERROR] WhatsApp no está listo. Verifica el servicio.")
+        print("[ERROR] WhatsApp no esta listo. Verifica el servicio.")
         return False
 
     # Determinar el nombre a usar: nick, o primer nombre del nombre completo
@@ -147,7 +147,7 @@ IEEE Tadeo Student Branch"""
     result = client.send_message(phone, message, country_code)
 
     if result.get("success"):
-        print(f"[OK] Mensaje de cumpleaños enviado a {user_name} ({country_code}{phone})")
+        print(f"[OK] Mensaje de cumpleanos enviado a {user_name} ({country_code}{phone})")
         return True
     else:
         print(f"[ERROR] No se pudo enviar mensaje a {user_name}: {result.get('error')}")
@@ -177,7 +177,7 @@ def send_ticket_whatsapp(
     client = WhatsAppClient()
 
     if not client.is_ready():
-        print("[ERROR] WhatsApp no está listo")
+        print("[ERROR] WhatsApp no esta listo")
         return False
 
     message = f"""🎟️ ¡Tu Ticket está listo!
@@ -236,7 +236,7 @@ def send_bulk_whatsapp(
     client = WhatsAppClient()
 
     if not client.is_ready():
-        print("[ERROR] WhatsApp no está listo")
+        print("[ERROR] WhatsApp no esta listo")
         return False
 
     # Construir mensaje de WhatsApp

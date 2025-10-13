@@ -1,14 +1,20 @@
 """
-Script para verificar cumpleaños y enviar correos de felicitación
+Script para verificar cumpleanos y enviar correos de felicitacion
 
 Este script debe ejecutarse diariamente (por ejemplo, a las 8:00 AM)
 usando un cron job o similar.
 """
 import sys
+import io
 from datetime import datetime
 from pathlib import Path
 
-# Agregar el directorio actual al path para importar módulos
+# Configurar codificacion UTF-8 para stdout en Windows
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
+# Agregar el directorio actual al path para importar modulos
 sys.path.insert(0, str(Path(__file__).parent))
 
 from sqlalchemy.orm import Session
@@ -18,15 +24,25 @@ from email_service import email_service
 from whatsapp_client import send_birthday_whatsapp, WhatsAppClient
 
 
-def check_and_send_birthday_emails():
+def check_and_send_birthday_emails(execution_type="automatic"):
     """
-    Verifica los cumpleaños del día actual y envía correos y WhatsApp de felicitación
+    Verifica los cumpleanos del dia actual y envia correos y WhatsApp de felicitacion
+
+    Args:
+        execution_type: "automatic" o "manual" para indicar el tipo de ejecucion
     """
     db: Session = SessionLocal()
 
-    # Verificar si WhatsApp está disponible
+    # Verificar si WhatsApp esta disponible
     whatsapp_client = WhatsAppClient()
     whatsapp_available = whatsapp_client.is_ready()
+
+    # Inicializar log de ejecucion
+    log_entry = models.BirthdayCheckLog(
+        executed_at=datetime.now(),
+        whatsapp_available=whatsapp_available,
+        execution_type=execution_type
+    )
 
     try:
         # Obtener la fecha de hoy (solo mes y día, ignorar año)
@@ -34,12 +50,12 @@ def check_and_send_birthday_emails():
         today_month = today.month
         today_day = today.day
 
-        print(f"=== Verificador de Cumpleaños - {today.strftime('%Y-%m-%d')} ===")
-        print(f"WhatsApp: {'✓ Disponible' if whatsapp_available else '✗ No disponible'}")
-        print(f"Buscando usuarios con cumpleaños en {today.strftime('%d/%m')}...")
+        print(f"=== Verificador de Cumpleanos - {today.strftime('%Y-%m-%d')} ===")
+        print(f"WhatsApp: {'[OK] Disponible' if whatsapp_available else '[X] No disponible'}")
+        print(f"Buscando usuarios con cumpleanos en {today.strftime('%d/%m')}...")
 
-        # Buscar usuarios que cumplan años hoy
-        # Filtramos por mes y día, sin importar el año
+        # Buscar usuarios que cumplan anos hoy
+        # Filtramos por mes y dia, sin importar el ano
         users = db.query(models.User).filter(
             models.User.birthday.isnot(None)
         ).all()
@@ -50,23 +66,29 @@ def check_and_send_birthday_emails():
                 birthday_users.append(user)
 
         if not birthday_users:
-            print("No hay cumpleaños hoy.")
+            print("No hay cumpleanos hoy.")
             print("=" * 60)
+
+            # Guardar log de ejecucion (sin cumpleanos)
+            log_entry.birthdays_found = 0
+            db.add(log_entry)
+            db.commit()
+
             return
 
-        print(f"\nEncontrados {len(birthday_users)} cumpleaños hoy:")
+        print(f"\nEncontrados {len(birthday_users)} cumpleanos hoy:")
         print("-" * 60)
 
-        # Enviar correos y WhatsApp de cumpleaños
+        # Enviar correos y WhatsApp de cumpleanos
         email_sent_count = 0
         email_failed_count = 0
         whatsapp_sent_count = 0
         whatsapp_failed_count = 0
 
         for user in birthday_users:
-            # Calcular la edad si tenemos el año de nacimiento
+            # Calcular la edad si tenemos el ano de nacimiento
             age = today.year - user.birthday.year if user.birthday else None
-            age_str = f" ({age} años)" if age else ""
+            age_str = f" ({age} anos)" if age else ""
 
             print(f"\n>> Enviando felicitaciones a:")
             print(f"   Nombre: {user.name}{age_str}")
@@ -110,14 +132,14 @@ def check_and_send_birthday_emails():
                     print(f"   [ERROR] Error en WhatsApp: {str(e)}")
                     whatsapp_failed_count += 1
             elif not user.phone or not user.country_code:
-                print(f"   [SKIP] Usuario sin número de teléfono")
+                print(f"   [SKIP] Usuario sin numero de telefono")
             elif not whatsapp_available:
                 print(f"   [SKIP] WhatsApp no disponible")
 
         # Resumen
         print("\n" + "=" * 60)
         print("RESUMEN:")
-        print(f"  Total de cumpleaños: {len(birthday_users)}")
+        print(f"  Total de cumpleanos: {len(birthday_users)}")
         print(f"\n  CORREOS:")
         print(f"    Enviados: {email_sent_count}")
         print(f"    Errores: {email_failed_count}")
@@ -126,8 +148,29 @@ def check_and_send_birthday_emails():
         print(f"    Errores: {whatsapp_failed_count}")
         print("=" * 60)
 
+        # Actualizar y guardar log de ejecucion
+        log_entry.birthdays_found = len(birthday_users)
+        log_entry.emails_sent = email_sent_count
+        log_entry.emails_failed = email_failed_count
+        log_entry.whatsapp_sent = whatsapp_sent_count
+        log_entry.whatsapp_failed = whatsapp_failed_count
+        log_entry.notes = f"Procesados {len(birthday_users)} cumpleaños"
+
+        db.add(log_entry)
+        db.commit()
+        print(f"\n[LOG] Ejecucion registrada en base de datos (ID: {log_entry.id})")
+
     except Exception as e:
         print(f"[ERROR] Error general: {str(e)}")
+
+        # Guardar log con error
+        log_entry.notes = f"Error durante la ejecución: {str(e)}"
+        try:
+            db.add(log_entry)
+            db.commit()
+        except:
+            pass
+
         raise
 
     finally:

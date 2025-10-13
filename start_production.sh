@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Script de inicio para producción
-# Sistema de Tickets IEEE
+# IEEE Tadeo Control System
 
-echo "🚀 Iniciando Sistema de Tickets IEEE en modo producción..."
+echo "🚀 Iniciando IEEE Tadeo Control System en modo producción..."
 
 # Verificar que existe el archivo .env
 if [ ! -f .env ]; then

@@ -130,3 +130,19 @@ class ValidationLog(Base):
     # Relaciones
     ticket = relationship("Ticket")
     validator = relationship("AdminUser", back_populates="validations")
+
+
+class BirthdayCheckLog(Base):
+    """Registro de ejecuciones del sistema de cumpleaños"""
+    __tablename__ = "birthday_check_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    executed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    birthdays_found = Column(Integer, default=0)  # Cantidad de cumpleaños encontrados
+    emails_sent = Column(Integer, default=0)  # Emails enviados exitosamente
+    emails_failed = Column(Integer, default=0)  # Emails fallidos
+    whatsapp_sent = Column(Integer, default=0)  # WhatsApps enviados exitosamente
+    whatsapp_failed = Column(Integer, default=0)  # WhatsApps fallidos
+    whatsapp_available = Column(Boolean, default=False)  # Si WhatsApp estaba disponible
+    execution_type = Column(String, default="automatic")  # "automatic" o "manual"
+    notes = Column(Text, nullable=True)  # Notas adicionales

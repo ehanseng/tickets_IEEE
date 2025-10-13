@@ -60,6 +60,7 @@ class UserCreate(BaseModel):
     phone: Optional[str] = None
     identification: Optional[str] = None  # Cédula
     university_id: Optional[int] = None  # ID de universidad
+    birthday: Optional[datetime] = None  # Fecha de cumpleaños
     is_ieee_member: bool = False  # Miembro activo de IEEE
 
 
@@ -86,6 +87,7 @@ class UserResponse(BaseModel):
     phone: Optional[str]
     identification: Optional[str]
     university_id: Optional[int]
+    birthday: Optional[datetime]
     is_ieee_member: bool
     created_at: datetime
     university: Optional[UniversityResponse] = None

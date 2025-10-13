@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, desc
 from datetime import datetime, timedelta
 from typing import List
 import os
@@ -34,8 +34,8 @@ BASE_URL = os.getenv("BASE_URL", "http://127.0.0.1:8000")
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="Sistema de Tickets IEEE",
-    description="Sistema de control de ingreso a eventos con QR",
+    title="IEEE Tadeo Control System",
+    description="Sistema de control y gestión para eventos IEEE",
     version="1.0.0"
 )
 
@@ -512,6 +512,97 @@ def send_birthday_greeting(
             }
         )
 
+
+
+
+# ========== ENDPOINTS DE CUMPLEAÑOS ==========
+
+@app.get("/birthdays/last-check")
+def get_last_birthday_check(
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Obtener información de la última ejecución del sistema de cumpleaños"""
+    last_check = db.query(models.BirthdayCheckLog).order_by(
+        desc(models.BirthdayCheckLog.executed_at)
+    ).first()
+
+    if not last_check:
+        return {
+            "has_logs": False,
+            "message": "No hay registros de ejecuciones anteriores"
+        }
+
+    # Calcular tiempo desde la última ejecución
+    now = datetime.now()
+    time_since = now - last_check.executed_at
+    hours_since = int(time_since.total_seconds() / 3600)
+    minutes_since = int((time_since.total_seconds() % 3600) / 60)
+
+    # Determinar mensaje de tiempo
+    if hours_since < 1:
+        time_message = f"Hace {minutes_since} minuto{'s' if minutes_since != 1 else ''}"
+    elif hours_since < 24:
+        time_message = f"Hace {hours_since} hora{'s' if hours_since != 1 else ''}"
+    else:
+        days_since = int(hours_since / 24)
+        time_message = f"Hace {days_since} día{'s' if days_since != 1 else ''}"
+
+    return {
+        "has_logs": True,
+        "last_check": {
+            "id": last_check.id,
+            "executed_at": last_check.executed_at.isoformat(),
+            "time_since": time_message,
+            "hours_since": hours_since,
+            "birthdays_found": last_check.birthdays_found,
+            "emails_sent": last_check.emails_sent,
+            "emails_failed": last_check.emails_failed,
+            "whatsapp_sent": last_check.whatsapp_sent,
+            "whatsapp_failed": last_check.whatsapp_failed,
+            "whatsapp_available": last_check.whatsapp_available,
+            "execution_type": last_check.execution_type,
+            "notes": last_check.notes,
+            "success_rate": {
+                "email": f"{(last_check.emails_sent / (last_check.emails_sent + last_check.emails_failed) * 100):.1f}%" if (last_check.emails_sent + last_check.emails_failed) > 0 else "N/A",
+                "whatsapp": f"{(last_check.whatsapp_sent / (last_check.whatsapp_sent + last_check.whatsapp_failed) * 100):.1f}%" if (last_check.whatsapp_sent + last_check.whatsapp_failed) > 0 else "N/A"
+            }
+        }
+    }
+
+
+@app.post("/birthdays/check-now")
+def check_birthdays_now(
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Ejecutar manualmente el verificador de cumpleaños"""
+    from birthday_checker import check_and_send_birthday_emails
+
+    try:
+        # Ejecutar verificación manual
+        check_and_send_birthday_emails(execution_type="manual")
+
+        # Obtener el último log para retornar la información
+        last_check = db.query(models.BirthdayCheckLog).order_by(
+            desc(models.BirthdayCheckLog.executed_at)
+        ).first()
+
+        return {
+            "success": True,
+            "message": "Verificación de cumpleaños ejecutada exitosamente",
+            "result": {
+                "birthdays_found": last_check.birthdays_found if last_check else 0,
+                "emails_sent": last_check.emails_sent if last_check else 0,
+                "whatsapp_sent": last_check.whatsapp_sent if last_check else 0
+            }
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al ejecutar verificación: {str(e)}"
+        )
 
 # ========== ENDPOINTS DE EVENTOS ==========
 
@@ -1242,22 +1333,46 @@ async def bulk_send_messages(
     if not send_email_bool and not send_whatsapp_bool:
         raise HTTPException(status_code=400, detail="Debes seleccionar al menos un canal de envío")
 
-    # Guardar imagen y convertir a base64 si fue proporcionada
+    # Guardar imagen, comprimir y convertir a base64 si fue proporcionada
     image_url = None
     if image and image.filename:
         import base64
+        from PIL import Image
+        from io import BytesIO
 
         # Leer el contenido de la imagen
         image_content = await image.read()
 
-        # Convertir a base64
-        image_base64 = base64.b64encode(image_content).decode('utf-8')
+        # Abrir imagen con Pillow
+        img = Image.open(BytesIO(image_content))
 
-        # Determinar el tipo MIME
-        mime_type = image.content_type or 'image/jpeg'
+        # Convertir a RGB si es necesario (para JPEG)
+        if img.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            background.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
+            img = background
+
+        # Redimensionar si es muy grande (max 1200x1200 como WhatsApp)
+        max_size = (1200, 1200)
+        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+        # Comprimir y guardar en buffer
+        buffer = BytesIO()
+        img.save(buffer, format='JPEG', quality=85, optimize=True)
+        compressed_content = buffer.getvalue()
+
+        # Log de compresión
+        original_size = len(image_content)
+        compressed_size = len(compressed_content)
+        print(f"[INFO] Imagen comprimida: {original_size/1024:.2f}KB → {compressed_size/1024:.2f}KB ({(1-compressed_size/original_size)*100:.1f}% reducción)")
+
+        # Convertir a base64
+        image_base64 = base64.b64encode(compressed_content).decode('utf-8')
 
         # Crear URL de datos (data URL) para embeber en el email
-        image_url = f"data:{mime_type};base64,{image_base64}"
+        image_url = f"data:image/jpeg;base64,{image_base64}"
 
     # Obtener usuarios
     users = db.query(models.User).filter(models.User.id.in_(user_id_list)).all()
@@ -1418,7 +1533,7 @@ async def root(request: Request):
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Sistema de Tickets IEEE</title>
+        <title>IEEE Tadeo Control System</title>
         <meta http-equiv="refresh" content="0; url=/login">
         <style>
             body {
@@ -1435,7 +1550,7 @@ async def root(request: Request):
     </head>
     <body>
         <div style="text-align: center;">
-            <h1>Sistema de Tickets IEEE</h1>
+            <h1>IEEE Tadeo Control System</h1>
             <p>Redirigiendo al login...</p>
             <p><a href="/login" style="color: white;">Haz clic aquí si no eres redirigido automáticamente</a></p>
         </div>
