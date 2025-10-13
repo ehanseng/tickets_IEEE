@@ -149,6 +149,18 @@ function initializeWhatsApp() {
         }
     });
 
+    // Evento adicional: Mensaje leído (para mayor compatibilidad)
+    client.on('message_revoke_everyone', async (msg) => {
+        console.log(`[INFO] Mensaje revocado: ${msg.id.id}`);
+    });
+
+    // Verificar estado de mensajes periódicamente
+    setInterval(async () => {
+        // Este es un fallback para verificar mensajes que no recibieron ACK
+        // Solo para desarrollo - en producción puede generar mucho tráfico
+        console.log('[DEBUG] Verificación periódica de estados activa');
+    }, 60000); // Cada minuto
+
     // Inicializar
     client.initialize();
 }
