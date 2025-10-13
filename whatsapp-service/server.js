@@ -1,14 +1,37 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const express = require('express');
 const qrcode = require('qrcode-terminal');
 const cors = require('cors');
+const multer = require('multer');
+const sharp = require('sharp');
+const fs = require('fs').promises;
+const path = require('path');
 
 const app = express();
 const PORT = 3000;
 
+// Crear directorio para imágenes de WhatsApp si no existe
+const WHATSAPP_IMAGES_DIR = path.join(__dirname, '../static/whatsapp_images');
+fs.mkdir(WHATSAPP_IMAGES_DIR, { recursive: true }).catch(console.error);
+
+// Configurar multer para uploads de archivos
+const upload = multer({
+    dest: 'uploads/',
+    limits: { fileSize: 16 * 1024 * 1024 }, // 16MB max
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Tipo de archivo no permitido. Solo imágenes.'));
+        }
+    }
+});
+
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Estado del cliente
 let client;
@@ -232,6 +255,115 @@ app.post('/send-bulk', async (req, res) => {
     });
 });
 
+// POST /send-media - Enviar mensaje con imagen
+app.post('/send-media', async (req, res) => {
+    if (!isReady) {
+        return res.status(503).json({
+            success: false,
+            error: 'WhatsApp no está conectado'
+        });
+    }
+
+    const { phone, message, imageBase64 } = req.body;
+
+    if (!phone || !message || !imageBase64) {
+        return res.status(400).json({
+            success: false,
+            error: 'Los campos phone, message e imageBase64 son requeridos'
+        });
+    }
+
+    try {
+        // Limpiar número de teléfono
+        let cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+        if (!cleanPhone.includes('@')) {
+            cleanPhone = cleanPhone.replace('+', '') + '@c.us';
+        }
+
+        console.log(`[INFO] Enviando mensaje con imagen a ${cleanPhone}`);
+
+        // Verificar si el número existe
+        const isRegistered = await client.isRegisteredUser(cleanPhone);
+        if (!isRegistered) {
+            return res.status(404).json({
+                success: false,
+                error: 'Este número no está registrado en WhatsApp'
+            });
+        }
+
+        // Extraer datos de la imagen base64
+        const matches = imageBase64.match(/^data:(.+);base64,(.+)$/);
+        if (!matches) {
+            return res.status(400).json({
+                success: false,
+                error: 'Formato de imagen base64 inválido'
+            });
+        }
+
+        const mimeType = matches[1];
+        const base64Data = matches[2];
+        const imageBuffer = Buffer.from(base64Data, 'base64');
+
+        // Comprimir imagen con sharp (optimizar para WhatsApp)
+        const compressedBuffer = await sharp(imageBuffer)
+            .resize(1200, 1200, {
+                fit: 'inside',
+                withoutEnlargement: true
+            })
+            .jpeg({
+                quality: 85,
+                progressive: true
+            })
+            .toBuffer();
+
+        // Guardar imagen comprimida
+        const timestamp = Date.now();
+        const filename = `wa_${timestamp}.jpg`;
+        const filepath = path.join(WHATSAPP_IMAGES_DIR, filename);
+        await fs.writeFile(filepath, compressedBuffer);
+
+        console.log(`[INFO] Imagen guardada y comprimida: ${filename}`);
+        console.log(`[INFO] Tamaño original: ${(imageBuffer.length / 1024).toFixed(2)}KB`);
+        console.log(`[INFO] Tamaño comprimido: ${(compressedBuffer.length / 1024).toFixed(2)}KB`);
+
+        // Crear objeto MessageMedia
+        const media = MessageMedia.fromFilePath(filepath);
+
+        // Enviar mensaje con imagen
+        const result = await client.sendMessage(cleanPhone, media, { caption: message });
+
+        console.log('[OK] Mensaje con imagen enviado exitosamente');
+
+        // Limpiar archivo temporal después de 30 segundos
+        setTimeout(async () => {
+            try {
+                await fs.unlink(filepath);
+                console.log(`[INFO] Archivo temporal eliminado: ${filename}`);
+            } catch (err) {
+                console.error(`[WARN] No se pudo eliminar archivo temporal: ${err.message}`);
+            }
+        }, 30000);
+
+        res.json({
+            success: true,
+            message: 'Mensaje con imagen enviado exitosamente',
+            messageId: result.id.id,
+            to: cleanPhone,
+            imageCompression: {
+                originalSize: `${(imageBuffer.length / 1024).toFixed(2)}KB`,
+                compressedSize: `${(compressedBuffer.length / 1024).toFixed(2)}KB`
+            }
+        });
+
+    } catch (error) {
+        console.error('[ERROR] Error al enviar mensaje con imagen:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error al enviar mensaje: ' + error.message
+        });
+    }
+});
+
 // POST /restart - Reiniciar cliente (útil si se pierde conexión)
 app.post('/restart', async (req, res) => {
     console.log('[INFO] Reiniciando cliente...');
@@ -255,6 +387,7 @@ app.listen(PORT, () => {
     console.log('  GET  / - Estado del servicio');
     console.log('  GET  /status - Estado de conexión y QR');
     console.log('  POST /send - Enviar mensaje individual');
+    console.log('  POST /send-media - Enviar mensaje con imagen');
     console.log('  POST /send-bulk - Enviar mensajes masivos');
     console.log('  POST /restart - Reiniciar cliente');
     console.log('');

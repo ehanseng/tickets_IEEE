@@ -215,7 +215,8 @@ def send_bulk_whatsapp(
     user_name: str,
     subject: str,
     message: str,
-    link: Optional[str] = None
+    link: Optional[str] = None,
+    image_base64: Optional[str] = None
 ) -> bool:
     """
     Envía un mensaje masivo personalizado por WhatsApp
@@ -227,6 +228,7 @@ def send_bulk_whatsapp(
         subject: Asunto/título del mensaje
         message: Contenido del mensaje
         link: URL opcional para incluir
+        image_base64: Imagen en formato base64 data URL (opcional)
 
     Returns:
         True si se envió correctamente, False en caso contrario
@@ -249,6 +251,41 @@ Hola {user_name},
 
     wa_message += "\n\n---\nIEEE Tadeo Student Branch"
 
+    # Si hay imagen, usar el endpoint /send-media
+    if image_base64:
+        full_phone = format_phone_number(country_code, phone)
+
+        try:
+            response = requests.post(
+                f"{client.base_url}/send-media",
+                json={
+                    "phone": full_phone,
+                    "message": wa_message,
+                    "imageBase64": image_base64
+                },
+                timeout=60
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("success"):
+                    print(f"[OK] Mensaje con imagen enviado a {user_name} ({country_code}{phone})")
+                    if "imageCompression" in result:
+                        print(f"     Compresión: {result['imageCompression']['originalSize']} → {result['imageCompression']['compressedSize']}")
+                    return True
+                else:
+                    print(f"[ERROR] No se pudo enviar mensaje con imagen a {user_name}: {result.get('error')}")
+                    return False
+            else:
+                error_data = response.json() if response.text else {}
+                print(f"[ERROR] No se pudo enviar mensaje con imagen a {user_name}: {error_data.get('error', 'Error desconocido')}")
+                return False
+
+        except requests.exceptions.RequestException as e:
+            print(f"[ERROR] Error de conexión al enviar imagen a {user_name}: {str(e)}")
+            return False
+
+    # Si no hay imagen, usar el método normal
     result = client.send_message(phone, wa_message, country_code)
 
     if result.get("success"):

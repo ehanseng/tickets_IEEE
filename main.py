@@ -1308,7 +1308,8 @@ async def bulk_send_messages(
                         user_name=display_name,
                         subject=subject,
                         message=personalized_message,
-                        link=link if link else None
+                        link=link if link else None,
+                        image_base64=image_url if image_url else None
                     )
                     if success:
                         sent_count += 1
