@@ -25,6 +25,18 @@
                 </h4>
 
                 <div class="space-y-4">
+                    <!-- Filtro por evento -->
+                    <div class="flex gap-2 items-center">
+                        <label for="eventFilter" class="text-sm font-medium whitespace-nowrap">Filtrar por evento:</label>
+                        <select id="eventFilter" class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm flex-1" onchange="updateEventTicketCount()">
+                            <option value="">Todos los usuarios</option>
+                        </select>
+                        <button type="button" onclick="selectUsersWithEventTickets()" class="inline-flex items-center justify-center rounded-md text-xs font-medium bg-purple-100 text-purple-800 hover:bg-purple-200 h-9 px-3 whitespace-nowrap">
+                            Seleccionar usuarios con tickets
+                            <span id="eventTicketCount" class="ml-1 font-bold"></span>
+                        </button>
+                    </div>
+
                     <!-- Filtros rápidos -->
                     <div class="flex gap-2 flex-wrap">
                         <button type="button" onclick="selectAllUsers()" class="inline-flex items-center justify-center rounded-md text-xs font-medium border border-input bg-background hover:bg-accent h-8 px-3">
@@ -213,6 +225,8 @@
 {% block extra_js %}
 <script>
     let allUsers = [];
+    let allEvents = [];
+    let eventTickets = {}; // Map de event_id -> array de user_ids con tickets
     let selectedUserIds = new Set();
 
     // Cargar usuarios al iniciar
@@ -225,12 +239,136 @@
 
             if (response.ok) {
                 allUsers = await response.json();
+                console.log('Total usuarios cargados:', allUsers.length);
+                console.log('Usuarios sin teléfono:', allUsers.filter(u => !u.phone).length);
                 renderUsers();
             }
         } catch (error) {
             console.error('Error al cargar usuarios:', error);
             showNotification('Error al cargar usuarios', 'error');
         }
+    }
+
+    // Cargar eventos
+    async function loadEvents() {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/events/', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                allEvents = await response.json();
+                renderEventOptions();
+            }
+        } catch (error) {
+            console.error('Error al cargar eventos:', error);
+        }
+    }
+
+    // Renderizar opciones de eventos
+    function renderEventOptions() {
+        const select = document.getElementById('eventFilter');
+        const eventsHtml = allEvents.map(event => {
+            const eventDate = new Date(event.event_date).toLocaleDateString();
+            return `<option value="${event.id}">${event.name} - ${eventDate}</option>`;
+        }).join('');
+        select.innerHTML = '<option value="">Todos los usuarios</option>' + eventsHtml;
+    }
+
+    // Cargar tickets de un evento específico
+    async function loadEventTickets(eventId) {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`/events/${eventId}/tickets`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Respuesta completa del servidor:', data);
+                // La respuesta tiene estructura: { event_id, event_name, tickets: [...] }
+                const tickets = data.tickets || [];
+                console.log('Total tickets recibidos:', tickets.length);
+                console.log('Primer ticket (ejemplo):', tickets[0]);
+                // Extraer IDs únicos de usuarios con tickets para este evento
+                const userIds = tickets.map(t => t.user_id);
+                console.log('User IDs antes de filtrar duplicados:', userIds);
+                eventTickets[eventId] = [...new Set(userIds)];
+                console.log('User IDs únicos después de filtrar:', eventTickets[eventId]);
+                return eventTickets[eventId];
+            }
+        } catch (error) {
+            console.error('Error al cargar tickets del evento:', error);
+        }
+        return [];
+    }
+
+    // Actualizar contador de usuarios con tickets del evento
+    async function updateEventTicketCount() {
+        const eventId = document.getElementById('eventFilter').value;
+        const countSpan = document.getElementById('eventTicketCount');
+
+        if (!eventId) {
+            countSpan.textContent = '';
+            return;
+        }
+
+        // Cargar tickets si no los tenemos en cache
+        if (!eventTickets[eventId]) {
+            await loadEventTickets(eventId);
+        }
+
+        const count = eventTickets[eventId]?.length || 0;
+        countSpan.textContent = `(${count})`;
+    }
+
+    // Seleccionar usuarios con tickets del evento seleccionado
+    async function selectUsersWithEventTickets() {
+        const eventId = document.getElementById('eventFilter').value;
+
+        if (!eventId) {
+            showNotification('Por favor selecciona un evento primero', 'error');
+            return;
+        }
+
+        // Cargar tickets si no los tenemos en cache
+        if (!eventTickets[eventId]) {
+            await loadEventTickets(eventId);
+        }
+
+        const userIdsWithTickets = eventTickets[eventId] || [];
+
+        console.log('User IDs con tickets:', userIdsWithTickets);
+        console.log('Total usuarios con tickets:', userIdsWithTickets.length);
+
+        if (userIdsWithTickets.length === 0) {
+            showNotification('No hay usuarios con tickets para este evento', 'error');
+            return;
+        }
+
+        // Deseleccionar todos primero
+        selectNone();
+
+        // Obtener todos los checkboxes y sus valores
+        const allCheckboxes = document.querySelectorAll('.user-checkbox');
+        console.log('Total checkboxes disponibles:', allCheckboxes.length);
+
+        let selectedCount = 0;
+        // Seleccionar usuarios que tienen tickets
+        allCheckboxes.forEach(cb => {
+            const userId = parseInt(cb.value);
+            if (userIdsWithTickets.includes(userId)) {
+                cb.checked = true;
+                selectedCount++;
+                console.log('Seleccionando usuario con ID:', userId);
+            }
+        });
+
+        console.log('Usuarios efectivamente seleccionados:', selectedCount);
+
+        updateSelection();
+        showNotification(`${selectedCount} usuario(s) con tickets seleccionado(s)`, 'success');
     }
 
     function renderUsers() {
@@ -392,7 +530,17 @@
             const data = await response.json();
 
             if (response.ok) {
-                showNotification(`✓ Mensajes enviados exitosamente a ${data.sent_count} usuario(s)`, 'success');
+                const totalSent = (data.emails_sent || 0) + (data.whatsapp_sent || 0);
+                const message = `✓ Campaña creada exitosamente! ${totalSent} mensaje(s) enviado(s) de ${data.total_recipients} destinatario(s).`;
+                showNotification(message, 'success');
+
+                // Mostrar botón para ver detalles de la campaña
+                setTimeout(() => {
+                    if (confirm('¿Quieres ver los detalles de la campaña enviada?')) {
+                        window.location.href = `/admin/campaigns/${data.campaign_id}`;
+                    }
+                }, 1000);
+
                 document.getElementById('messageForm').reset();
                 selectNone();
             } else {
@@ -430,7 +578,10 @@
         document.getElementById('notification').classList.add('hidden');
     }
 
-    // Cargar usuarios al inicio
-    window.addEventListener('DOMContentLoaded', loadUsers);
+    // Cargar usuarios y eventos al inicio
+    window.addEventListener('DOMContentLoaded', () => {
+        loadUsers();
+        loadEvents();
+    });
 </script>
 {% endblock %}
