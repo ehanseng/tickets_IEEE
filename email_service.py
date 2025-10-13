@@ -19,7 +19,7 @@ class EmailService:
         # Configuración de Resend
         self.api_key = os.getenv("RESEND_API_KEY", "")
         self.from_email = os.getenv("FROM_EMAIL", "onboarding@resend.dev")
-        self.from_name = os.getenv("FROM_NAME", "IEEE Tadeo - Sistema de Tickets")
+        self.from_name = os.getenv("FROM_NAME", "IEEE Tadeo - Control System")
 
         # Configurar Resend
         if self.api_key:
@@ -251,7 +251,7 @@ class EmailService:
         {f'<div class="info-section"><h2>ℹ️ Sobre el Evento</h2><p>{event_description}</p></div>' if event_description else ''}
 
         <div class="footer">
-            <p>Este correo fue generado automáticamente por el Sistema de Tickets IEEE Tadeo.</p>
+            <p>Este correo fue generado automáticamente por el Control System IEEE Tadeo.</p>
             <p>Si tienes alguna pregunta, contacta al organizador del evento.</p>
         </div>
     </div>
@@ -287,7 +287,7 @@ IMPORTANTE:
 {f'SOBRE EL EVENTO:\\n{event_description}\\n' if event_description else ''}
 
 ---
-Este correo fue generado automáticamente por el Sistema de Tickets IEEE Tadeo.
+Este correo fue generado automáticamente por el Control System IEEE Tadeo.
         """
 
         return self.send_email(to_email, subject, html_content, text_content)
@@ -481,7 +481,7 @@ https://ticket.ieeetadeo.org
                             <tr>
                                 <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e9ecef;">
                                     <p style="margin: 5px 0; font-weight: 600; color: #6c757d; font-size: 14px;">IEEE Tadeo Student Branch</p>
-                                    <p style="margin: 5px 0; color: #6c757d; font-size: 14px;">Sistema de Tickets</p>
+                                    <p style="margin: 5px 0; color: #6c757d; font-size: 14px;">Control System</p>
                                 </td>
                             </tr>
                         </table>
@@ -503,7 +503,7 @@ Hola {user_name},
 
 ---
 IEEE Tadeo Student Branch
-Sistema de Tickets
+Control System
         """
 
         # Si hay imagen adjunta, usar Resend con attachments
