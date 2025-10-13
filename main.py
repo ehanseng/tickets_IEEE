@@ -1242,25 +1242,22 @@ async def bulk_send_messages(
     if not send_email_bool and not send_whatsapp_bool:
         raise HTTPException(status_code=400, detail="Debes seleccionar al menos un canal de envío")
 
-    # Guardar imagen si fue proporcionada
-    image_path = None
+    # Guardar imagen y convertir a base64 si fue proporcionada
+    image_url = None
     if image and image.filename:
-        # Crear directorio para imágenes de mensajes si no existe
-        upload_dir = Path("static/message_images")
-        upload_dir.mkdir(parents=True, exist_ok=True)
+        import base64
 
-        # Guardar archivo
-        file_extension = Path(image.filename).suffix
-        image_filename = f"msg_{datetime.now().strftime('%Y%m%d_%H%M%S')}{file_extension}"
-        image_path = upload_dir / image_filename
+        # Leer el contenido de la imagen
+        image_content = await image.read()
 
-        with image_path.open("wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
+        # Convertir a base64
+        image_base64 = base64.b64encode(image_content).decode('utf-8')
 
-        # Convertir a URL relativa
-        image_url = f"/static/message_images/{image_filename}"
-    else:
-        image_url = None
+        # Determinar el tipo MIME
+        mime_type = image.content_type or 'image/jpeg'
+
+        # Crear URL de datos (data URL) para embeber en el email
+        image_url = f"data:{mime_type};base64,{image_base64}"
 
     # Obtener usuarios
     users = db.query(models.User).filter(models.User.id.in_(user_id_list)).all()
