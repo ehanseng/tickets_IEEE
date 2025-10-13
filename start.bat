@@ -15,7 +15,7 @@ echo ========================================
 echo.
 echo Este script iniciara:
 echo   [1] Servicio de WhatsApp (puerto 3000)
-echo   [2] Tunel publico (localtunnel o ngrok)
+echo   [2] Cloudflare Tunnel (https://ticket.ieeetadeo.org)
 echo   [3] Aplicacion FastAPI (puerto 8000)
 echo.
 echo ========================================
@@ -60,20 +60,8 @@ set TASK_NAME=IEEE_Birthday_Checker
 schtasks /Query /TN "%TASK_NAME%" >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo      [INFO] No se encontro tarea programada de cumpleanos.
-    echo      [INFO] Configurando tarea automatica (diaria a las 9:00 AM)...
-
-    set SCRIPT_DIR=%~dp0
-    set SCRIPT_DIR=%SCRIPT_DIR:~0,-1%
-
-    schtasks /Create /TN "%TASK_NAME%" /TR "cmd /c cd /d \"%SCRIPT_DIR%\" && uv run python birthday_checker.py >> logs\birthday_checker.log 2>&1" /SC DAILY /ST 09:00 /F >nul 2>&1
-
-    if %ERRORLEVEL% EQU 0 (
-        echo      [OK] Tarea programada creada exitosamente!
-        echo      [INFO] Verificacion de cumpleanos: Diariamente a las 9:00 AM
-    ) else (
-        echo      [WARN] No se pudo crear la tarea programada automaticamente.
-        echo      [INFO] Puedes crearla manualmente ejecutando: setup_daily_birthday_task.bat
-    )
+    echo      [INFO] Configurando tarea automatica (diaria a las 9:00 AM)
+    echo      [WARN] No se pudo crear automaticamente. Ejecuta: setup_daily_birthday_task.bat
 ) else (
     echo      [OK] Tarea programada ya configurada.
 )
@@ -109,36 +97,17 @@ if %ERRORLEVEL% EQU 0 (
 )
 echo.
 
-REM Iniciar túnel público
-echo [5/7] Iniciando tunel publico (puerto 8000)...
-echo.
-echo      Opciones de tunel:
-echo      [1] localtunnel (gratuito, rapido)
-echo      [2] ngrok (requiere cuenta, mas estable)
-echo      [3] Omitir tunel (solo local)
-echo.
-set /p TUNNEL_CHOICE="      Elige una opcion (1/2/3): "
-
-if "%TUNNEL_CHOICE%"=="1" (
-    where npx >nul 2>&1
-    if %ERRORLEVEL% EQU 0 (
-        start "Localtunnel - IEEE Tadeo" cmd /k "echo [Localtunnel] Iniciando tunel... && npx localtunnel --port 8000"
-        echo      [OK] Localtunnel iniciado en segundo plano.
-        echo      [INFO] Copia la URL que aparece en la ventana separada
-    ) else (
-        echo      [ERROR] npx no encontrado. Instala Node.js.
-    )
-) else if "%TUNNEL_CHOICE%"=="2" (
-    where ngrok >nul 2>&1
-    if %ERRORLEVEL% EQU 0 (
-        start "Ngrok - IEEE Tadeo" cmd /k "echo [Ngrok] Iniciando tunel... && ngrok http 8000"
-        echo      [OK] Ngrok iniciado en segundo plano.
-        echo      [INFO] Copia la URL que aparece en la ventana separada
-    ) else (
-        echo      [ERROR] ngrok no encontrado. Instala desde: https://ngrok.com/download
-    )
+REM Iniciar túnel de Cloudflare
+echo [5/7] Iniciando Cloudflare Tunnel...
+where cloudflared >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    start "Cloudflare Tunnel - IEEE Tadeo" cmd /k "echo [Cloudflare Tunnel] Iniciando... && cloudflared tunnel run tickets-ieee"
+    echo      [OK] Cloudflare Tunnel iniciado en segundo plano.
+    echo      [INFO] URL publica: https://ticket.ieeetadeo.org
 ) else (
-    echo      [INFO] Omitiendo tunel. Aplicacion solo accesible localmente.
+    echo      [WARN] cloudflared no encontrado.
+    echo      [INFO] Instala desde: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/
+    echo      [INFO] Aplicacion solo accesible localmente en: http://localhost:8000
 )
 echo.
 
@@ -157,8 +126,9 @@ echo ========================================
 echo.
 echo   URLs del sistema:
 echo   -----------------
-echo   ^> Panel Admin:  http://localhost:8000/admin
-echo   ^> API Docs:     http://localhost:8000/docs
+echo   ^> URL Publica:  https://ticket.ieeetadeo.org
+echo   ^> Panel Admin:  https://ticket.ieeetadeo.org/admin
+echo   ^> API Docs:     https://ticket.ieeetadeo.org/docs
 echo   ^> WhatsApp API: http://localhost:3000/status
 echo.
 echo   Credenciales por defecto:
@@ -189,10 +159,8 @@ echo ========================================
 echo.
 echo [INFO] Deteniendo WhatsApp Service...
 taskkill /FI "WindowTitle eq WhatsApp Service - IEEE Tadeo*" /T /F 2>nul
-echo [INFO] Deteniendo Localtunnel...
-taskkill /FI "WindowTitle eq Localtunnel - IEEE Tadeo*" /T /F 2>nul
-echo [INFO] Deteniendo Ngrok...
-taskkill /FI "WindowTitle eq Ngrok - IEEE Tadeo*" /T /F 2>nul
+echo [INFO] Deteniendo Cloudflare Tunnel...
+taskkill /FI "WindowTitle eq Cloudflare Tunnel - IEEE Tadeo*" /T /F 2>nul
 echo.
 echo [OK] Todos los servicios han sido detenidos.
 echo.
