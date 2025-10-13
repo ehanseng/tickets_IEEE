@@ -4,10 +4,12 @@ Servicio para envío de correos electrónicos
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
 from datetime import datetime
 from typing import Optional
 import os
 from dotenv import load_dotenv
+import base64
 
 # Cargar variables de entorno desde .env
 load_dotenv()
@@ -522,13 +524,27 @@ https://ticket.ieeetadeo.org
             message: Contenido del mensaje
             link: URL opcional para incluir
             link_text: Texto del botón del enlace
-            image_url: URL de la imagen opcional
+            image_url: URL de la imagen opcional (data URL base64)
 
         Returns:
             bool: True si el correo se envió correctamente
         """
+        # Procesar imagen si existe (extraer datos de la data URL)
+        image_data = None
+        image_type = None
+        if image_url and image_url.startswith('data:'):
+            try:
+                # Formato: data:image/png;base64,iVBORw0KG...
+                header, encoded = image_url.split(',', 1)
+                image_type = header.split(';')[0].split(':')[1]  # Obtener mime type
+                image_data = base64.b64decode(encoded)
+            except Exception as e:
+                print(f"[WARN] No se pudo procesar la imagen: {e}")
+                image_url = None
+
         # Crear HTML personalizado
-        image_html = f'<div style="text-align: center; margin: 30px 0;"><img src="{image_url}" alt="Imagen" style="max-width: 100%; height: auto; border-radius: 8px;"/></div>' if image_url else ''
+        # Si hay imagen, usar CID para referenciarla
+        image_html = '<div style="text-align: center; margin: 30px 0;"><img src="cid:message_image" alt="Imagen" style="max-width: 100%; height: auto; border-radius: 8px;"/></div>' if image_data else ''
 
         link_html = f'''
         <div style="text-align: center; margin: 30px 0;">
@@ -627,7 +643,50 @@ IEEE Tadeo Student Branch
 Sistema de Tickets
         """
 
-        return self.send_email(to_email, subject, html_content, text_content)
+        # Si no hay imagen, usar el método normal
+        if not image_data:
+            return self.send_email(to_email, subject, html_content, text_content)
+
+        # Si hay imagen, crear mensaje con adjunto CID
+        try:
+            msg = MIMEMultipart('related')
+            msg['Subject'] = subject
+            msg['From'] = f'{self.from_name} <{self.from_email}>'
+            msg['To'] = to_email
+
+            # Crear contenedor alternativo para texto/HTML
+            msg_alternative = MIMEMultipart('alternative')
+            msg.attach(msg_alternative)
+
+            # Adjuntar texto plano y HTML
+            part_text = MIMEText(text_content, 'plain', 'utf-8')
+            part_html = MIMEText(html_content, 'html', 'utf-8')
+            msg_alternative.attach(part_text)
+            msg_alternative.attach(part_html)
+
+            # Adjuntar imagen con CID
+            img = MIMEImage(image_data)
+            img.add_header('Content-ID', '<message_image>')
+            img.add_header('Content-Disposition', 'inline', filename='image.png')
+            msg.attach(img)
+
+            # Enviar correo
+            if not self.smtp_user or not self.smtp_password:
+                print("⚠️  SMTP no configurado - El correo NO se enviará")
+                print(f"📧 Correo simulado enviado a: {to_email} (con imagen)")
+                return True
+
+            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                server.starttls()
+                server.login(self.smtp_user, self.smtp_password)
+                server.send_message(msg)
+
+            print(f"[OK] Correo con imagen enviado exitosamente a {to_email}")
+            return True
+
+        except Exception as e:
+            print(f"[ERROR] Error al enviar correo con imagen: {str(e)}")
+            return False
 
 
 # Instancia global del servicio
