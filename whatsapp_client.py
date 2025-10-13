@@ -272,7 +272,7 @@ Hola {user_name},
                     message_id = result.get("messageId")
                     print(f"[OK] Mensaje con imagen enviado a {user_name} ({country_code}{phone})")
                     if "imageCompression" in result:
-                        print(f"     Compresión: {result['imageCompression']['originalSize']} → {result['imageCompression']['compressedSize']}")
+                        print(f"     Compresion: {result['imageCompression']['originalSize']} -> {result['imageCompression']['compressedSize']}")
                     return {"success": True, "message_id": message_id}
                 else:
                     error_msg = result.get('error', 'Error desconocido')
