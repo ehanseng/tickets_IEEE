@@ -62,6 +62,7 @@ class UserCreate(BaseModel):
     university_id: Optional[int] = None  # ID de universidad
     birthday: Optional[datetime] = None  # Fecha de cumpleaños
     is_ieee_member: bool = False  # Miembro activo de IEEE
+    ieee_member_id: Optional[str] = None  # ID de membresía IEEE
 
 
 class UserUpdate(BaseModel):
@@ -75,6 +76,7 @@ class UserUpdate(BaseModel):
     university_id: Optional[int] = None
     birthday: Optional[datetime] = None
     is_ieee_member: Optional[bool] = None
+    ieee_member_id: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -89,6 +91,7 @@ class UserResponse(BaseModel):
     university_id: Optional[int]
     birthday: Optional[datetime]
     is_ieee_member: bool
+    ieee_member_id: Optional[str]
     created_at: datetime
     university: Optional[UniversityResponse] = None
 

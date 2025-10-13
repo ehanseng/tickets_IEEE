@@ -704,6 +704,7 @@ def get_event_tickets(
         result.append({
             "ticket_id": ticket.id,
             "ticket_code": ticket.ticket_code,
+            "user_id": user.id,
             "user_name": user.name,
             "user_email": user.email,
             "user_identification": user.identification,
@@ -1120,7 +1121,7 @@ async def admin_dashboard(
     db: Session = Depends(get_db)
 ):
     """Dashboard de administración"""
-    # Obtener estadísticas
+    # Obtener estadísticas básicas
     total_users = db.query(func.count(models.User.id)).scalar()
     total_events = db.query(func.count(models.Event.id)).scalar()
     total_tickets = db.query(func.count(models.Ticket.id)).scalar()
@@ -1140,17 +1141,63 @@ async def admin_dashboard(
         event_dict['ticket_count'] = ticket_count
         active_events_list.append(type('Event', (), event_dict))
 
+    # Obtener distribución por universidad
+    university_stats = db.query(
+        models.University.name,
+        models.University.short_name,
+        func.count(models.User.id).label('count')
+    ).outerjoin(
+        models.User, models.University.id == models.User.university_id
+    ).group_by(
+        models.University.id
+    ).order_by(
+        desc('count')
+    ).all()
+
+    # Agregar usuarios sin universidad asignada
+    users_without_university = db.query(func.count(models.User.id)).filter(
+        models.User.university_id == None
+    ).scalar()
+
+    university_stats_list = []
+    for name, short_name, count in university_stats:
+        if count > 0:  # Solo incluir universidades con usuarios
+            university_stats_list.append({
+                'name': name,
+                'short_name': short_name,
+                'count': count
+            })
+
+    # Agregar usuarios sin universidad si existen
+    if users_without_university > 0:
+        university_stats_list.append({
+            'name': 'Sin Universidad',
+            'short_name': 'N/A',
+            'count': users_without_university
+        })
+
+    # Obtener estadísticas de membresía IEEE
+    ieee_members = db.query(func.count(models.User.id)).filter(
+        models.User.is_ieee_member == True
+    ).scalar()
+    non_ieee_members = db.query(func.count(models.User.id)).filter(
+        models.User.is_ieee_member == False
+    ).scalar()
+
     stats = {
         "total_users": total_users,
         "total_events": total_events,
         "total_tickets": total_tickets,
-        "tickets_used": tickets_used
+        "tickets_used": tickets_used,
+        "ieee_members": ieee_members,
+        "non_ieee_members": non_ieee_members
     }
 
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "stats": stats,
-        "active_events": active_events_list
+        "active_events": active_events_list,
+        "university_stats": university_stats_list
     })
 
 
@@ -1302,6 +1349,28 @@ async def admin_messages(
     })
 
 
+@app.get("/admin/campaigns", response_class=HTMLResponse)
+async def admin_campaigns(
+    request: Request
+):
+    """Página de histórico de campañas de mensajes"""
+    return templates.TemplateResponse("campaigns.html", {
+        "request": request
+    })
+
+
+@app.get("/admin/campaigns/{campaign_id}", response_class=HTMLResponse)
+async def admin_campaign_details(
+    request: Request,
+    campaign_id: int
+):
+    """Página de detalles de una campaña específica"""
+    return templates.TemplateResponse("campaign_details.html", {
+        "request": request,
+        "campaign_id": campaign_id
+    })
+
+
 @app.post("/messages/bulk-send")
 async def bulk_send_messages(
     user_ids: str = Form(...),
@@ -1315,9 +1384,11 @@ async def bulk_send_messages(
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(require_admin)
 ):
-    """Enviar mensajes masivos a usuarios seleccionados"""
+    """Enviar mensajes masivos a usuarios seleccionados con tracking completo"""
     import json
-    import shutil
+    import base64
+    from PIL import Image
+    from io import BytesIO
     from pathlib import Path
 
     # Parsear IDs de usuarios
@@ -1333,20 +1404,15 @@ async def bulk_send_messages(
     if not send_email_bool and not send_whatsapp_bool:
         raise HTTPException(status_code=400, detail="Debes seleccionar al menos un canal de envío")
 
-    # Guardar imagen, comprimir y convertir a base64 si fue proporcionada
+    # Procesar imagen si fue proporcionada
     image_url = None
+    image_path_for_db = None
     if image and image.filename:
-        import base64
-        from PIL import Image
-        from io import BytesIO
-
-        # Leer el contenido de la imagen
+        # Leer y procesar imagen
         image_content = await image.read()
-
-        # Abrir imagen con Pillow
         img = Image.open(BytesIO(image_content))
 
-        # Convertir a RGB si es necesario (para JPEG)
+        # Convertir a RGB si es necesario
         if img.mode in ('RGBA', 'LA', 'P'):
             background = Image.new('RGB', img.size, (255, 255, 255))
             if img.mode == 'P':
@@ -1354,40 +1420,72 @@ async def bulk_send_messages(
             background.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
             img = background
 
-        # Redimensionar si es muy grande (max 1200x1200 como WhatsApp)
+        # Redimensionar
         max_size = (1200, 1200)
         img.thumbnail(max_size, Image.Resampling.LANCZOS)
 
-        # Comprimir y guardar en buffer
+        # Comprimir
         buffer = BytesIO()
         img.save(buffer, format='JPEG', quality=85, optimize=True)
         compressed_content = buffer.getvalue()
 
-        # Log de compresión
-        original_size = len(image_content)
-        compressed_size = len(compressed_content)
-        print(f"[INFO] Imagen comprimida: {original_size/1024:.2f}KB → {compressed_size/1024:.2f}KB ({(1-compressed_size/original_size)*100:.1f}% reducción)")
+        # Guardar en directorio message_images
+        import os
+        import time
+        message_images_dir = "static/message_images"
+        os.makedirs(message_images_dir, exist_ok=True)
 
-        # Convertir a base64
+        timestamp = int(time.time())
+        image_filename = f"msg_{timestamp}_{image.filename}"
+        image_path = os.path.join(message_images_dir, image_filename)
+
+        with open(image_path, 'wb') as f:
+            f.write(compressed_content)
+
+        image_path_for_db = image_path
+
+        # Convertir a base64 data URL
         image_base64 = base64.b64encode(compressed_content).decode('utf-8')
-
-        # Crear URL de datos (data URL) para embeber en el email
         image_url = f"data:image/jpeg;base64,{image_base64}"
+
+        print(f"[INFO] Imagen guardada: {image_path} ({len(compressed_content)/1024:.2f}KB)")
 
     # Obtener usuarios
     users = db.query(models.User).filter(models.User.id.in_(user_id_list)).all()
-
     if not users:
         raise HTTPException(status_code=404, detail="No se encontraron usuarios")
 
-    sent_count = 0
-    failed_count = 0
-    errors = []
+    # CREAR CAMPAÑA
+    campaign = models.MessageCampaign(
+        subject=subject,
+        message=message,
+        link=link if link else None,
+        link_text=link_text if link_text else None,
+        has_image=image_url is not None,
+        image_path=image_path_for_db,
+        send_email=send_email_bool,
+        send_whatsapp=send_whatsapp_bool,
+        total_recipients=len(users),
+        created_by=current_user.id
+    )
+    db.add(campaign)
+    db.flush()  # Get campaign ID without committing
 
+    print(f"[CAMPAIGN] Created campaign ID {campaign.id}: '{subject}' to {len(users)} users")
+
+    # Enviar mensajes y crear registros de destinatarios
     for user in users:
-        # Personalizar mensaje con el nombre del usuario
+        # Personalizar mensaje
         display_name = user.nick if user.nick else user.name.split()[0]
         personalized_message = message.replace("{nombre}", display_name)
+
+        # Crear registro de destinatario
+        recipient = models.MessageRecipient(
+            campaign_id=campaign.id,
+            user_id=user.id
+        )
+        db.add(recipient)
+        db.flush()  # Get recipient ID
 
         # Enviar por email
         if send_email_bool:
@@ -1401,14 +1499,21 @@ async def bulk_send_messages(
                     link_text=link_text if link_text else None,
                     image_url=image_url
                 )
+
+                recipient.email_sent = success
+                recipient.email_sent_at = datetime.utcnow() if success else None
+
                 if success:
-                    sent_count += 1
+                    campaign.emails_sent += 1
                 else:
-                    failed_count += 1
-                    errors.append(f"Email fallido para {user.email}")
+                    campaign.emails_failed += 1
+                    recipient.email_error = "Email sending failed"
+
             except Exception as e:
-                failed_count += 1
-                errors.append(f"Error email {user.email}: {str(e)}")
+                campaign.emails_failed += 1
+                recipient.email_sent = False
+                recipient.email_error = str(e)
+                print(f"[ERROR] Email to {user.email}: {str(e)}")
 
         # Enviar por WhatsApp
         if send_whatsapp_bool and user.phone and user.country_code:
@@ -1417,7 +1522,7 @@ async def bulk_send_messages(
 
                 whatsapp_client = WhatsAppClient()
                 if whatsapp_client.is_ready():
-                    success = send_bulk_whatsapp(
+                    result = send_bulk_whatsapp(
                         phone=user.phone,
                         country_code=user.country_code,
                         user_name=display_name,
@@ -1426,24 +1531,219 @@ async def bulk_send_messages(
                         link=link if link else None,
                         image_base64=image_url if image_url else None
                     )
-                    if success:
-                        sent_count += 1
+
+                    if result.get("success"):
+                        recipient.whatsapp_sent = True
+                        recipient.whatsapp_sent_at = datetime.utcnow()
+                        recipient.whatsapp_message_id = result.get("message_id")
+                        recipient.whatsapp_status = "pending"
+                        campaign.whatsapp_sent += 1
                     else:
-                        failed_count += 1
-                        errors.append(f"WhatsApp fallido para {user.phone}")
+                        recipient.whatsapp_sent = False
+                        recipient.whatsapp_error = result.get("error", "Unknown error")
+                        campaign.whatsapp_failed += 1
                 else:
-                    errors.append(f"WhatsApp no disponible para {user.name}")
+                    recipient.whatsapp_sent = False
+                    recipient.whatsapp_error = "WhatsApp service not ready"
+                    campaign.whatsapp_failed += 1
+
             except Exception as e:
-                failed_count += 1
-                errors.append(f"Error WhatsApp {user.phone}: {str(e)}")
+                campaign.whatsapp_failed += 1
+                recipient.whatsapp_sent = False
+                recipient.whatsapp_error = str(e)
+                print(f"[ERROR] WhatsApp to {user.phone}: {str(e)}")
+
+    # Commit todas las transacciones
+    db.commit()
+
+    print(f"[CAMPAIGN] Completed campaign ID {campaign.id}:")
+    print(f"  Emails: {campaign.emails_sent} sent, {campaign.emails_failed} failed")
+    print(f"  WhatsApp: {campaign.whatsapp_sent} sent, {campaign.whatsapp_failed} failed")
 
     return {
         "success": True,
-        "sent_count": sent_count,
-        "failed_count": failed_count,
-        "total_users": len(users),
-        "errors": errors if errors else None
+        "campaign_id": campaign.id,
+        "total_recipients": len(users),
+        "emails_sent": campaign.emails_sent,
+        "emails_failed": campaign.emails_failed,
+        "whatsapp_sent": campaign.whatsapp_sent,
+        "whatsapp_failed": campaign.whatsapp_failed
     }
+
+
+# ========== ENDPOINTS DE CAMPAÑAS ==========
+
+@app.get("/campaigns/")
+def list_campaigns(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Listar todas las campañas de mensajes"""
+    campaigns = db.query(models.MessageCampaign).order_by(
+        desc(models.MessageCampaign.created_at)
+    ).offset(skip).limit(limit).all()
+
+    result = []
+    for campaign in campaigns:
+        # Get creator info
+        creator = db.query(models.AdminUser).filter(
+            models.AdminUser.id == campaign.created_by
+        ).first()
+
+        result.append({
+            "id": campaign.id,
+            "subject": campaign.subject,
+            "message": campaign.message[:100] + "..." if len(campaign.message) > 100 else campaign.message,
+            "has_image": campaign.has_image,
+            "send_email": campaign.send_email,
+            "send_whatsapp": campaign.send_whatsapp,
+            "total_recipients": campaign.total_recipients,
+            "emails_sent": campaign.emails_sent,
+            "emails_failed": campaign.emails_failed,
+            "whatsapp_sent": campaign.whatsapp_sent,
+            "whatsapp_failed": campaign.whatsapp_failed,
+            "created_by_name": creator.full_name if creator else "Unknown",
+            "created_at": campaign.created_at.isoformat()
+        })
+
+    return result
+
+
+@app.get("/campaigns/{campaign_id}")
+def get_campaign_details(
+    campaign_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Obtener detalles de una campaña con todos sus destinatarios"""
+    campaign = db.query(models.MessageCampaign).filter(
+        models.MessageCampaign.id == campaign_id
+    ).first()
+
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaña no encontrada")
+
+    # Get creator info
+    creator = db.query(models.AdminUser).filter(
+        models.AdminUser.id == campaign.created_by
+    ).first()
+
+    # Get recipients with user info
+    recipients = db.query(
+        models.MessageRecipient,
+        models.User
+    ).join(
+        models.User, models.MessageRecipient.user_id == models.User.id
+    ).filter(
+        models.MessageRecipient.campaign_id == campaign_id
+    ).all()
+
+    recipients_data = []
+    for recipient, user in recipients:
+        recipients_data.append({
+            "recipient_id": recipient.id,
+            "user_id": user.id,
+            "user_name": user.name,
+            "user_email": user.email,
+            "user_phone": user.phone,
+            "email_sent": recipient.email_sent,
+            "email_sent_at": recipient.email_sent_at.isoformat() if recipient.email_sent_at else None,
+            "email_error": recipient.email_error,
+            "whatsapp_sent": recipient.whatsapp_sent,
+            "whatsapp_sent_at": recipient.whatsapp_sent_at.isoformat() if recipient.whatsapp_sent_at else None,
+            "whatsapp_status": recipient.whatsapp_status,
+            "whatsapp_status_updated_at": recipient.whatsapp_status_updated_at.isoformat() if recipient.whatsapp_status_updated_at else None,
+            "whatsapp_error": recipient.whatsapp_error
+        })
+
+    # Calculate WhatsApp delivery stats
+    whatsapp_delivered = sum(1 for r, u in recipients if r.whatsapp_status == "delivered")
+    whatsapp_read = sum(1 for r, u in recipients if r.whatsapp_status == "read")
+
+    return {
+        "id": campaign.id,
+        "subject": campaign.subject,
+        "message": campaign.message,
+        "link": campaign.link,
+        "link_text": campaign.link_text,
+        "has_image": campaign.has_image,
+        "image_path": campaign.image_path,
+        "send_email": campaign.send_email,
+        "send_whatsapp": campaign.send_whatsapp,
+        "total_recipients": campaign.total_recipients,
+        "emails_sent": campaign.emails_sent,
+        "emails_failed": campaign.emails_failed,
+        "whatsapp_sent": campaign.whatsapp_sent,
+        "whatsapp_failed": campaign.whatsapp_failed,
+        "whatsapp_delivered": whatsapp_delivered,
+        "whatsapp_read": whatsapp_read,
+        "created_by": campaign.created_by,
+        "created_by_name": creator.full_name if creator else "Unknown",
+        "created_at": campaign.created_at.isoformat(),
+        "recipients": recipients_data
+    }
+
+
+# ========== WEBHOOKS ==========
+
+@app.post("/webhooks/whatsapp-status")
+async def whatsapp_status_webhook(
+    webhook_data: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Recibe actualizaciones de estado de WhatsApp desde el servicio Node.js
+
+    Expected payload:
+    {
+        "message_id": "whatsapp_message_id",
+        "status": "pending|sent|delivered|read|failed",
+        "ack": 0|1|2|3|4|5
+    }
+    """
+    try:
+        message_id = webhook_data.get("message_id")
+        status = webhook_data.get("status")
+
+        if not message_id or not status:
+            return {"success": False, "error": "Missing message_id or status"}
+
+        # Buscar el destinatario por whatsapp_message_id
+        recipient = db.query(models.MessageRecipient).filter(
+            models.MessageRecipient.whatsapp_message_id == message_id
+        ).first()
+
+        if not recipient:
+            # No encontrado - puede ser un mensaje que no es de campaña
+            return {
+                "success": True,
+                "message": "Message ID not tracked in campaigns"
+            }
+
+        # Actualizar estado
+        recipient.whatsapp_status = status
+        recipient.whatsapp_status_updated_at = datetime.utcnow()
+
+        # Si el estado es "failed", marcar como no enviado
+        if status == "failed":
+            recipient.whatsapp_sent = False
+
+        db.commit()
+
+        print(f"[WEBHOOK] Estado actualizado: {message_id} -> {status}")
+
+        return {
+            "success": True,
+            "message": "Status updated",
+            "recipient_id": recipient.id,
+            "new_status": status
+        }
+
+    except Exception as e:
+        print(f"[WEBHOOK ERROR] {str(e)}")
+        return {"success": False, "error": str(e)}
 
 
 # ========== ENDPOINTS PÚBLICOS DE TICKETS ==========
@@ -1579,3 +1879,5 @@ async def get_qr_code(ticket_code: str):
         return FileResponse(qr_path, media_type="image/png")
     else:
         raise HTTPException(status_code=404, detail=f"QR code not found: {ticket_code}")
+ 
+

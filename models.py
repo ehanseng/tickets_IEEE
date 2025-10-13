@@ -41,6 +41,7 @@ class User(Base):
     birthday = Column(DateTime, nullable=True)  # Fecha de cumpleaños
     university_id = Column(Integer, ForeignKey("universities.id"), nullable=True)  # Universidad (FK)
     is_ieee_member = Column(Boolean, default=False)  # Miembro activo de IEEE
+    ieee_member_id = Column(String, nullable=True)  # ID de membresía IEEE
     password_reset_token = Column(String, nullable=True)  # Token para recuperar contraseña
     password_reset_expires = Column(DateTime, nullable=True)  # Expiración del token
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -112,8 +113,9 @@ class AdminUser(Base):
     access_start = Column(DateTime, nullable=True)  # Inicio de acceso temporal
     access_end = Column(DateTime, nullable=True)  # Fin de acceso temporal
 
-    # Relación con validaciones
+    # Relaciones
     validations = relationship("ValidationLog", back_populates="validator")
+    campaigns = relationship("MessageCampaign", back_populates="creator")
 
 
 class ValidationLog(Base):
@@ -146,3 +148,61 @@ class BirthdayCheckLog(Base):
     whatsapp_available = Column(Boolean, default=False)  # Si WhatsApp estaba disponible
     execution_type = Column(String, default="automatic")  # "automatic" o "manual"
     notes = Column(Text, nullable=True)  # Notas adicionales
+
+
+class MessageCampaign(Base):
+    """Campaña de mensajes masivos"""
+    __tablename__ = "message_campaigns"
+
+    id = Column(Integer, primary_key=True, index=True)
+    subject = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    link = Column(String, nullable=True)
+    link_text = Column(String, nullable=True)
+    has_image = Column(Boolean, default=False)
+    image_path = Column(String, nullable=True)
+
+    # Canales de envío
+    send_email = Column(Boolean, default=True)
+    send_whatsapp = Column(Boolean, default=False)
+
+    # Estadísticas
+    total_recipients = Column(Integer, default=0)
+    emails_sent = Column(Integer, default=0)
+    emails_failed = Column(Integer, default=0)
+    whatsapp_sent = Column(Integer, default=0)
+    whatsapp_failed = Column(Integer, default=0)
+
+    # Usuario que creó la campaña
+    created_by = Column(Integer, ForeignKey("admin_users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relaciones
+    creator = relationship("AdminUser", back_populates="campaigns")
+    recipients = relationship("MessageRecipient", back_populates="campaign", cascade="all, delete-orphan")
+
+
+class MessageRecipient(Base):
+    """Destinatario individual de una campaña"""
+    __tablename__ = "message_recipients"
+
+    id = Column(Integer, primary_key=True, index=True)
+    campaign_id = Column(Integer, ForeignKey("message_campaigns.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    # Estado de email
+    email_sent = Column(Boolean, default=False)
+    email_sent_at = Column(DateTime, nullable=True)
+    email_error = Column(String, nullable=True)
+
+    # Estado de WhatsApp
+    whatsapp_sent = Column(Boolean, default=False)
+    whatsapp_sent_at = Column(DateTime, nullable=True)
+    whatsapp_message_id = Column(String, nullable=True)  # ID del mensaje de WhatsApp
+    whatsapp_status = Column(String, default="pending")  # pending, sent, delivered, read, failed
+    whatsapp_status_updated_at = Column(DateTime, nullable=True)
+    whatsapp_error = Column(String, nullable=True)
+
+    # Relaciones
+    campaign = relationship("MessageCampaign", back_populates="recipients")
+    user = relationship("User")

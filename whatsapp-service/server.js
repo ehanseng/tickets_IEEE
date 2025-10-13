@@ -97,6 +97,58 @@ function initializeWhatsApp() {
         }, 5000);
     });
 
+    // Evento: Cambio de estado del mensaje (ACK)
+    client.on('message_ack', async (msg, ack) => {
+        try {
+            const messageId = msg.id.id;
+            let status = 'pending';
+
+            // Mapear estados de ACK a nuestros estados
+            switch (ack) {
+                case 0: // ACK_ERROR
+                    status = 'failed';
+                    break;
+                case 1: // ACK_PENDING
+                    status = 'pending';
+                    break;
+                case 2: // ACK_SERVER (enviado al servidor de WhatsApp)
+                    status = 'sent';
+                    break;
+                case 3: // ACK_DEVICE (entregado al dispositivo)
+                    status = 'delivered';
+                    break;
+                case 4: // ACK_READ (leído por el destinatario)
+                    status = 'read';
+                    break;
+                case 5: // ACK_PLAYED (reproducido - para audio/video)
+                    status = 'read';
+                    break;
+            }
+
+            console.log(`[ACK] Mensaje ${messageId} - Estado: ${status} (ACK: ${ack})`);
+
+            // Enviar webhook a nuestro backend
+            try {
+                const axios = require('axios');
+                await axios.post('http://localhost:8000/webhooks/whatsapp-status', {
+                    message_id: messageId,
+                    status: status,
+                    ack: ack
+                }, {
+                    timeout: 5000
+                });
+                console.log(`[WEBHOOK] Estado enviado al backend: ${messageId} -> ${status}`);
+            } catch (webhookError) {
+                // No mostrar error si el backend no está disponible, solo registrar
+                if (webhookError.code !== 'ECONNREFUSED') {
+                    console.error(`[WEBHOOK ERROR] ${webhookError.message}`);
+                }
+            }
+        } catch (error) {
+            console.error('[ERROR] Error procesando ACK:', error);
+        }
+    });
+
     // Inicializar
     client.initialize();
 }

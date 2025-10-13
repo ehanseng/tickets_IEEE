@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico de Campañas - Sistema de Tickets{% endblock %}
+
+{% block content %}
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div class="flex flex-col space-y-1.5 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-2xl font-semibold leading-none tracking-tight">Histórico de Campañas de Mensajes</h3>
+                <p class="text-sm text-muted-foreground mt-1">Visualiza el historial completo de mensajes enviados y sus estados de entrega</p>
+            </div>
+            <a href="/admin/messages" class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4">
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Nuevo Mensaje
+            </a>
+        </div>
+    </div>
+
+    <div class="p-6 pt-0">
+        <!-- Filtros y búsqueda -->
+        <div class="mb-4 flex gap-2 flex-wrap items-center">
+            <div class="relative flex-1 min-w-[250px]">
+                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <input
+                    type="text"
+                    id="campaignSearch"
+                    placeholder="Buscar campañas por asunto..."
+                    class="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm"
+                    onkeyup="filterCampaigns()"
+                >
+            </div>
+            <button onclick="loadCampaigns()" class="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input bg-background hover:bg-accent h-10 px-4">
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Actualizar
+            </button>
+        </div>
+
+        <!-- Tabla de campañas -->
+        <div class="border rounded-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-muted">
+                        <tr class="border-b">
+                            <th class="text-left p-4 font-medium">Fecha</th>
+                            <th class="text-left p-4 font-medium">Asunto</th>
+                            <th class="text-center p-4 font-medium">Destinatarios</th>
+                            <th class="text-center p-4 font-medium">Email</th>
+                            <th class="text-center p-4 font-medium">WhatsApp</th>
+                            <th class="text-center p-4 font-medium">Creado por</th>
+                            <th class="text-center p-4 font-medium">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="campaignsTableBody">
+                        <tr>
+                            <td colspan="7" class="p-8 text-center text-muted-foreground">
+                                Cargando campañas...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Leyenda -->
+        <div class="mt-4 flex gap-4 text-xs text-muted-foreground">
+            <div class="flex items-center gap-1">
+                <span class="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+                <span>Enviado exitosamente</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <span class="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+                <span>Falló</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <span class="inline-block w-3 h-3 rounded-full bg-blue-500"></span>
+                <span>Entregado (WhatsApp)</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <span class="inline-block w-3 h-3 rounded-full bg-purple-500"></span>
+                <span>Leído (WhatsApp)</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notificación flotante -->
+<div id="notification" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] w-11/12 max-w-md shadow-lg rounded-lg transition-all duration-300"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let allCampaigns = [];
+
+    // Cargar campañas al iniciar
+    async function loadCampaigns() {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/campaigns/', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                allCampaigns = await response.json();
+                console.log('Campañas cargadas:', allCampaigns.length);
+                renderCampaigns();
+            } else {
+                showNotification('Error al cargar campañas', 'error');
+            }
+        } catch (error) {
+            console.error('Error al cargar campañas:', error);
+            showNotification('Error al cargar campañas', 'error');
+        }
+    }
+
+    function renderCampaigns() {
+        const tbody = document.getElementById('campaignsTableBody');
+
+        if (allCampaigns.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="p-8 text-center text-muted-foreground">
+                        <svg class="mx-auto h-12 w-12 text-muted-foreground mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                        </svg>
+                        <p>No hay campañas registradas</p>
+                        <a href="/admin/messages" class="text-primary hover:underline mt-2 inline-block">Envía tu primer mensaje</a>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = allCampaigns.map(campaign => {
+            const date = new Date(campaign.created_at);
+            const dateStr = date.toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
+            const timeStr = date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+
+            // Calcular estadísticas de email
+            const emailTotal = campaign.emails_sent + campaign.emails_failed;
+            const emailRate = emailTotal > 0 ? ((campaign.emails_sent / emailTotal) * 100).toFixed(0) : 0;
+
+            // Calcular estadísticas de WhatsApp
+            const waTotal = campaign.whatsapp_sent + campaign.whatsapp_failed;
+            const waRate = waTotal > 0 ? ((campaign.whatsapp_sent / waTotal) * 100).toFixed(0) : 0;
+
+            return `
+                <tr class="border-b hover:bg-muted/50 campaign-row" data-subject="${campaign.subject.toLowerCase()}">
+                    <td class="p-4">
+                        <div class="text-sm font-medium">${dateStr}</div>
+                        <div class="text-xs text-muted-foreground">${timeStr}</div>
+                    </td>
+                    <td class="p-4">
+                        <div class="font-medium">${campaign.subject}</div>
+                        <div class="text-xs text-muted-foreground line-clamp-1">${campaign.message}</div>
+                        ${campaign.has_image ? '<span class="inline-flex items-center rounded-full border px-1.5 py-0.5 text-xs bg-purple-100 text-purple-800 mt-1">📷 Con imagen</span>' : ''}
+                    </td>
+                    <td class="p-4 text-center">
+                        <div class="text-lg font-bold">${campaign.total_recipients}</div>
+                        <div class="text-xs text-muted-foreground">usuarios</div>
+                    </td>
+                    <td class="p-4 text-center">
+                        ${campaign.send_email ? `
+                            <div class="flex items-center justify-center gap-2">
+                                <div class="flex items-center gap-1">
+                                    <span class="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+                                    <span class="text-sm font-medium">${campaign.emails_sent}</span>
+                                </div>
+                                ${campaign.emails_failed > 0 ? `
+                                    <div class="flex items-center gap-1">
+                                        <span class="inline-block w-2 h-2 rounded-full bg-red-500"></span>
+                                        <span class="text-sm font-medium">${campaign.emails_failed}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="text-xs text-muted-foreground mt-1">${emailRate}% éxito</div>
+                        ` : '<span class="text-muted-foreground text-xs">No enviado</span>'}
+                    </td>
+                    <td class="p-4 text-center">
+                        ${campaign.send_whatsapp ? `
+                            <div class="flex items-center justify-center gap-2">
+                                <div class="flex items-center gap-1">
+                                    <span class="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+                                    <span class="text-sm font-medium">${campaign.whatsapp_sent}</span>
+                                </div>
+                                ${campaign.whatsapp_failed > 0 ? `
+                                    <div class="flex items-center gap-1">
+                                        <span class="inline-block w-2 h-2 rounded-full bg-red-500"></span>
+                                        <span class="text-sm font-medium">${campaign.whatsapp_failed}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="text-xs text-muted-foreground mt-1">${waRate}% éxito</div>
+                        ` : '<span class="text-muted-foreground text-xs">No enviado</span>'}
+                    </td>
+                    <td class="p-4 text-center">
+                        <div class="text-sm">${campaign.created_by_name}</div>
+                    </td>
+                    <td class="p-4 text-center">
+                        <a href="/admin/campaigns/${campaign.id}" class="inline-flex items-center justify-center rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3">
+                            Ver detalles
+                        </a>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function filterCampaigns() {
+        const search = document.getElementById('campaignSearch').value.toLowerCase();
+        document.querySelectorAll('.campaign-row').forEach(row => {
+            const subject = row.dataset.subject;
+            const matches = subject.includes(search);
+            row.style.display = matches ? '' : 'none';
+        });
+    }
+
+    function showNotification(message, type = 'success') {
+        const notification = document.getElementById('notification');
+        const bgColor = type === 'success' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200';
+        const textColor = type === 'success' ? 'text-green-900' : 'text-red-900';
+
+        notification.innerHTML = `
+            <div class="border ${bgColor} px-4 py-3 ${textColor} flex items-center justify-between">
+                <span class="font-medium">${message}</span>
+                <button onclick="hideNotification()" class="ml-4 text-current opacity-70 hover:opacity-100">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+        notification.classList.remove('hidden');
+        setTimeout(() => hideNotification(), 5000);
+    }
+
+    function hideNotification() {
+        document.getElementById('notification').classList.add('hidden');
+    }
+
+    // Cargar campañas al inicio
+    window.addEventListener('DOMContentLoaded', () => {
+        loadCampaigns();
+    });
+</script>
+{% endblock %}

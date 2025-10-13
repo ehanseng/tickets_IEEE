@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+
+{% block title %}Detalles de Campaña - Sistema de Tickets{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header con botón de regreso -->
+    <div class="flex items-center justify-between">
+        <a href="/admin/campaigns" class="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Volver al histórico
+        </a>
+    </div>
+
+    <!-- Card de información de la campaña -->
+    <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <div class="flex-1">
+                    <h3 class="text-2xl font-semibold leading-none tracking-tight" id="campaignSubject">Cargando...</h3>
+                    <p class="text-sm text-muted-foreground mt-1" id="campaignDate"></p>
+                </div>
+                <button onclick="loadCampaignDetails()" class="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input bg-background hover:bg-accent h-9 px-3">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Actualizar
+                </button>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <!-- Mensaje de la campaña -->
+            <div class="mb-6">
+                <h4 class="font-semibold mb-2 text-sm text-muted-foreground">MENSAJE:</h4>
+                <div class="bg-muted rounded-lg p-4">
+                    <p class="whitespace-pre-wrap" id="campaignMessage">Cargando mensaje...</p>
+                    <div id="campaignLink" class="mt-3"></div>
+                </div>
+            </div>
+
+            <!-- Estadísticas generales -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                <div class="rounded-lg border p-4">
+                    <div class="text-2xl font-bold" id="statTotalRecipients">0</div>
+                    <div class="text-xs text-muted-foreground mt-1">Total Destinatarios</div>
+                </div>
+                <div class="rounded-lg border p-4 bg-green-50">
+                    <div class="text-2xl font-bold text-green-700" id="statEmailsSent">0</div>
+                    <div class="text-xs text-muted-foreground mt-1">Emails Enviados</div>
+                </div>
+                <div class="rounded-lg border p-4 bg-red-50">
+                    <div class="text-2xl font-bold text-red-700" id="statEmailsFailed">0</div>
+                    <div class="text-xs text-muted-foreground mt-1">Emails Fallidos</div>
+                </div>
+                <div class="rounded-lg border p-4 bg-blue-50">
+                    <div class="text-2xl font-bold text-blue-700" id="statWhatsappSent">0</div>
+                    <div class="text-xs text-muted-foreground mt-1">WhatsApp Enviados</div>
+                </div>
+                <div class="rounded-lg border p-4 bg-purple-50">
+                    <div class="text-2xl font-bold text-purple-700" id="statWhatsappRead">0</div>
+                    <div class="text-xs text-muted-foreground mt-1">WhatsApp Leídos</div>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="mb-4 flex gap-2 flex-wrap items-center">
+                <div class="relative flex-1 min-w-[250px]">
+                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <input
+                        type="text"
+                        id="recipientSearch"
+                        placeholder="Buscar por nombre o email..."
+                        class="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm"
+                        onkeyup="filterRecipients()"
+                    >
+                </div>
+                <select id="statusFilter" class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" onchange="filterRecipients()">
+                    <option value="">Todos los estados</option>
+                    <option value="email_sent">Email enviado</option>
+                    <option value="email_failed">Email fallido</option>
+                    <option value="wa_sent">WhatsApp enviado</option>
+                    <option value="wa_delivered">WhatsApp entregado</option>
+                    <option value="wa_read">WhatsApp leído</option>
+                    <option value="wa_failed">WhatsApp fallido</option>
+                </select>
+            </div>
+
+            <!-- Tabla de destinatarios -->
+            <div class="border rounded-md overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-muted">
+                            <tr class="border-b">
+                                <th class="text-left p-3 font-medium">Usuario</th>
+                                <th class="text-center p-3 font-medium">Email</th>
+                                <th class="text-center p-3 font-medium">WhatsApp</th>
+                                <th class="text-center p-3 font-medium">Estado WA</th>
+                                <th class="text-left p-3 font-medium">Última actualización</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recipientsTableBody">
+                            <tr>
+                                <td colspan="5" class="p-8 text-center text-muted-foreground">
+                                    Cargando destinatarios...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notificación flotante -->
+<div id="notification" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] w-11/12 max-w-md shadow-lg rounded-lg transition-all duration-300"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const campaignId = {{ campaign_id }};
+    let campaignData = null;
+    let allRecipients = [];
+
+    async function loadCampaignDetails() {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`/campaigns/${campaignId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                campaignData = await response.json();
+                console.log('Campaña cargada:', campaignData);
+                allRecipients = campaignData.recipients || [];
+                renderCampaignInfo();
+                renderRecipients();
+            } else {
+                showNotification('Error al cargar detalles de la campaña', 'error');
+            }
+        } catch (error) {
+            console.error('Error al cargar campaña:', error);
+            showNotification('Error al cargar campaña', 'error');
+        }
+    }
+
+    function renderCampaignInfo() {
+        // Header
+        document.getElementById('campaignSubject').textContent = campaignData.subject;
+
+        const date = new Date(campaignData.created_at);
+        const dateStr = date.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        document.getElementById('campaignDate').textContent = `Enviado el ${dateStr} por ${campaignData.created_by_name}`;
+
+        // Mensaje
+        document.getElementById('campaignMessage').textContent = campaignData.message;
+
+        // Link si existe
+        if (campaignData.link) {
+            document.getElementById('campaignLink').innerHTML = `
+                <a href="${campaignData.link}" target="_blank" class="inline-flex items-center text-sm text-primary hover:underline">
+                    <svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                    </svg>
+                    ${campaignData.link_text || 'Ver enlace'}
+                </a>
+            `;
+        }
+
+        // Estadísticas
+        document.getElementById('statTotalRecipients').textContent = campaignData.total_recipients;
+        document.getElementById('statEmailsSent').textContent = campaignData.emails_sent;
+        document.getElementById('statEmailsFailed').textContent = campaignData.emails_failed;
+        document.getElementById('statWhatsappSent').textContent = campaignData.whatsapp_sent;
+        document.getElementById('statWhatsappRead').textContent = campaignData.whatsapp_read || 0;
+    }
+
+    function getWhatsAppStatusBadge(status) {
+        const statusConfig = {
+            'pending': { color: 'bg-gray-100 text-gray-800', icon: '⏳', text: 'Pendiente' },
+            'sent': { color: 'bg-blue-100 text-blue-800', icon: '✓', text: 'Enviado' },
+            'delivered': { color: 'bg-green-100 text-green-800', icon: '✓✓', text: 'Entregado' },
+            'read': { color: 'bg-purple-100 text-purple-800', icon: '✓✓', text: 'Leído' },
+            'failed': { color: 'bg-red-100 text-red-800', icon: '✗', text: 'Fallido' }
+        };
+
+        const config = statusConfig[status] || statusConfig['pending'];
+        return `<span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${config.color}">
+            ${config.icon} ${config.text}
+        </span>`;
+    }
+
+    function renderRecipients() {
+        const tbody = document.getElementById('recipientsTableBody');
+
+        if (allRecipients.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="p-8 text-center text-muted-foreground">
+                        No hay destinatarios registrados
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = allRecipients.map(recipient => {
+            const emailStatus = recipient.email_sent
+                ? '<span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs bg-green-100 text-green-800">✓ Enviado</span>'
+                : recipient.email_error
+                ? `<span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs bg-red-100 text-red-800" title="${recipient.email_error}">✗ Fallido</span>`
+                : '<span class="text-muted-foreground text-xs">-</span>';
+
+            const waStatus = recipient.whatsapp_sent
+                ? '<span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs bg-green-100 text-green-800">✓ Enviado</span>'
+                : recipient.whatsapp_error
+                ? `<span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs bg-red-100 text-red-800" title="${recipient.whatsapp_error}">✗ Fallido</span>`
+                : '<span class="text-muted-foreground text-xs">-</span>';
+
+            const waStatusBadge = recipient.whatsapp_sent ? getWhatsAppStatusBadge(recipient.whatsapp_status) : '<span class="text-muted-foreground text-xs">-</span>';
+
+            let lastUpdate = '-';
+            if (recipient.whatsapp_status_updated_at) {
+                const date = new Date(recipient.whatsapp_status_updated_at);
+                lastUpdate = date.toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            } else if (recipient.whatsapp_sent_at) {
+                const date = new Date(recipient.whatsapp_sent_at);
+                lastUpdate = date.toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            } else if (recipient.email_sent_at) {
+                const date = new Date(recipient.email_sent_at);
+                lastUpdate = date.toLocaleString('es-CO', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            }
+
+            return `
+                <tr class="border-b hover:bg-muted/50 recipient-row"
+                    data-name="${recipient.user_name.toLowerCase()}"
+                    data-email="${recipient.user_email.toLowerCase()}"
+                    data-email-sent="${recipient.email_sent}"
+                    data-email-failed="${!recipient.email_sent && recipient.email_error}"
+                    data-wa-sent="${recipient.whatsapp_sent}"
+                    data-wa-status="${recipient.whatsapp_status || ''}"
+                    data-wa-failed="${!recipient.whatsapp_sent && recipient.whatsapp_error}">
+                    <td class="p-3">
+                        <div class="font-medium">${recipient.user_name}</div>
+                        <div class="text-xs text-muted-foreground">${recipient.user_email}</div>
+                        ${recipient.user_phone ? `<div class="text-xs text-muted-foreground">${recipient.user_phone}</div>` : ''}
+                    </td>
+                    <td class="p-3 text-center">
+                        ${emailStatus}
+                    </td>
+                    <td class="p-3 text-center">
+                        ${waStatus}
+                    </td>
+                    <td class="p-3 text-center">
+                        ${waStatusBadge}
+                    </td>
+                    <td class="p-3">
+                        <div class="text-xs text-muted-foreground">${lastUpdate}</div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function filterRecipients() {
+        const search = document.getElementById('recipientSearch').value.toLowerCase();
+        const statusFilter = document.getElementById('statusFilter').value;
+
+        document.querySelectorAll('.recipient-row').forEach(row => {
+            const name = row.dataset.name;
+            const email = row.dataset.email;
+            const searchMatches = name.includes(search) || email.includes(search);
+
+            let statusMatches = true;
+            if (statusFilter) {
+                switch (statusFilter) {
+                    case 'email_sent':
+                        statusMatches = row.dataset.emailSent === 'true';
+                        break;
+                    case 'email_failed':
+                        statusMatches = row.dataset.emailFailed === 'true';
+                        break;
+                    case 'wa_sent':
+                        statusMatches = row.dataset.waSent === 'true';
+                        break;
+                    case 'wa_delivered':
+                        statusMatches = row.dataset.waStatus === 'delivered';
+                        break;
+                    case 'wa_read':
+                        statusMatches = row.dataset.waStatus === 'read';
+                        break;
+                    case 'wa_failed':
+                        statusMatches = row.dataset.waFailed === 'true';
+                        break;
+                }
+            }
+
+            row.style.display = (searchMatches && statusMatches) ? '' : 'none';
+        });
+    }
+
+    function showNotification(message, type = 'success') {
+        const notification = document.getElementById('notification');
+        const bgColor = type === 'success' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200';
+        const textColor = type === 'success' ? 'text-green-900' : 'text-red-900';
+
+        notification.innerHTML = `
+            <div class="border ${bgColor} px-4 py-3 ${textColor} flex items-center justify-between">
+                <span class="font-medium">${message}</span>
+                <button onclick="hideNotification()" class="ml-4 text-current opacity-70 hover:opacity-100">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+        notification.classList.remove('hidden');
+        setTimeout(() => hideNotification(), 5000);
+    }
+
+    function hideNotification() {
+        document.getElementById('notification').classList.add('hidden');
+    }
+
+    // Cargar detalles al inicio
+    window.addEventListener('DOMContentLoaded', () => {
+        loadCampaignDetails();
+
+        // Auto-actualizar cada 30 segundos para estados de WhatsApp
+        setInterval(() => {
+            loadCampaignDetails();
+        }, 30000);
+    });
+</script>
+{% endblock %}
