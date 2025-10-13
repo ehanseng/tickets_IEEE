@@ -1686,6 +1686,41 @@ def get_campaign_details(
     }
 
 
+@app.delete("/campaigns/{campaign_id}")
+def delete_campaign(
+    campaign_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Eliminar una campaña y todos sus destinatarios"""
+    campaign = db.query(models.MessageCampaign).filter(
+        models.MessageCampaign.id == campaign_id
+    ).first()
+
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaña no encontrada")
+
+    # Eliminar imagen si existe
+    if campaign.image_path:
+        import os
+        try:
+            if os.path.exists(campaign.image_path):
+                os.remove(campaign.image_path)
+                print(f"[INFO] Imagen eliminada: {campaign.image_path}")
+        except Exception as e:
+            print(f"[WARNING] Error al eliminar imagen: {e}")
+
+    # Los destinatarios se eliminan automáticamente por cascade
+    db.delete(campaign)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "Campaña eliminada exitosamente",
+        "campaign_id": campaign_id
+    }
+
+
 # ========== WEBHOOKS ==========
 
 @app.post("/webhooks/whatsapp-status")

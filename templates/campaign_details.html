@@ -12,6 +12,12 @@
             </svg>
             Volver al histórico
         </a>
+        <button onclick="deleteCampaign()" class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-red-600 text-white hover:bg-red-700 h-9 px-4">
+            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            </svg>
+            Eliminar campaña
+        </button>
     </div>
 
     <!-- Card de información de la campaña -->
@@ -319,6 +325,38 @@
 
     function hideNotification() {
         document.getElementById('notification').classList.add('hidden');
+    }
+
+    async function deleteCampaign() {
+        if (!campaignData) {
+            showNotification('Datos de campaña no cargados', 'error');
+            return;
+        }
+
+        if (!confirm(`¿Estás seguro de que quieres eliminar la campaña "${campaignData.subject}"?\n\nEsto eliminará también todos los registros de destinatarios y no se puede deshacer.`)) {
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`/campaigns/${campaignId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                showNotification('Campaña eliminada exitosamente', 'success');
+                setTimeout(() => {
+                    window.location.href = '/admin/campaigns';
+                }, 1000);
+            } else {
+                const error = await response.json();
+                showNotification(`Error: ${error.detail || 'No se pudo eliminar la campaña'}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error al eliminar campaña:', error);
+            showNotification('Error al eliminar campaña', 'error');
+        }
     }
 
     // Cargar detalles al inicio

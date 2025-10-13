@@ -199,13 +199,45 @@
                         <div class="text-sm">${campaign.created_by_name}</div>
                     </td>
                     <td class="p-4 text-center">
-                        <a href="/admin/campaigns/${campaign.id}" class="inline-flex items-center justify-center rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3">
-                            Ver detalles
-                        </a>
+                        <div class="flex gap-2 justify-center">
+                            <a href="/admin/campaigns/${campaign.id}" class="inline-flex items-center justify-center rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3">
+                                Ver detalles
+                            </a>
+                            <button onclick="deleteCampaign(${campaign.id}, '${campaign.subject.replace(/'/g, "\\'")}')}" class="inline-flex items-center justify-center rounded-md text-xs font-medium bg-red-600 text-white hover:bg-red-700 h-8 px-3">
+                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
         }).join('');
+    }
+
+    async function deleteCampaign(campaignId, campaignSubject) {
+        if (!confirm(`¿Estás seguro de que quieres eliminar la campaña "${campaignSubject}"?\n\nEsto eliminará también todos los registros de destinatarios y no se puede deshacer.`)) {
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`/campaigns/${campaignId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                showNotification('Campaña eliminada exitosamente', 'success');
+                loadCampaigns(); // Recargar la lista
+            } else {
+                const error = await response.json();
+                showNotification(`Error: ${error.detail || 'No se pudo eliminar la campaña'}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error al eliminar campaña:', error);
+            showNotification('Error al eliminar campaña', 'error');
+        }
     }
 
     function filterCampaigns() {
