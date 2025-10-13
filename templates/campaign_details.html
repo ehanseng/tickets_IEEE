@@ -47,6 +47,14 @@
                 </div>
             </div>
 
+            <!-- Imagen adjunta (si existe) -->
+            <div id="campaignImageSection" class="mb-6 hidden">
+                <h4 class="font-semibold mb-2 text-sm text-muted-foreground">IMAGEN ADJUNTA:</h4>
+                <div class="bg-muted rounded-lg p-4">
+                    <img id="campaignImage" src="" alt="Imagen de la campaña" class="max-w-full h-auto rounded-lg border" style="max-height: 400px;">
+                </div>
+            </div>
+
             <!-- Estadísticas generales -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div class="rounded-lg border p-4">
@@ -171,6 +179,14 @@
                     ${campaignData.link_text || 'Ver enlace'}
                 </a>
             `;
+        }
+
+        // Imagen si existe
+        if (campaignData.image_path) {
+            document.getElementById('campaignImage').src = '/' + campaignData.image_path;
+            document.getElementById('campaignImageSection').classList.remove('hidden');
+        } else {
+            document.getElementById('campaignImageSection').classList.add('hidden');
         }
 
         // Estadísticas
