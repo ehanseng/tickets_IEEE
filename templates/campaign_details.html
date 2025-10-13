@@ -42,7 +42,7 @@
             </div>
 
             <!-- Estadísticas generales -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div class="rounded-lg border p-4">
                     <div class="text-2xl font-bold" id="statTotalRecipients">0</div>
                     <div class="text-xs text-muted-foreground mt-1">Total Destinatarios</div>
@@ -58,10 +58,6 @@
                 <div class="rounded-lg border p-4 bg-blue-50">
                     <div class="text-2xl font-bold text-blue-700" id="statWhatsappSent">0</div>
                     <div class="text-xs text-muted-foreground mt-1">WhatsApp Enviados</div>
-                </div>
-                <div class="rounded-lg border p-4 bg-purple-50">
-                    <div class="text-2xl font-bold text-purple-700" id="statWhatsappRead">0</div>
-                    <div class="text-xs text-muted-foreground mt-1">WhatsApp Leídos</div>
                 </div>
             </div>
 
@@ -85,7 +81,6 @@
                     <option value="email_failed">Email fallido</option>
                     <option value="wa_sent">WhatsApp enviado</option>
                     <option value="wa_delivered">WhatsApp entregado</option>
-                    <option value="wa_read">WhatsApp leído</option>
                     <option value="wa_failed">WhatsApp fallido</option>
                 </select>
             </div>
@@ -177,7 +172,6 @@
         document.getElementById('statEmailsSent').textContent = campaignData.emails_sent;
         document.getElementById('statEmailsFailed').textContent = campaignData.emails_failed;
         document.getElementById('statWhatsappSent').textContent = campaignData.whatsapp_sent;
-        document.getElementById('statWhatsappRead').textContent = campaignData.whatsapp_read || 0;
     }
 
     function getWhatsAppStatusBadge(status) {
