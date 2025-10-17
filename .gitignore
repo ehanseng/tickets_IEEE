@@ -29,3 +29,25 @@ logs/
 # Backups
 backups/
 backup_*.db
+
+# WhatsApp session data (must be regenerated)
+whatsapp-session/
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Temporary files
+nul
+te.txt
+*.tmp
+
+# Message images (regenerated)
+static/message_images/
+
+# Migration scripts (one-time use)
+import_users_and_tickets.py
+migrate_ieee_member_id.py
+add_birthday_endpoints.py
+birthday_endpoints.py
+
+# Claude settings (local configuration)
+.claude/settings.local.json

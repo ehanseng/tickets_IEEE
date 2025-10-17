@@ -135,12 +135,22 @@ def update_validator(
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(require_admin)
 ):
-    """Actualizar un validador (solo ADMIN)"""
+    """Actualizar un usuario admin/validador (solo ADMIN)"""
     validator = db.query(models.AdminUser).filter(models.AdminUser.id == validator_id).first()
     if not validator:
-        raise HTTPException(status_code=404, detail="Validador no encontrado")
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     # Actualizar solo los campos proporcionados
+    if validator_update.username is not None:
+        # Verificar que el username no esté en uso por otro usuario
+        existing = db.query(models.AdminUser).filter(
+            models.AdminUser.username == validator_update.username,
+            models.AdminUser.id != validator_id
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="El nombre de usuario ya está en uso")
+        validator.username = validator_update.username
+
     if validator_update.email is not None:
         # Verificar que el email no esté en uso por otro usuario
         existing = db.query(models.AdminUser).filter(
@@ -154,6 +164,12 @@ def update_validator(
     if validator_update.full_name is not None:
         validator.full_name = validator_update.full_name
 
+    if validator_update.role is not None:
+        # Validar que el rol sea válido
+        if validator_update.role not in ['admin', 'validator']:
+            raise HTTPException(status_code=400, detail="Rol inválido. Use 'admin' o 'validator'")
+        validator.role = models.RoleEnum(validator_update.role)
+
     if validator_update.is_active is not None:
         validator.is_active = validator_update.is_active
 
@@ -162,6 +178,10 @@ def update_validator(
 
     if validator_update.access_end is not None:
         validator.access_end = validator_update.access_end
+
+    if validator_update.password is not None:
+        # Actualizar contraseña si se proporciona
+        validator.hashed_password = get_password_hash(validator_update.password)
 
     db.commit()
     db.refresh(validator)
@@ -973,6 +993,67 @@ def send_ticket_email(
         return {"message": "Correo enviado exitosamente", "email": user.email}
     else:
         raise HTTPException(status_code=500, detail="Error al enviar el correo")
+
+
+@app.post("/tickets/{ticket_id}/send-whatsapp")
+def send_ticket_whatsapp_endpoint(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Enviar ticket por WhatsApp al usuario con toda la información"""
+    ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+
+    user = db.query(models.User).filter(models.User.id == ticket.user_id).first()
+    event = db.query(models.Event).filter(models.Event.id == ticket.event_id).first()
+
+    # Verificar que el usuario tenga teléfono
+    if not user.phone or not user.country_code:
+        raise HTTPException(
+            status_code=400,
+            detail="El usuario no tiene número de teléfono registrado"
+        )
+
+    # Construir URL completa del ticket
+    ticket_url = f"{BASE_URL}/ticket/{ticket.unique_url}"
+
+    # Formatear fecha del evento
+    event_date_formatted = event.event_date.strftime('%d/%m/%Y a las %H:%M')
+
+    # Enviar por WhatsApp
+    from whatsapp_client import send_ticket_whatsapp, WhatsAppClient
+
+    # Verificar que WhatsApp esté disponible
+    whatsapp_client = WhatsAppClient()
+    if not whatsapp_client.is_ready():
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio de WhatsApp no disponible. Verifica que esté conectado."
+        )
+
+    success = send_ticket_whatsapp(
+        phone=user.phone,
+        country_code=user.country_code,
+        user_name=user.name,
+        event_name=event.name,
+        event_location=event.location,
+        event_date=event_date_formatted,
+        ticket_code=ticket.ticket_code,
+        ticket_url=ticket_url,
+        access_pin=ticket.access_pin,
+        companions=ticket.companions or 0
+    )
+
+    if success:
+        return {
+            "message": "Ticket enviado por WhatsApp exitosamente",
+            "phone": f"{user.country_code}{user.phone}",
+            "user_name": user.name
+        }
+    else:
+        raise HTTPException(status_code=500, detail="Error al enviar el ticket por WhatsApp")
 
 
 # ========== ENDPOINTS DE VALIDACIÓN ==========
@@ -1825,6 +1906,15 @@ async def verify_ticket_pin(
     user = db.query(models.User).filter(models.User.id == ticket.user_id).first()
     event = db.query(models.Event).filter(models.Event.id == ticket.event_id).first()
 
+    # Obtener nombre de la universidad
+    university_name = None
+    if user.university_id:
+        university = db.query(models.University).filter(
+            models.University.id == user.university_id
+        ).first()
+        if university:
+            university_name = university.name
+
     # Generar QR en base64
     qr_base64 = ticket_service.generate_qr_base64(
         ticket_code=ticket.ticket_code,
@@ -1848,7 +1938,7 @@ async def verify_ticket_pin(
             "email": user.email,
             "phone": user.phone,
             "identification": user.identification,
-            "university": user.university
+            "university": university_name
         },
         "event": {
             "name": event.name,

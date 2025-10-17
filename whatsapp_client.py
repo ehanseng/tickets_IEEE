@@ -171,17 +171,27 @@ def send_ticket_whatsapp(
     country_code: str,
     user_name: str,
     event_name: str,
-    ticket_url: str
+    event_location: str,
+    event_date: str,
+    ticket_code: str,
+    ticket_url: str,
+    access_pin: str,
+    companions: int = 0
 ) -> bool:
     """
-    Envía un mensaje con el ticket de evento por WhatsApp
+    Envía un mensaje con el ticket de evento por WhatsApp con toda la información
 
     Args:
         phone: Número de teléfono
         country_code: Código de país
         user_name: Nombre del usuario
         event_name: Nombre del evento
+        event_location: Ubicación del evento
+        event_date: Fecha y hora del evento (formateada)
+        ticket_code: Código del ticket
         ticket_url: URL del ticket
+        access_pin: PIN de acceso al ticket
+        companions: Número de acompañantes
 
     Returns:
         True si se envió correctamente
@@ -192,19 +202,43 @@ def send_ticket_whatsapp(
         print("[ERROR] WhatsApp no esta listo")
         return False
 
-    message = f"""🎟️ ¡Tu Ticket está listo!
+    # Construir información de acompañantes
+    companions_text = ""
+    if companions > 0:
+        companions_text = f"\n👥 *Acompañantes:* {companions} persona{'s' if companions != 1 else ''}"
 
-Hola {user_name},
+    message = f"""🎟️ *¡Tu Ticket está listo!*
 
-Tu registro para *{event_name}* ha sido confirmado.
+Hola *{user_name}*,
 
-🔗 Accede a tu ticket aquí:
+Tu registro para el evento ha sido confirmado.
+
+📋 *INFORMACIÓN DEL EVENTO*
+━━━━━━━━━━━━━━━━━━━
+🎯 *Evento:* {event_name}
+📍 *Lugar:* {event_location}
+📅 *Fecha y Hora:* {event_date}
+
+🎫 *INFORMACIÓN DEL TICKET*
+━━━━━━━━━━━━━━━━━━━
+👤 *Titular:* {user_name}
+🔢 *Código:* {ticket_code}
+🔐 *PIN de acceso:* {access_pin}{companions_text}
+
+✅ *TICKET VÁLIDO*
+Este ticket es válido para el ingreso al evento. El código QR será escaneado en la entrada.
+
+🔗 *Accede a tu ticket web aquí:*
 {ticket_url}
 
-*Importante:*
+🌐 *Portal de usuarios:*
+https://ticket.ieeetadeo.org/portal/login
+
+*IMPORTANTE:*
 • Presenta este ticket en el evento
 • El código QR será escaneado en la entrada
 • Guarda este enlace para acceder cuando lo necesites
+• Llega con anticipación para evitar congestiones
 
 ¡Nos vemos en el evento! 🎉
 
@@ -214,7 +248,7 @@ IEEE Tadeo Student Branch"""
     result = client.send_message(phone, message, country_code)
 
     if result.get("success"):
-        print(f"[OK] Ticket enviado a {user_name}")
+        print(f"[OK] Ticket enviado a {user_name} ({country_code}{phone})")
         return True
     else:
         print(f"[ERROR] No se pudo enviar ticket: {result.get('error')}")

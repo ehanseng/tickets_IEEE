@@ -225,8 +225,10 @@ class AdminUserResponse(BaseModel):
 
 class AdminUserUpdate(BaseModel):
     """Schema para actualizar usuario admin"""
+    username: Optional[str] = None
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
+    role: Optional[str] = None
     is_active: Optional[bool] = None
     access_start: Optional[datetime] = None
     access_end: Optional[datetime] = None

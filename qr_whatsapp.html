@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Código QR WhatsApp - +573054497235</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 500px;
+        }
+        h1 {
+            color: #25D366;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .phone-number {
+            color: #666;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        #qrcode {
+            display: inline-block;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .instructions {
+            background: #f0f7ff;
+            border-left: 4px solid #25D366;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            border-radius: 5px;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #25D366;
+        }
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 8px 0;
+            color: #333;
+        }
+        .status {
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            margin-top: 20px;
+            display: inline-block;
+        }
+        .status.waiting {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.ready {
+            background: #d4edda;
+            color: #155724;
+        }
+        .refresh-btn {
+            background: #25D366;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.3s;
+        }
+        .refresh-btn:hover {
+            background: #1da851;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 WhatsApp Business</h1>
+        <div class="phone-number">+57 305 449 7235</div>
+
+        <div id="qrcode"></div>
+        <div id="status" class="status waiting">Esperando escaneo...</div>
+
+        <div class="instructions">
+            <h3>📋 Instrucciones</h3>
+            <ol>
+                <li>Abre WhatsApp en tu teléfono <strong>+57 305 449 7235</strong></li>
+                <li>Ve a <strong>Menú (⋮)</strong> → <strong>Dispositivos vinculados</strong></li>
+                <li>Toca <strong>Vincular un dispositivo</strong></li>
+                <li>Escanea este código QR con la cámara</li>
+            </ol>
+        </div>
+
+        <button class="refresh-btn" onclick="location.reload()">🔄 Actualizar QR</button>
+
+        <p style="color: #999; font-size: 14px; margin-top: 20px;">
+            El código QR se actualiza automáticamente cada 30 segundos
+        </p>
+    </div>
+
+    <script>
+        async function loadQR() {
+            try {
+                const response = await fetch('http://localhost:3000/status');
+                const data = await response.json();
+
+                const qrDiv = document.getElementById('qrcode');
+                const statusDiv = document.getElementById('status');
+
+                if (data.ready) {
+                    qrDiv.innerHTML = '<p style="color: #25D366; font-size: 20px;">✅ WhatsApp conectado!</p>';
+                    statusDiv.textContent = '✅ Listo y conectado';
+                    statusDiv.className = 'status ready';
+                } else if (data.qr) {
+                    qrDiv.innerHTML = '';
+                    new QRCode(qrDiv, {
+                        text: data.qr,
+                        width: 300,
+                        height: 300,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.L
+                    });
+                    statusDiv.textContent = '⏳ Esperando escaneo...';
+                    statusDiv.className = 'status waiting';
+                } else {
+                    qrDiv.innerHTML = '<p class="loading">Inicializando...</p>';
+                    statusDiv.textContent = '🔄 Inicializando servicio...';
+                    statusDiv.className = 'status waiting';
+                }
+            } catch (error) {
+                document.getElementById('qrcode').innerHTML =
+                    '<p style="color: red;">❌ Error: Asegúrate de que el servicio esté corriendo en el puerto 3000</p>';
+                document.getElementById('status').textContent = '❌ Error de conexión';
+                document.getElementById('status').className = 'status waiting';
+            }
+        }
+
+        // Cargar QR al iniciar
+        loadQR();
+
+        // Actualizar cada 30 segundos
+        setInterval(loadQR, 30000);
+    </script>
+</body>
+</html>
