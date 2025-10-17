@@ -1,0 +1,77 @@
+========================================
+ARCHIVOS QUE DEBES COPIAR MANUALMENTE
+========================================
+
+📁 Ubicación actual: e:\erick\Documents\Personal\UTadeo\IEEE\Proyectos\Ticket
+
+========================================
+ARCHIVOS CRÍTICOS (OBLIGATORIOS)
+========================================
+
+✅ tickets.db
+   - Base de datos principal con todos los usuarios, tickets y campañas
+   - Tamaño aproximado: [ver en carpeta]
+   - Es el archivo MÁS IMPORTANTE
+
+✅ .env
+   - Contiene credenciales y configuración secreta
+   - NO está en GitHub por seguridad
+   - Si no existe, puedes crear uno nuevo siguiendo GUIA_MIGRACION.md
+
+========================================
+ARCHIVOS OPCIONALES (RECOMENDADOS)
+========================================
+
+□ cloudflared.exe
+   - Solo si usas Cloudflare Tunnel para acceso remoto
+   - Lo puedes descargar nuevamente si no lo tienes
+
+□ Carpeta: logs/
+   - Historial de logs (opcional, se regenera)
+
+========================================
+ARCHIVOS QUE NO SE COPIAN
+========================================
+
+❌ whatsapp-session/
+   - Sesión de WhatsApp (debes escanear QR nuevamente)
+
+❌ .venv/
+   - Entorno virtual (se crea nuevo en el otro computador)
+
+❌ __pycache__/
+   - Archivos temporales de Python
+
+❌ static/message_images/
+   - Imágenes temporales (se regeneran)
+
+========================================
+CÓMO COPIARLOS
+========================================
+
+OPCIÓN 1: USB/Disco Externo
+1. Copia tickets.db y .env a USB
+2. En el nuevo computador, pégalos en la raíz del proyecto clonado
+
+OPCIÓN 2: Red Local
+1. En este PC: Botón derecho en carpeta > Compartir
+2. En el nuevo PC: Accede a \\NOMBREPC\carpeta
+3. Copia los archivos
+
+OPCIÓN 3: Nube (OneDrive/Google Drive)
+1. Sube tickets.db y .env a la nube
+2. Descárgalos en el nuevo computador
+3. Pégalos en la raíz del proyecto
+
+⚠️ IMPORTANTE: Mantén seguro el archivo .env, contiene información sensible
+
+========================================
+DESPUÉS DE COPIAR
+========================================
+
+1. Verifica que tickets.db esté en la raíz del proyecto
+2. Verifica que .env esté en la raíz del proyecto
+3. Inicia la aplicación: python main.py
+4. Si todo funciona, verás el login en http://localhost:8000
+
+========================================
