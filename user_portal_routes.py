@@ -62,6 +62,7 @@ class UserUpdateProfile(BaseModel):
     identification: Optional[str] = None
     birthday: Optional[datetime] = None
     university_id: Optional[int] = None
+    ieee_member_id: Optional[str] = None
 
 
 class UserTicketResponse(BaseModel):
@@ -273,6 +274,7 @@ async def get_profile(
         "id": user.id,
         "name": user.name,
         "email": user.email,
+        "country_code": user.country_code,
         "phone": user.phone,
         "identification": user.identification,
         "birthday": user.birthday,
@@ -283,6 +285,7 @@ async def get_profile(
             "short_name": user.university.short_name
         } if user.university else None,
         "is_ieee_member": user.is_ieee_member,
+        "ieee_member_id": user.ieee_member_id,
         "created_at": user.created_at
     }
 
@@ -320,6 +323,12 @@ async def update_profile(
                 detail="Universidad no encontrada"
             )
         current_user.university_id = profile_data.university_id
+
+    if profile_data.ieee_member_id is not None:
+        # Actualizar ID de membresía IEEE
+        current_user.ieee_member_id = profile_data.ieee_member_id.strip() if profile_data.ieee_member_id else None
+        # Establecer is_ieee_member basado en si tiene ID de IEEE
+        current_user.is_ieee_member = bool(current_user.ieee_member_id)
 
     db.commit()
     db.refresh(current_user)

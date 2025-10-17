@@ -99,7 +99,7 @@ Selecciona una opción:
 
 **Prueba enviándote un mensaje:**
 1. Selecciona opción `1`
-2. Ingresa tu número: `+573001234567` (con tu número real)
+2. Ingresa tu número: `+573054497235` (o tu número personal)
 3. Escribe un mensaje: `Hola, esto es una prueba!`
 4. ¡Deberías recibir el mensaje en tu WhatsApp! 📱
 
@@ -161,7 +161,7 @@ npm start
 → Asegúrate de que el servicio Node.js esté corriendo en la otra terminal
 
 ### "Este número no está registrado en WhatsApp"
-→ Verifica el formato del número: `+573001234567` (con + y código de país)
+→ Verifica el formato del número: `+573054497235` (con + y código de país)
 
 ### "Error: EADDRINUSE"
 → El puerto 3000 ya está en uso. Mata el proceso:

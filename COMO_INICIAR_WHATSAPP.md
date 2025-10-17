@@ -120,7 +120,7 @@ wa = WhatsAppClient()
 if wa.is_ready():
     # Enviar mensaje
     result = wa.send_message(
-        phone="+573001234567",
+        phone="+573054497235",
         message="¡Hola! Mensaje de prueba desde IEEE Tadeo Control System"
     )
     print(result)

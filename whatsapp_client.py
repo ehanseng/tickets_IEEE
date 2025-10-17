@@ -77,7 +77,7 @@ class WhatsAppClient:
 
         Args:
             messages: Lista de diccionarios con formato:
-                     [{"phone": "+573001234567", "message": "Hola"}]
+                     [{"phone": "+573054497235", "message": "Hola"}]
 
         Returns:
             Dict con los resultados del envío masivo
@@ -98,7 +98,7 @@ class WhatsAppClient:
             }
 
     def restart(self) -> Dict:
-        """Reinicia el cliente de WhatsApp"""
+        """Reinicia el cliente de WhatsApp manteniendo la sesión"""
         try:
             response = requests.post(f"{self.base_url}/restart", timeout=10)
             response.raise_for_status()
@@ -107,6 +107,18 @@ class WhatsAppClient:
             return {
                 "success": False,
                 "error": f"Error al reiniciar: {str(e)}"
+            }
+
+    def logout(self) -> Dict:
+        """Cierra sesión y elimina credenciales para generar nuevo QR"""
+        try:
+            response = requests.post(f"{self.base_url}/logout", timeout=15)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            return {
+                "success": False,
+                "error": f"Error al cerrar sesión: {str(e)}"
             }
 
 

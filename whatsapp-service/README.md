@@ -125,7 +125,7 @@ curl http://localhost:3000/status
 curl -X POST http://localhost:3000/send \
   -H "Content-Type: application/json" \
   -d '{
-    "phone": "+573001234567",
+    "phone": "+573054497235",
     "message": "Hola desde IEEE Tadeo!"
   }'
 ```
@@ -136,8 +136,8 @@ curl -X POST http://localhost:3000/send-bulk \
   -H "Content-Type: application/json" \
   -d '{
     "messages": [
-      {"phone": "+573001234567", "message": "Hola!"},
-      {"phone": "+573007654321", "message": "¡Feliz cumpleaños!"}
+      {"phone": "+573054497235", "message": "Hola!"},
+      {"phone": "+573012345678", "message": "¡Feliz cumpleaños!"}
     ]
   }'
 ```
@@ -160,7 +160,7 @@ client = WhatsAppClient()
 if client.is_ready():
     # Enviar mensaje
     result = client.send_message(
-        phone="+573001234567",
+        phone="+573054497235",
         message="¡Hola desde Python!"
     )
 
@@ -243,7 +243,7 @@ whatsapp-session/
 
 ### "Este número no está registrado en WhatsApp"
 - El número no tiene WhatsApp instalado
-- Verifica el formato: +573001234567
+- Verifica el formato: +573054497235
 
 ### "Error al enviar mensaje"
 - Puede ser restricción temporal de WhatsApp

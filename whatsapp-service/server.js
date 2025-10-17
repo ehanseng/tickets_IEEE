@@ -432,16 +432,78 @@ app.post('/send-media', async (req, res) => {
 app.post('/restart', async (req, res) => {
     console.log('[INFO] Reiniciando cliente...');
 
-    if (client) {
-        await client.destroy();
+    try {
+        if (client) {
+            console.log('[INFO] Destruyendo cliente existente...');
+            await client.destroy();
+        }
+
+        // Resetear estado
+        isReady = false;
+        qrCodeData = null;
+
+        // Esperar un momento para que se limpie todo
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        console.log('[INFO] Inicializando nuevo cliente...');
+        initializeWhatsApp();
+
+        res.json({
+            success: true,
+            message: 'Cliente reiniciado. Escanea el código QR si es necesario.'
+        });
+    } catch (error) {
+        console.error('[ERROR] Error al reiniciar cliente:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
     }
+});
 
-    initializeWhatsApp();
+// POST /logout - Cerrar sesión y eliminar credenciales
+app.post('/logout', async (req, res) => {
+    console.log('[INFO] Cerrando sesión y eliminando credenciales...');
 
-    res.json({
-        success: true,
-        message: 'Cliente reiniciado. Escanea el código QR si es necesario.'
-    });
+    try {
+        if (client) {
+            console.log('[INFO] Destruyendo cliente...');
+            await client.destroy();
+        }
+
+        // Resetear estado
+        isReady = false;
+        qrCodeData = null;
+
+        // Eliminar directorio de sesión
+        const sessionPath = path.join(__dirname, 'whatsapp-session');
+        console.log('[INFO] Eliminando directorio de sesión:', sessionPath);
+
+        try {
+            await fs.rm(sessionPath, { recursive: true, force: true });
+            console.log('[OK] Directorio de sesión eliminado');
+        } catch (err) {
+            console.warn('[WARN] No se pudo eliminar directorio de sesión:', err.message);
+        }
+
+        // Esperar un momento
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Reinicializar para generar nuevo QR
+        console.log('[INFO] Inicializando nuevo cliente...');
+        initializeWhatsApp();
+
+        res.json({
+            success: true,
+            message: 'Sesión cerrada. Escanea el nuevo código QR con el número deseado.'
+        });
+    } catch (error) {
+        console.error('[ERROR] Error al cerrar sesión:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
 });
 
 // Iniciar servidor
@@ -453,7 +515,8 @@ app.listen(PORT, () => {
     console.log('  POST /send - Enviar mensaje individual');
     console.log('  POST /send-media - Enviar mensaje con imagen');
     console.log('  POST /send-bulk - Enviar mensajes masivos');
-    console.log('  POST /restart - Reiniciar cliente');
+    console.log('  POST /restart - Reiniciar cliente (mantiene sesión)');
+    console.log('  POST /logout - Cerrar sesión y generar nuevo QR');
     console.log('');
 
     // Inicializar WhatsApp

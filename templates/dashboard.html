@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Sistema de Tickets{% endblock %}
+{% block title %}Dashboard - IEEE Tadeo Control System{% endblock %}
 
 {% block content %}
 <!-- Stats Cards -->
@@ -104,6 +104,89 @@
             <p class="text-muted-foreground">No hay eventos activos</p>
         </div>
         {% endif %}
+    </div>
+</div>
+
+<!-- Universities Stats -->
+<div class="grid gap-4 md:grid-cols-2 mb-8">
+    <!-- Universities Distribution -->
+    <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+        <div class="flex flex-col space-y-1.5 p-6">
+            <h3 class="text-2xl font-semibold leading-none tracking-tight">Usuarios por Universidad</h3>
+            <p class="text-sm text-muted-foreground">Distribución de usuarios registrados</p>
+        </div>
+        <div class="p-6 pt-0">
+            {% if university_stats %}
+            <div class="space-y-4">
+                {% for stat in university_stats %}
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium text-sm">{{ stat.name or 'Sin Universidad' }}</span>
+                            {% if stat.short_name %}
+                            <span class="text-xs text-muted-foreground">({{ stat.short_name }})</span>
+                            {% endif %}
+                        </div>
+                        <div class="mt-1 h-2 w-full bg-secondary rounded-full overflow-hidden">
+                            <div class="h-full bg-primary rounded-full" style="width: {{ (stat.count / stats.total_users * 100)|round(1) }}%"></div>
+                        </div>
+                    </div>
+                    <div class="ml-4 flex items-center gap-2">
+                        <span class="text-2xl font-bold">{{ stat.count }}</span>
+                        <span class="text-xs text-muted-foreground">{{ (stat.count / stats.total_users * 100)|round(1) }}%</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="flex flex-col items-center justify-center py-8 text-center">
+                <svg class="h-12 w-12 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                <p class="text-muted-foreground">No hay datos de universidades</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- IEEE Members Stats -->
+    <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+        <div class="flex flex-col space-y-1.5 p-6">
+            <h3 class="text-2xl font-semibold leading-none tracking-tight">Miembros IEEE</h3>
+            <p class="text-sm text-muted-foreground">Distribución de membresía</p>
+        </div>
+        <div class="p-6 pt-0">
+            <div class="space-y-6">
+                <!-- IEEE Members Chart -->
+                <div class="flex items-center justify-center gap-8">
+                    <div class="text-center">
+                        <div class="text-4xl font-bold text-primary">{{ stats.ieee_members }}</div>
+                        <p class="text-sm text-muted-foreground mt-1">Miembros IEEE</p>
+                        <p class="text-xs text-muted-foreground">{{ (stats.ieee_members / stats.total_users * 100)|round(1) }}%</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-4xl font-bold text-secondary">{{ stats.non_ieee_members }}</div>
+                        <p class="text-sm text-muted-foreground mt-1">No Miembros</p>
+                        <p class="text-xs text-muted-foreground">{{ (stats.non_ieee_members / stats.total_users * 100)|round(1) }}%</p>
+                    </div>
+                </div>
+
+                <!-- Visual Bar -->
+                <div class="space-y-2">
+                    <div class="flex h-8 w-full rounded-lg overflow-hidden">
+                        <div class="bg-primary flex items-center justify-center text-white text-xs font-medium" style="width: {{ (stats.ieee_members / stats.total_users * 100)|round(1) }}%">
+                            {% if (stats.ieee_members / stats.total_users * 100) > 15 %}IEEE{% endif %}
+                        </div>
+                        <div class="bg-secondary flex items-center justify-center text-white text-xs font-medium" style="width: {{ (stats.non_ieee_members / stats.total_users * 100)|round(1) }}%">
+                            {% if (stats.non_ieee_members / stats.total_users * 100) > 15 %}No IEEE{% endif %}
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Total: {{ stats.total_users }} usuarios</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

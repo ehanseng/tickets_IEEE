@@ -44,7 +44,7 @@
         <div class="rounded-lg border bg-card text-card-foreground shadow-lg">
             <div class="flex flex-col space-y-1.5 p-6">
                 <h3 class="text-2xl font-semibold leading-none tracking-tight">Iniciar Sesión</h3>
-                <p class="text-sm text-muted-foreground">Accede a tu portal de tickets</p>
+                <p class="text-sm text-muted-foreground">Accede a tu perfil dentro de nuestro sistema</p>
             </div>
             <div class="p-6 pt-0">
                 <form id="loginForm" class="space-y-4">
@@ -102,16 +102,26 @@
     </div>
 
     <!-- Modal de recuperación de contraseña -->
-    <div id="recoveryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="rounded-lg border bg-card text-card-foreground shadow-lg max-w-md w-full">
-            <div class="flex flex-col space-y-1.5 p-6">
-                <h3 class="text-2xl font-semibold leading-none tracking-tight">Recuperar Contraseña</h3>
-                <p class="text-sm text-muted-foreground">Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.</p>
+    <div id="recoveryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onclick="handleModalClick(event)">
+        <div class="rounded-lg border bg-white text-card-foreground shadow-lg max-w-md w-full" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between p-6 border-b">
+                <div class="flex-1">
+                    <h3 class="text-xl sm:text-2xl font-semibold leading-none tracking-tight">Recuperar Contraseña</h3>
+                    <p class="text-xs sm:text-sm text-muted-foreground mt-1">Te enviaremos un enlace de recuperación a tu correo</p>
+                </div>
+                <button onclick="closeRecoveryForm()" class="ml-4 text-gray-400 hover:text-gray-600 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
             </div>
-            <div class="p-6 pt-0">
+            <div class="p-6">
                 <form id="recoveryForm" class="space-y-4">
                     <div class="space-y-2">
-                        <label for="recoveryEmail" class="text-sm font-medium leading-none">
+                        <label for="recoveryEmail" class="text-sm font-medium leading-none flex items-center gap-2">
+                            <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                            </svg>
                             Correo Electrónico
                         </label>
                         <input
@@ -119,24 +129,28 @@
                             id="recoveryEmail"
                             name="recoveryEmail"
                             required
+                            autocomplete="email"
                             class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             placeholder="tu@email.com">
                     </div>
 
                     <div id="recoveryMessage" class="hidden"></div>
 
-                    <div class="flex gap-3">
+                    <div class="flex flex-col sm:flex-row gap-3 pt-2">
                         <button
                             type="button"
                             onclick="closeRecoveryForm()"
-                            class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-background hover:bg-slate-100 h-10 px-4 py-2 flex-1">
+                            class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-background hover:bg-slate-100 h-10 px-4 py-2 flex-1 order-2 sm:order-1">
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             id="recoveryButton"
-                            class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 flex-1">
-                            Enviar
+                            class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 flex-1 order-1 sm:order-2">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                            </svg>
+                            Enviar Enlace
                         </button>
                     </div>
                 </form>
@@ -204,6 +218,10 @@
         // Mostrar modal de recuperación
         function showRecoveryForm() {
             document.getElementById('recoveryModal').classList.remove('hidden');
+            // Enfocar en el input de email
+            setTimeout(() => {
+                document.getElementById('recoveryEmail').focus();
+            }, 100);
         }
 
         // Cerrar modal de recuperación
@@ -212,6 +230,23 @@
             document.getElementById('recoveryForm').reset();
             document.getElementById('recoveryMessage').classList.add('hidden');
         }
+
+        // Cerrar modal al hacer clic fuera de él
+        function handleModalClick(event) {
+            if (event.target.id === 'recoveryModal') {
+                closeRecoveryForm();
+            }
+        }
+
+        // Cerrar modal con tecla ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('recoveryModal');
+                if (!modal.classList.contains('hidden')) {
+                    closeRecoveryForm();
+                }
+            }
+        });
 
         // Recovery form
         document.getElementById('recoveryForm').addEventListener('submit', async (e) => {

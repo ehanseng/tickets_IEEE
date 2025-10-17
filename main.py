@@ -1914,5 +1914,65 @@ async def get_qr_code(ticket_code: str):
         return FileResponse(qr_path, media_type="image/png")
     else:
         raise HTTPException(status_code=404, detail=f"QR code not found: {ticket_code}")
+
+
+# ========== ENDPOINTS DE GESTIÓN DE WHATSAPP ==========
+
+@app.get("/admin/whatsapp", response_class=HTMLResponse)
+async def admin_whatsapp(
+    request: Request
+):
+    """Página de gestión de WhatsApp"""
+    return templates.TemplateResponse("whatsapp_admin.html", {
+        "request": request
+    })
+
+
+@app.get("/whatsapp/status")
+def get_whatsapp_status(
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Obtener estado del servicio de WhatsApp"""
+    try:
+        from whatsapp_client import WhatsAppClient
+        client = WhatsAppClient()
+        status = client.get_status()
+        return status
+    except Exception as e:
+        return {
+            "ready": False,
+            "error": str(e),
+            "message": "Error al conectar con el servicio de WhatsApp"
+        }
+
+
+@app.post("/whatsapp/restart")
+def restart_whatsapp(
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Reiniciar el servicio de WhatsApp y generar nuevo QR (cierra sesión actual)"""
+    try:
+        from whatsapp_client import WhatsAppClient
+
+        client = WhatsAppClient()
+        # Usar logout para cerrar sesión y generar nuevo QR
+        result = client.logout()
+
+        if result.get("success"):
+            return {
+                "success": True,
+                "message": "Sesión cerrada exitosamente. Escanea el nuevo código QR con el número deseado.",
+                "details": result
+            }
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error al reiniciar: {result.get('error', 'Error desconocido')}"
+            )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al reiniciar WhatsApp: {str(e)}"
+        )
  
 

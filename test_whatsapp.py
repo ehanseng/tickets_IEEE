@@ -48,7 +48,7 @@ def main():
 
         if opcion == "1":
             print("\n--- ENVIAR MENSAJE DE PRUEBA ---")
-            phone = input("Número de teléfono (ej: +573001234567): ").strip()
+            phone = input("Número de teléfono (ej: +573054497235): ").strip()
             message = input("Mensaje: ").strip()
 
             if phone and message:

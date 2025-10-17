@@ -1,0 +1,461 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de WhatsApp - Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .whatsapp-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .status-card {
+        background: white;
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    .status-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    .status-dot {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+
+    .status-dot.ready {
+        background: #25D366;
+    }
+
+    .status-dot.waiting {
+        background: #FFA500;
+    }
+
+    .status-dot.error {
+        background: #dc3545;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .qr-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 30px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+        margin: 20px 0;
+    }
+
+    .qr-box {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        min-height: 320px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #qrcode canvas {
+        border-radius: 5px;
+    }
+
+    .instructions-box {
+        background: #f8f9fa;
+        border-left: 4px solid #25D366;
+        padding: 20px;
+        border-radius: 5px;
+        margin: 20px 0;
+    }
+
+    .instructions-box h4 {
+        color: #25D366;
+        margin-top: 0;
+        margin-bottom: 15px;
+    }
+
+    .instructions-box ol {
+        margin: 0;
+        padding-left: 20px;
+    }
+
+    .instructions-box li {
+        margin: 10px 0;
+        color: #333;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        margin-top: 20px;
+    }
+
+    .btn-restart {
+        background: #25D366;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-restart:hover {
+        background: #1da851;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+    }
+
+    .btn-restart:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    .info-card {
+        background: #e7f3ff;
+        border: 1px solid #b3d9ff;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
+    }
+
+    .info-card h5 {
+        color: #004085;
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+
+    .info-card p {
+        color: #004085;
+        margin: 5px 0;
+    }
+
+    .loading-spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #25D366;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .alert {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .alert-warning {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="whatsapp-container">
+    <h1 style="margin-bottom: 30px;">
+        <i class="fab fa-whatsapp"></i> Gestión de WhatsApp
+    </h1>
+
+    <!-- Alerts -->
+    <div id="alertContainer"></div>
+
+    <!-- Status Card -->
+    <div class="status-card">
+        <div class="status-header">
+            <div class="status-indicator">
+                <span class="status-dot waiting" id="statusDot"></span>
+                <span id="statusText">Cargando estado...</span>
+            </div>
+            <div class="action-buttons">
+                <button class="btn-restart" id="restartBtn" onclick="restartWhatsApp()">
+                    <i class="fas fa-sync-alt"></i> Reiniciar WhatsApp
+                </button>
+                <button class="btn-secondary" onclick="refreshStatus()">
+                    <i class="fas fa-refresh"></i> Actualizar
+                </button>
+            </div>
+        </div>
+
+        <!-- QR Code Section -->
+        <div class="qr-container" id="qrSection" style="display: none;">
+            <div class="qr-box" id="qrcode">
+                <div class="loading-spinner"></div>
+            </div>
+            <p style="color: white; margin-top: 15px; font-size: 14px;">
+                El código QR se actualiza automáticamente cada 30 segundos
+            </p>
+        </div>
+
+        <!-- Connected Section -->
+        <div id="connectedSection" style="display: none; text-align: center; padding: 30px;">
+            <i class="fas fa-check-circle" style="font-size: 80px; color: #25D366;"></i>
+            <h3 style="color: #25D366; margin-top: 20px;">WhatsApp Conectado</h3>
+            <p style="color: #666;">El servicio está activo y listo para enviar mensajes</p>
+        </div>
+
+        <!-- Instructions -->
+        <div class="instructions-box">
+            <h4><i class="fas fa-info-circle"></i> Instrucciones para Cambiar de Número</h4>
+            <ol>
+                <li>Haz clic en <strong>"Reiniciar WhatsApp"</strong> para generar un nuevo código QR</li>
+                <li>Abre WhatsApp en el teléfono que deseas conectar</li>
+                <li>Ve a <strong>Menú (⋮)</strong> → <strong>Dispositivos vinculados</strong></li>
+                <li>Toca <strong>Vincular un dispositivo</strong></li>
+                <li>Escanea el código QR que aparece arriba</li>
+                <li>Espera a que la conexión se establezca (verás el indicador verde)</li>
+            </ol>
+        </div>
+
+        <!-- Info Card -->
+        <div class="info-card">
+            <h5><i class="fas fa-lightbulb"></i> Información Importante</h5>
+            <p><strong>Números disponibles:</strong></p>
+            <ul>
+                <li><strong>+57 320 345 3099</strong> - Número temporal (actual)</li>
+                <li><strong>+57 305 449 7235</strong> - Número definitivo IEEE Tadeo</li>
+            </ul>
+            <p style="margin-top: 10px;">
+                <strong>Nota:</strong> Al reiniciar el servicio, la sesión actual se cerrará y deberás escanear
+                el código QR con el teléfono que deseas conectar.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+let qrCodeInstance = null;
+let autoRefreshInterval = null;
+
+// Show alert message
+function showAlert(message, type = 'success') {
+    const alertContainer = document.getElementById('alertContainer');
+    const alertClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-error' : 'alert-warning';
+
+    const alert = document.createElement('div');
+    alert.className = `alert ${alertClass}`;
+    alert.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'exclamation-triangle'}"></i>
+        ${message}
+    `;
+
+    alertContainer.innerHTML = '';
+    alertContainer.appendChild(alert);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        alert.style.transition = 'opacity 0.5s';
+        alert.style.opacity = '0';
+        setTimeout(() => alert.remove(), 500);
+    }, 5000);
+}
+
+// Fetch WhatsApp status
+async function refreshStatus() {
+    try {
+        const response = await fetch('/whatsapp/status');
+        const data = await response.json();
+
+        updateStatusUI(data);
+    } catch (error) {
+        console.error('Error fetching status:', error);
+        updateStatusUI({
+            ready: false,
+            error: error.message,
+            message: 'Error al conectar con el servicio'
+        });
+    }
+}
+
+// Update UI based on status
+function updateStatusUI(data) {
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const qrSection = document.getElementById('qrSection');
+    const connectedSection = document.getElementById('connectedSection');
+    const qrDiv = document.getElementById('qrcode');
+
+    if (data.ready) {
+        // Connected
+        statusDot.className = 'status-dot ready';
+        statusText.textContent = '✓ WhatsApp Conectado';
+        qrSection.style.display = 'none';
+        connectedSection.style.display = 'block';
+    } else if (data.qr) {
+        // QR Available
+        statusDot.className = 'status-dot waiting';
+        statusText.textContent = '⏳ Esperando escaneo del código QR';
+        qrSection.style.display = 'block';
+        connectedSection.style.display = 'none';
+
+        // Generate QR Code
+        qrDiv.innerHTML = '';
+        qrCodeInstance = new QRCode(qrDiv, {
+            text: data.qr,
+            width: 300,
+            height: 300,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.L
+        });
+    } else {
+        // Initializing or Error
+        statusDot.className = 'status-dot ' + (data.error ? 'error' : 'waiting');
+        statusText.textContent = data.message || 'Inicializando...';
+        qrSection.style.display = 'none';
+        connectedSection.style.display = 'none';
+
+        if (data.error) {
+            showAlert(`Error: ${data.error}`, 'error');
+        }
+    }
+}
+
+// Restart WhatsApp service
+async function restartWhatsApp() {
+    const btn = document.getElementById('restartBtn');
+
+    if (!confirm('¿Estás seguro de que deseas reiniciar WhatsApp?\n\nEsto cerrará la sesión actual y generará un nuevo código QR.')) {
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reiniciando...';
+
+    try {
+        const response = await fetch('/whatsapp/restart', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            showAlert('WhatsApp reiniciado exitosamente. Escanea el nuevo código QR.', 'success');
+
+            // Wait 2 seconds before refreshing status
+            setTimeout(() => {
+                refreshStatus();
+            }, 2000);
+        } else {
+            showAlert(data.detail || 'Error al reiniciar WhatsApp', 'error');
+        }
+    } catch (error) {
+        console.error('Error restarting WhatsApp:', error);
+        showAlert('Error al reiniciar WhatsApp: ' + error.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Reiniciar WhatsApp';
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    // Initial status check
+    refreshStatus();
+
+    // Auto-refresh más frecuente (cada 5 segundos) cuando no está conectado
+    // y cada 30 segundos cuando ya está conectado
+    function startAutoRefresh() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+        }
+
+        // Primero verificar el estado actual
+        fetch('/whatsapp/status')
+            .then(res => res.json())
+            .then(data => {
+                const interval = data.ready ? 30000 : 5000; // 30s si está listo, 5s si no
+                autoRefreshInterval = setInterval(refreshStatus, interval);
+            })
+            .catch(() => {
+                autoRefreshInterval = setInterval(refreshStatus, 5000);
+            });
+    }
+
+    startAutoRefresh();
+
+    // Re-evaluar intervalo cada vez que se actualiza el estado
+    const originalUpdateStatusUI = updateStatusUI;
+    updateStatusUI = function(data) {
+        originalUpdateStatusUI(data);
+        // Ajustar intervalo basado en estado
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+        }
+        const interval = data.ready ? 30000 : 5000;
+        autoRefreshInterval = setInterval(refreshStatus, interval);
+    };
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+    }
+});
+</script>
+{% endblock %}
