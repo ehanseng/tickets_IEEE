@@ -38,7 +38,7 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 REM Verificar que uv está disponible
-where uv >nul 2>&1
+python -m uv --version >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] uv no encontrado. Instala uv con: pip install uv
     pause
@@ -69,7 +69,7 @@ echo.
 
 REM Sincronizar dependencias
 echo [3/7] Sincronizando dependencias Python...
-call uv sync --quiet
+call python -m uv sync --quiet
 if %ERRORLEVEL% NEQ 0 (
     echo      [ERROR] Fallo al sincronizar dependencias
     pause
@@ -148,7 +148,7 @@ echo Logs de FastAPI:
 echo ----------------
 
 REM Ejecutar la aplicación (esto bloqueará hasta que se detenga)
-call uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+call python -m uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 REM Al cerrar este script, cerrar también las otras ventanas
 echo.

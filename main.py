@@ -1290,14 +1290,15 @@ async def admin_users(
     """Página de gestión de usuarios"""
     from birthday_utils import get_birthday_status
 
-    # Obtener usuarios con conteo de tickets
-    users = db.query(
-        models.User,
-        func.count(models.Ticket.id).label('ticket_count')
-    ).outerjoin(models.Ticket).group_by(models.User.id).all()
+    # Obtener todos los usuarios
+    users = db.query(models.User).all()
 
     users_list = []
-    for user, ticket_count in users:
+    for user in users:
+        # Contar tickets para este usuario específico
+        ticket_count = db.query(func.count(models.Ticket.id)).filter(
+            models.Ticket.user_id == user.id
+        ).scalar() or 0
         # Cargar la universidad manualmente si existe
         university = None
         if user.university_id:
