@@ -287,6 +287,7 @@
 <script>
 let qrCodeInstance = null;
 let autoRefreshInterval = null;
+let lastQrCode = null;
 
 // Show alert message
 function showAlert(message, type = 'success') {
@@ -349,24 +350,32 @@ function updateStatusUI(data) {
         qrSection.style.display = 'block';
         connectedSection.style.display = 'none';
 
-        // Generate QR Code
-        qrDiv.innerHTML = '';
-        qrCodeInstance = new QRCode(qrDiv, {
-            text: data.qr,
-            width: 300,
-            height: 300,
-            colorDark: "#000000",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.L
-        });
+        // Solo regenerar el QR si cambió
+        if (lastQrCode !== data.qr) {
+            qrDiv.innerHTML = '';
+            qrCodeInstance = new QRCode(qrDiv, {
+                text: data.qr,
+                width: 300,
+                height: 300,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.L
+            });
+            lastQrCode = data.qr;
+        }
     } else {
-        // Initializing or Error
+        // Initializing or Error - no ocultar el QR si ya existe
         statusDot.className = 'status-dot ' + (data.error ? 'error' : 'waiting');
         statusText.textContent = data.message || 'Inicializando...';
-        qrSection.style.display = 'none';
+
+        // Solo ocultar si no hay QR previo
+        if (!lastQrCode) {
+            qrSection.style.display = 'none';
+        }
         connectedSection.style.display = 'none';
 
-        if (data.error) {
+        // Solo mostrar error si no es un timeout y no hay QR previo
+        if (data.error && !data.error.includes('timeout') && !lastQrCode) {
             showAlert(`Error: ${data.error}`, 'error');
         }
     }

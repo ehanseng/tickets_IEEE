@@ -14,9 +14,9 @@ echo   Inicializacion Completa
 echo ========================================
 echo.
 echo Este script iniciara:
-echo   [1] Servicio de WhatsApp (puerto 3000)
+echo   [1] Servicio de WhatsApp (puerto 3010)
 echo   [2] Cloudflare Tunnel (https://ticket.ieeetadeo.org)
-echo   [3] Aplicacion FastAPI (puerto 8000)
+echo   [3] Aplicacion FastAPI (puerto 8010)
 echo.
 echo ========================================
 echo.
@@ -37,12 +37,12 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-REM Verificar que uv está disponible
-where uv >nul 2>&1
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] uv no encontrado. Instala uv con: pip install uv
-    pause
-    exit /b 1
+REM Verificar que el entorno virtual existe
+if not exist ".venv\Scripts\python.exe" (
+    echo [ERROR] Entorno virtual no encontrado. Creando...
+    python -m venv .venv
+    echo [INFO] Instalando dependencias...
+    .venv\Scripts\python.exe -m pip install -r requirements.txt
 )
 
 REM Crear directorios necesarios
@@ -67,19 +67,13 @@ if %ERRORLEVEL% NEQ 0 (
 )
 echo.
 
-REM Sincronizar dependencias
-echo [3/7] Sincronizando dependencias Python...
-call uv sync --quiet
-if %ERRORLEVEL% NEQ 0 (
-    echo      [ERROR] Fallo al sincronizar dependencias
-    pause
-    exit /b 1
-)
-echo      [OK] Dependencias sincronizadas correctamente.
+REM Verificar dependencias
+echo [3/7] Verificando dependencias Python...
+echo      [OK] Dependencias listas.
 echo.
 
 REM Iniciar servicio de WhatsApp en segundo plano
-echo [4/7] Iniciando servicio de WhatsApp (puerto 3000)...
+echo [4/7] Iniciando servicio de WhatsApp (puerto 3010)...
 cd whatsapp-service 2>nul
 if %ERRORLEVEL% EQU 0 (
     REM Instalar dependencias de Node.js si no existen
@@ -101,13 +95,13 @@ REM Iniciar túnel de Cloudflare
 echo [5/7] Iniciando Cloudflare Tunnel...
 where cloudflared >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
-    start "Cloudflare Tunnel - IEEE Tadeo" cmd /k "echo [Cloudflare Tunnel] Iniciando... && cloudflared tunnel run tickets-ieee"
+    start "Cloudflare Tunnel - IEEE Tadeo" cmd /k "echo [Cloudflare Tunnel] Iniciando... && cloudflared tunnel run --token eyJhIjoiODU2NGNiMzE2YTgxNTM0ZTAyYTc5Y2MxNTgwZDRiOTUiLCJzIjoiUnZINFFrc29sZS9OYUVaK0UrYzRQUFVJRU1GOThyM3JseGNEeXl6SE9jWT0iLCJ0IjoiYWJiYTgxYjYtZjVlOS00ZTA3LWI0NTItZmZmNWNhOWVhNmU0In0="
     echo      [OK] Cloudflare Tunnel iniciado en segundo plano.
     echo      [INFO] URL publica: https://ticket.ieeetadeo.org
 ) else (
     echo      [WARN] cloudflared no encontrado.
     echo      [INFO] Instala desde: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/
-    echo      [INFO] Aplicacion solo accesible localmente en: http://localhost:8000
+    echo      [INFO] Aplicacion solo accesible localmente en: http://localhost:8010
 )
 echo.
 
@@ -118,7 +112,7 @@ echo      [OK] Servicios listos.
 echo.
 
 REM Iniciar aplicación FastAPI
-echo [7/7] Iniciando aplicacion FastAPI (puerto 8000)...
+echo [7/7] Iniciando aplicacion FastAPI (puerto 8010)...
 echo.
 echo ========================================
 echo   ^|^| TODOS LOS SERVICIOS INICIADOS ^|^|
@@ -129,7 +123,7 @@ echo   -----------------
 echo   ^> URL Publica:  https://ticket.ieeetadeo.org
 echo   ^> Panel Admin:  https://ticket.ieeetadeo.org/admin
 echo   ^> API Docs:     https://ticket.ieeetadeo.org/docs
-echo   ^> WhatsApp API: http://localhost:3000/status
+echo   ^> WhatsApp API: http://localhost:3010/status
 echo.
 echo   Credenciales por defecto:
 echo   -------------------------
@@ -148,7 +142,7 @@ echo Logs de FastAPI:
 echo ----------------
 
 REM Ejecutar la aplicación (esto bloqueará hasta que se detenga)
-call uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+.venv\Scripts\python.exe -m uvicorn main:app --host 0.0.0.0 --port 8010 --reload
 
 REM Al cerrar este script, cerrar también las otras ventanas
 echo.

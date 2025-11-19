@@ -9,13 +9,13 @@ from country_codes import format_phone_number
 class WhatsAppClient:
     """Cliente para enviar mensajes de WhatsApp"""
 
-    def __init__(self, base_url: str = "http://localhost:3000"):
+    def __init__(self, base_url: str = "http://localhost:3010"):
         self.base_url = base_url
 
     def get_status(self) -> Dict:
         """Obtiene el estado del servicio de WhatsApp"""
         try:
-            response = requests.get(f"{self.base_url}/status", timeout=5)
+            response = requests.get(f"{self.base_url}/status", timeout=15)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:

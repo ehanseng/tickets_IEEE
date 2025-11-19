@@ -8,7 +8,7 @@ const fs = require('fs').promises;
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
+const PORT = 3010;
 
 // Crear directorio para imágenes de WhatsApp si no existe
 const WHATSAPP_IMAGES_DIR = path.join(__dirname, '../static/whatsapp_images');
