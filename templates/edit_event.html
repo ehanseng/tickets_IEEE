@@ -79,6 +79,26 @@
                         {% endif %}
                     </div>
 
+                    <!-- Imagen para WhatsApp (Opcional) -->
+                    <div class="space-y-2">
+                        <label for="whatsapp_image" class="text-sm font-medium">Imagen para WhatsApp (Opcional)</label>
+                        <div class="space-y-2">
+                            <input type="file" id="whatsapp_image" name="whatsapp_image" accept="image/*" class="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
+                            <p class="text-xs text-muted-foreground">La imagen se enviará junto con el mensaje de WhatsApp. Formatos: JPG, PNG, GIF (máx. 5MB)</p>
+                            {% if event.whatsapp_image_path %}
+                            <div class="flex items-center gap-2 text-xs">
+                                <span class="text-green-700">✓ Imagen actual:</span>
+                                <a href="{{ event.whatsapp_image_path }}" target="_blank" class="text-blue-600 hover:underline">Ver imagen</a>
+                                <button type="button" onclick="removeWhatsAppImage()" class="text-red-600 hover:text-red-800 ml-2">🗑 Eliminar</button>
+                            </div>
+                            <img src="{{ event.whatsapp_image_path }}" alt="Preview" class="mt-2 max-w-xs rounded border">
+                            {% endif %}
+                            <div id="whatsapp_image_preview" class="hidden mt-2">
+                                <img id="whatsapp_image_preview_img" src="" alt="Preview" class="max-w-xs rounded border">
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Template de Email -->
                     <div class="space-y-2">
                         <div class="flex items-center justify-between">
@@ -295,6 +315,48 @@ IEEE Tadeo Student Branch`;
         alert('Template predeterminado de Email copiado ✓');
     }
 
+    // Preview de imagen al seleccionarla
+    document.getElementById('whatsapp_image').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('whatsapp_image_preview_img').src = e.target.result;
+                document.getElementById('whatsapp_image_preview').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Función para eliminar imagen de WhatsApp
+    async function removeWhatsAppImage() {
+        if (!confirm('¿Estás seguro de que deseas eliminar la imagen actual?')) {
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/events/{{ event.id }}/whatsapp-image', {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert('Imagen eliminada exitosamente');
+                window.location.reload();
+            } else {
+                alert(`Error: ${data.detail || 'No se pudo eliminar la imagen'}`);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al eliminar la imagen');
+        }
+    }
+
     document.getElementById('editEventForm').addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -314,6 +376,7 @@ IEEE Tadeo Student Branch`;
         };
 
         try {
+            // 1. Actualizar datos del evento
             const response = await fetch('/events/{{ event.id }}', {
                 method: 'PUT',
                 headers: {
@@ -324,16 +387,45 @@ IEEE Tadeo Student Branch`;
 
             const data = await response.json();
 
-            if (response.ok) {
-                document.getElementById('message').innerHTML =
-                    '<div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">Evento actualizado exitosamente</div>';
-                setTimeout(() => {
-                    window.location.href = '/admin/events';
-                }, 1500);
-            } else {
+            if (!response.ok) {
                 document.getElementById('message').innerHTML =
                     `<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error: ${data.detail}</div>`;
+                return;
             }
+
+            // 2. Subir imagen si se seleccionó una nueva
+            const imageFile = document.getElementById('whatsapp_image').files[0];
+            if (imageFile) {
+                const imageFormData = new FormData();
+                imageFormData.append('image', imageFile);
+
+                const token = localStorage.getItem('access_token');
+                const imageResponse = await fetch('/events/{{ event.id }}/upload-whatsapp-image', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: imageFormData
+                });
+
+                if (!imageResponse.ok) {
+                    const imageData = await imageResponse.json();
+                    document.getElementById('message').innerHTML =
+                        `<div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">Evento actualizado, pero error al subir imagen: ${imageData.detail}</div>`;
+                    setTimeout(() => {
+                        window.location.href = '/admin/events';
+                    }, 2000);
+                    return;
+                }
+            }
+
+            // Éxito
+            document.getElementById('message').innerHTML =
+                '<div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">Evento actualizado exitosamente</div>';
+            setTimeout(() => {
+                window.location.href = '/admin/events';
+            }, 1500);
+
         } catch (error) {
             document.getElementById('message').innerHTML =
                 '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error al actualizar evento</div>';

@@ -222,7 +222,33 @@ def send_ticket_whatsapp(
         event=event
     )
 
-    result = client.send_message(phone, message, country_code)
+    # Si el evento tiene imagen, enviar con imagen
+    image_base64 = None
+    if event and event.whatsapp_image_path:
+        import os
+        import base64
+        if os.path.exists(event.whatsapp_image_path):
+            try:
+                with open(event.whatsapp_image_path, 'rb') as f:
+                    image_data = f.read()
+                    # Determinar el tipo de imagen
+                    ext = os.path.splitext(event.whatsapp_image_path)[1].lower()
+                    mime_types = {
+                        '.jpg': 'image/jpeg',
+                        '.jpeg': 'image/jpeg',
+                        '.png': 'image/png',
+                        '.gif': 'image/gif'
+                    }
+                    mime_type = mime_types.get(ext, 'image/jpeg')
+                    image_base64 = f"data:{mime_type};base64,{base64.b64encode(image_data).decode()}"
+            except Exception as e:
+                print(f"[WARNING] No se pudo cargar la imagen del evento: {e}")
+
+    # Enviar mensaje (con o sin imagen)
+    if image_base64:
+        result = client.send_message_with_image(phone, message, image_base64, country_code)
+    else:
+        result = client.send_message(phone, message, country_code)
 
     if result.get("success"):
         print(f"[OK] Ticket enviado a {user_name} ({country_code}{phone})")

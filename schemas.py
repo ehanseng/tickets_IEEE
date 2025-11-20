@@ -199,6 +199,7 @@ class EventCreate(BaseModel):
     organization_id: Optional[int] = None  # ID de organización (opcional)
     whatsapp_template: Optional[str] = None  # Template personalizado de WhatsApp
     email_template: Optional[str] = None  # Template personalizado de Email
+    whatsapp_image_path: Optional[str] = None  # Ruta de la imagen para WhatsApp
 
 
 class EventUpdate(BaseModel):
@@ -211,6 +212,7 @@ class EventUpdate(BaseModel):
     is_active: Optional[bool] = None
     whatsapp_template: Optional[str] = None  # Template personalizado de WhatsApp
     email_template: Optional[str] = None  # Template personalizado de Email
+    whatsapp_image_path: Optional[str] = None  # Ruta de la imagen para WhatsApp
 
 
 class EventResponse(BaseModel):
@@ -223,6 +225,7 @@ class EventResponse(BaseModel):
     organization_id: Optional[int]
     whatsapp_template: Optional[str] = None  # Template personalizado de WhatsApp
     email_template: Optional[str] = None  # Template personalizado de Email
+    whatsapp_image_path: Optional[str] = None  # Ruta de la imagen para WhatsApp
     is_active: bool
     created_at: datetime
     organization: Optional[OrganizationResponse] = None

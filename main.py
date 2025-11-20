@@ -1154,6 +1154,92 @@ def update_event(
     return event
 
 
+@app.post("/events/{event_id}/upload-whatsapp-image")
+async def upload_event_whatsapp_image(
+    event_id: int,
+    image: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Subir imagen de WhatsApp para un evento"""
+    import os
+    from pathlib import Path
+
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    # Validar que sea una imagen
+    if not image.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="El archivo debe ser una imagen")
+
+    # Validar tamaño (máx 5MB)
+    content = await image.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="La imagen no puede superar los 5MB")
+
+    # Generar nombre único para el archivo
+    ext = Path(image.filename).suffix
+    filename = f"event_{event_id}_{int(datetime.now().timestamp())}{ext}"
+    filepath = f"static/event_images/{filename}"
+
+    # Guardar el archivo
+    try:
+        with open(filepath, 'wb') as f:
+            f.write(content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al guardar la imagen: {str(e)}")
+
+    # Eliminar imagen anterior si existe
+    if event.whatsapp_image_path and os.path.exists(event.whatsapp_image_path):
+        try:
+            os.remove(event.whatsapp_image_path)
+        except:
+            pass
+
+    # Actualizar el evento
+    event.whatsapp_image_path = filepath
+    db.commit()
+    db.refresh(event)
+
+    return {
+        "message": "Imagen subida exitosamente",
+        "image_path": filepath,
+        "image_url": f"/{filepath}"
+    }
+
+
+@app.delete("/events/{event_id}/whatsapp-image")
+def delete_event_whatsapp_image(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Eliminar imagen de WhatsApp de un evento"""
+    import os
+
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    if not event.whatsapp_image_path:
+        raise HTTPException(status_code=404, detail="El evento no tiene imagen de WhatsApp")
+
+    # Eliminar el archivo
+    if os.path.exists(event.whatsapp_image_path):
+        try:
+            os.remove(event.whatsapp_image_path)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error al eliminar la imagen: {str(e)}")
+
+    # Actualizar el evento
+    event.whatsapp_image_path = None
+    db.commit()
+    db.refresh(event)
+
+    return {"message": "Imagen eliminada exitosamente"}
+
+
 @app.get("/events/{event_id}/tickets")
 def get_event_tickets(
     event_id: int,
@@ -1592,7 +1678,60 @@ def get_whatsapp_preview(
         "phone": f"{user.country_code}{user.phone}" if user.phone else None,
         "event_name": event.name,
         "message_preview": message_preview,
-        "template_source": "evento" if event.whatsapp_template else ("organizacion" if organization and organization.whatsapp_template else "default")
+        "template_source": "evento" if event.whatsapp_template else ("organizacion" if organization and organization.whatsapp_template else "default"),
+        "has_image": bool(event.whatsapp_image_path),
+        "image_url": f"/{event.whatsapp_image_path}" if event.whatsapp_image_path else None
+    }
+
+
+@app.get("/events/{event_id}/whatsapp-template-preview")
+def get_event_whatsapp_template_preview(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Obtiene un preview del template de WhatsApp que se usará para este evento
+    """
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    # Cargar organización del evento si existe
+    organization = None
+    if event.organization_id:
+        organization = db.query(models.Organization).filter(
+            models.Organization.id == event.organization_id
+        ).first()
+
+    # Formatear fecha del evento
+    event_date_formatted = event.event_date.strftime('%d/%m/%Y a las %H:%M')
+
+    # Generar preview del mensaje usando template service
+    from template_service import template_service
+
+    # Usar valores de ejemplo
+    message_preview = template_service.render_whatsapp_template(
+        organization=organization,
+        user_name="[Nombre del Usuario]",
+        event_name=event.name,
+        event_date=event_date_formatted,
+        event_location=event.location,
+        ticket_code="XXXX-XXXX-XXXX",
+        ticket_url="https://ticket.ieeetadeo.org/ticket/...",
+        access_pin="****",
+        companions=0,
+        event=event
+    )
+
+    return {
+        "event_id": event_id,
+        "event_name": event.name,
+        "message_preview": message_preview,
+        "template_source": "evento" if event.whatsapp_template else ("organizacion" if organization and organization.whatsapp_template else "default"),
+        "template_source_name": event.name if event.whatsapp_template else (organization.name if organization and organization.whatsapp_template else "IEEE Tadeo (predeterminado)"),
+        "has_image": bool(event.whatsapp_image_path),
+        "image_url": f"/{event.whatsapp_image_path}" if event.whatsapp_image_path else None
     }
 
 

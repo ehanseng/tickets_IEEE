@@ -399,13 +399,38 @@
             <form id="whatsappForm" class="space-y-4">
                 <div class="space-y-2">
                     <label for="whatsapp_event_id" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Evento *</label>
-                    <select id="whatsapp_event_id" name="whatsapp_event_id" required onchange="updateTicketPreview()" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                    <select id="whatsapp_event_id" name="whatsapp_event_id" required onchange="updateTicketPreview(); updateTemplatePreview();" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
                         <option value="">Seleccione un evento</option>
                         {% for event in events %}
                         <option value="{{ event.id }}">{{ event.name }} - {{ event.event_date.strftime('%d/%m/%Y') }}</option>
                         {% endfor %}
                     </select>
                     <p class="text-xs text-muted-foreground">Selecciona el evento cuyos tickets deseas enviar</p>
+                </div>
+
+                <!-- Preview del template que se usará -->
+                <div id="templatePreviewSection" class="hidden space-y-2">
+                    <label class="text-sm font-medium">Preview del Mensaje</label>
+                    <div class="border rounded-lg p-3 bg-white space-y-3">
+                        <div>
+                            <span class="text-xs font-medium text-muted-foreground">Template:</span>
+                            <span id="templateSourceName" class="text-xs italic ml-1"></span>
+                        </div>
+
+                        <!-- Imagen si existe -->
+                        <div id="templateImageSection" class="hidden">
+                            <div class="text-xs font-medium text-muted-foreground mb-2">Imagen adjunta:</div>
+                            <img id="templatePreviewImage" src="" alt="Imagen del evento" class="max-w-xs rounded border">
+                        </div>
+
+                        <!-- Mensaje -->
+                        <div>
+                            <div class="text-xs font-medium text-muted-foreground mb-2">Mensaje:</div>
+                            <div class="border rounded-lg p-3 bg-muted max-h-64 overflow-y-auto whitespace-pre-wrap text-xs font-mono">
+                                <div id="templatePreviewContent"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Vista previa de tickets a enviar -->
@@ -463,6 +488,14 @@
                         <div><strong>Teléfono:</strong> <span id="previewPhone"></span></div>
                         <div><strong>Evento:</strong> <span id="previewEventName"></span></div>
                         <div><strong>Template:</strong> <span id="previewTemplateSource" class="text-xs italic"></span></div>
+                    </div>
+                </div>
+
+                <!-- Preview de imagen (si existe) -->
+                <div id="previewImageSection" class="hidden">
+                    <label class="text-sm font-medium">Imagen adjunta:</label>
+                    <div class="mt-2 border rounded-lg p-4 bg-white">
+                        <img id="previewImage" src="" alt="Imagen del evento" class="max-w-full rounded">
                     </div>
                 </div>
 
@@ -746,6 +779,14 @@
                 document.getElementById('previewTemplateSource').textContent = templateSourceMap[data.template_source] || data.template_source;
 
                 document.getElementById('previewMessageContent').textContent = data.message_preview;
+
+                // Mostrar imagen si existe
+                if (data.has_image && data.image_url) {
+                    document.getElementById('previewImage').src = data.image_url;
+                    document.getElementById('previewImageSection').classList.remove('hidden');
+                } else {
+                    document.getElementById('previewImageSection').classList.add('hidden');
+                }
 
                 // Abrir modal de preview
                 document.getElementById('whatsappPreviewModal').classList.remove('hidden');
@@ -1082,11 +1123,55 @@
         }
     }
 
+    async function updateTemplatePreview() {
+        const eventId = document.getElementById('whatsapp_event_id').value;
+        const previewSection = document.getElementById('templatePreviewSection');
+        const previewContent = document.getElementById('templatePreviewContent');
+        const templateSourceName = document.getElementById('templateSourceName');
+
+        if (!eventId) {
+            previewSection.classList.add('hidden');
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`/events/${eventId}/whatsapp-template-preview`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                previewContent.textContent = data.message_preview;
+                templateSourceName.textContent = data.template_source_name;
+
+                // Mostrar imagen si existe
+                if (data.has_image && data.image_url) {
+                    document.getElementById('templatePreviewImage').src = data.image_url;
+                    document.getElementById('templateImageSection').classList.remove('hidden');
+                } else {
+                    document.getElementById('templateImageSection').classList.add('hidden');
+                }
+
+                previewSection.classList.remove('hidden');
+            } else {
+                previewSection.classList.add('hidden');
+            }
+        } catch (error) {
+            console.error('Error loading template preview:', error);
+            previewSection.classList.add('hidden');
+        }
+    }
+
     function openWhatsAppModal() {
         document.getElementById('whatsappModal').classList.remove('hidden');
         document.getElementById('whatsappForm').reset();
         document.getElementById('whatsappMessage').innerHTML = '';
         document.getElementById('ticketPreview').classList.add('hidden');
+        document.getElementById('templatePreviewSection').classList.add('hidden');
     }
 
     function closeWhatsAppModal() {
@@ -1094,6 +1179,7 @@
         document.getElementById('whatsappForm').reset();
         document.getElementById('whatsappMessage').innerHTML = '';
         document.getElementById('ticketPreview').classList.add('hidden');
+        document.getElementById('templatePreviewSection').classList.add('hidden');
     }
 
     document.getElementById('whatsappForm').addEventListener('submit', async (e) => {
