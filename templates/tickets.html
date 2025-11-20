@@ -7,9 +7,26 @@
     <div class="p-6">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-3xl font-bold tracking-tight">Gestión de Tickets</h2>
-            <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2" onclick="openModal()">
-                Generar Nuevo Ticket
-            </button>
+            <div class="flex gap-2">
+                <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:bg-green-700 h-10 px-4 py-2" onclick="openWhatsAppModal()">
+                    <svg class="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                    </svg>
+                    Enviar por WhatsApp
+                </button>
+                <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2" onclick="openBulkModal()">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    Crear Tickets de Eventos
+                </button>
+                <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2" onclick="openModal()">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Generar Nuevo Ticket
+                </button>
+            </div>
         </div>
 
         <!-- Barra de búsqueda y filtros -->
@@ -284,6 +301,195 @@
         </div>
     </div>
 </div>
+
+<!-- Modal para crear tickets masivos por etiqueta -->
+<div id="bulkModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-lg">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-semibold leading-none tracking-tight">Crear Tickets de Eventos Masivos</h2>
+                <button onclick="closeBulkModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-sm">
+                <p class="font-semibold text-blue-900 mb-1">Generación masiva de tickets</p>
+                <p class="text-blue-700 text-xs">
+                    Esta función creará tickets para todos los usuarios que tengan la etiqueta seleccionada.
+                    Solo se crearán tickets para usuarios que aún NO tengan un ticket para el evento seleccionado.
+                </p>
+            </div>
+
+            <form id="bulkForm" class="space-y-4">
+                <div class="space-y-2">
+                    <label for="bulk_event_id" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Evento *</label>
+                    <select id="bulk_event_id" name="bulk_event_id" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <option value="">Seleccione un evento</option>
+                        {% for event in events %}
+                        <option value="{{ event.id }}">{{ event.name }} - {{ event.event_date.strftime('%d/%m/%Y') }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="bulk_tag_id" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Etiqueta *</label>
+                    <select id="bulk_tag_id" name="bulk_tag_id" required onchange="updateUserPreview()" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <option value="">Seleccione una etiqueta</option>
+                    </select>
+                    <p class="text-xs text-muted-foreground">Se crearán tickets para todos los usuarios con esta etiqueta</p>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="bulk_companions" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Acompañantes (0-4)</label>
+                    <input type="number" id="bulk_companions" name="bulk_companions" min="0" max="4" value="0" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                    <p class="text-xs text-muted-foreground">Cantidad de acompañantes para cada ticket (mismo valor para todos)</p>
+                </div>
+
+                <!-- Vista previa de usuarios -->
+                <div id="userPreview" class="hidden space-y-2">
+                    <label class="text-sm font-medium">Vista previa de usuarios</label>
+                    <div class="border rounded-lg p-3 bg-muted max-h-40 overflow-y-auto">
+                        <p id="userPreviewCount" class="text-xs text-muted-foreground mb-2"></p>
+                        <div id="userPreviewList" class="text-xs space-y-1"></div>
+                    </div>
+                </div>
+
+                <button type="submit" id="bulkSubmitBtn" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    Crear Tickets Masivos
+                </button>
+            </form>
+
+            <div id="bulkMessage" class="mt-4"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para envío masivo de tickets por WhatsApp -->
+<div id="whatsappModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-lg">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-semibold leading-none tracking-tight">Enviar Tickets por WhatsApp</h2>
+                <button onclick="closeWhatsAppModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 text-sm">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg class="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                    </svg>
+                    <span class="font-semibold text-green-900">Envío masivo por evento</span>
+                </div>
+                <p class="text-green-700 text-xs">
+                    Esta función enviará los tickets por WhatsApp a todos los usuarios que tengan ticket para el evento seleccionado.
+                    Se omitirán usuarios sin número de teléfono registrado.
+                </p>
+            </div>
+
+            <form id="whatsappForm" class="space-y-4">
+                <div class="space-y-2">
+                    <label for="whatsapp_event_id" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Evento *</label>
+                    <select id="whatsapp_event_id" name="whatsapp_event_id" required onchange="updateTicketPreview()" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <option value="">Seleccione un evento</option>
+                        {% for event in events %}
+                        <option value="{{ event.id }}">{{ event.name }} - {{ event.event_date.strftime('%d/%m/%Y') }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-xs text-muted-foreground">Selecciona el evento cuyos tickets deseas enviar</p>
+                </div>
+
+                <!-- Vista previa de tickets a enviar -->
+                <div id="ticketPreview" class="hidden space-y-2">
+                    <label class="text-sm font-medium">Vista previa de envíos</label>
+                    <div class="border rounded-lg p-3 bg-muted max-h-40 overflow-y-auto">
+                        <p id="ticketPreviewCount" class="text-xs text-muted-foreground mb-2"></p>
+                        <div id="ticketPreviewList" class="text-xs space-y-1"></div>
+                    </div>
+                </div>
+
+                <button type="submit" id="whatsappSubmitBtn" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:bg-green-700 h-10 px-4 py-2 w-full">
+                    <svg class="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                    </svg>
+                    Enviar Tickets por WhatsApp
+                </button>
+            </form>
+
+            <div id="whatsappMessage" class="mt-4"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para preview de mensaje individual de WhatsApp -->
+<div id="whatsappPreviewModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-lg">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-semibold leading-none tracking-tight">Preview de WhatsApp</h2>
+                <button onclick="closeWhatsAppPreviewModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 text-sm">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg class="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                    </svg>
+                    <span class="font-semibold text-green-900">Vista previa del mensaje</span>
+                </div>
+                <p class="text-green-700 text-xs">
+                    Este es el mensaje que se enviará al usuario por WhatsApp
+                </p>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Info del destinatario -->
+                <div class="bg-muted rounded-lg p-3 text-sm">
+                    <div class="space-y-1">
+                        <div><strong>Usuario:</strong> <span id="previewUserName"></span></div>
+                        <div><strong>Teléfono:</strong> <span id="previewPhone"></span></div>
+                        <div><strong>Evento:</strong> <span id="previewEventName"></span></div>
+                        <div><strong>Template:</strong> <span id="previewTemplateSource" class="text-xs italic"></span></div>
+                    </div>
+                </div>
+
+                <!-- Preview del mensaje -->
+                <div>
+                    <label class="text-sm font-medium">Mensaje:</label>
+                    <div class="mt-2 border rounded-lg p-4 bg-white max-h-96 overflow-y-auto whitespace-pre-wrap text-sm font-mono">
+                        <div id="previewMessageContent"></div>
+                    </div>
+                </div>
+
+                <!-- Botones de acción -->
+                <div class="flex gap-2">
+                    <button onclick="confirmSendWhatsApp()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:bg-green-700 h-10 px-4 py-2 flex-1">
+                        <svg class="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                        </svg>
+                        Enviar Ahora
+                    </button>
+                    <button onclick="closeWhatsAppPreviewModal()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -508,14 +714,56 @@
         }
     }
 
+    let currentPreviewTicketId = null;
+
     async function sendWhatsApp(ticketId) {
-        if (!confirm('¿Enviar ticket por WhatsApp al usuario?')) {
-            return;
+        try {
+            const token = localStorage.getItem('access_token');
+
+            // Obtener preview del mensaje
+            const response = await fetch(`/tickets/${ticketId}/whatsapp-preview`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Guardar el ID del ticket para enviar después
+                currentPreviewTicketId = ticketId;
+
+                // Mostrar el preview en el modal
+                document.getElementById('previewUserName').textContent = data.user_name;
+                document.getElementById('previewPhone').textContent = data.phone || 'Sin teléfono';
+                document.getElementById('previewEventName').textContent = data.event_name;
+
+                const templateSourceMap = {
+                    'evento': 'Personalizado del evento',
+                    'organizacion': 'Personalizado de la organización',
+                    'default': 'Predeterminado de IEEE Tadeo'
+                };
+                document.getElementById('previewTemplateSource').textContent = templateSourceMap[data.template_source] || data.template_source;
+
+                document.getElementById('previewMessageContent').textContent = data.message_preview;
+
+                // Abrir modal de preview
+                document.getElementById('whatsappPreviewModal').classList.remove('hidden');
+            } else {
+                alert(`Error: ${data.detail || 'No se pudo obtener el preview'}`);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al obtener preview de WhatsApp');
         }
+    }
+
+    async function confirmSendWhatsApp() {
+        if (!currentPreviewTicketId) return;
 
         try {
             const token = localStorage.getItem('access_token');
-            const response = await fetch(`/tickets/${ticketId}/send-whatsapp`, {
+            const response = await fetch(`/tickets/${currentPreviewTicketId}/send-whatsapp`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -525,6 +773,7 @@
             const data = await response.json();
 
             if (response.ok) {
+                closeWhatsAppPreviewModal();
                 alert(`✓ Ticket enviado por WhatsApp exitosamente a ${data.phone}\n\nUsuario: ${data.user_name}`);
             } else {
                 alert(`Error: ${data.detail || 'No se pudo enviar el ticket por WhatsApp'}`);
@@ -533,6 +782,11 @@
             console.error('Error:', error);
             alert('Error al enviar por WhatsApp');
         }
+    }
+
+    function closeWhatsAppPreviewModal() {
+        document.getElementById('whatsappPreviewModal').classList.add('hidden');
+        currentPreviewTicketId = null;
     }
 
     async function deleteTicket(ticketId) {
@@ -563,6 +817,9 @@
         const ticketModal = document.getElementById('ticketModal');
         const qrModal = document.getElementById('qrModal');
         const editModal = document.getElementById('editModal');
+        const bulkModal = document.getElementById('bulkModal');
+        const whatsappModal = document.getElementById('whatsappModal');
+        const whatsappPreviewModal = document.getElementById('whatsappPreviewModal');
 
         if (event.target == ticketModal) {
             closeModal();
@@ -573,7 +830,423 @@
         if (event.target == editModal) {
             closeEditModal();
         }
+        if (event.target == bulkModal) {
+            closeBulkModal();
+        }
+        if (event.target == whatsappModal) {
+            closeWhatsAppModal();
+        }
+        if (event.target == whatsappPreviewModal) {
+            closeWhatsAppPreviewModal();
+        }
     }
+
+    // ========== FUNCIONES PARA CREACIÓN MASIVA DE TICKETS ==========
+
+    let availableTags = [];
+    let usersByTag = {};
+
+    async function loadTags() {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/tags/?active_only=true', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                availableTags = await response.json();
+                populateBulkTagSelect();
+            }
+        } catch (error) {
+            console.error('Error al cargar tags:', error);
+        }
+    }
+
+    function populateBulkTagSelect() {
+        const select = document.getElementById('bulk_tag_id');
+        select.innerHTML = '<option value="">Seleccione una etiqueta</option>';
+
+        availableTags.forEach(tag => {
+            const option = document.createElement('option');
+            option.value = tag.id;
+            option.textContent = `${tag.name} - ${tag.description || 'Sin descripción'}`;
+            select.appendChild(option);
+        });
+    }
+
+    async function loadUsersByTag(tagId) {
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`/users/by-tag/${tagId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const users = await response.json();
+                usersByTag[tagId] = users;
+                return users;
+            }
+            return [];
+        } catch (error) {
+            console.error('Error al cargar usuarios por tag:', error);
+            return [];
+        }
+    }
+
+    async function updateUserPreview() {
+        const tagId = document.getElementById('bulk_tag_id').value;
+        const previewDiv = document.getElementById('userPreview');
+        const countP = document.getElementById('userPreviewCount');
+        const listDiv = document.getElementById('userPreviewList');
+
+        if (!tagId) {
+            previewDiv.classList.add('hidden');
+            return;
+        }
+
+        countP.textContent = 'Cargando...';
+        listDiv.innerHTML = '';
+        previewDiv.classList.remove('hidden');
+
+        const users = await loadUsersByTag(tagId);
+
+        if (users.length === 0) {
+            countP.textContent = 'No hay usuarios con esta etiqueta';
+            listDiv.innerHTML = '<p class="text-muted-foreground">Sin usuarios</p>';
+        } else {
+            countP.textContent = `Se crearán tickets para ${users.length} usuario(s):`;
+            listDiv.innerHTML = users.map(u =>
+                `<div class="flex items-center gap-2">
+                    <svg class="h-3 w-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                    <span>${u.name} (${u.email})</span>
+                </div>`
+            ).join('');
+        }
+    }
+
+    function openBulkModal() {
+        loadTags();
+        document.getElementById('bulkModal').classList.remove('hidden');
+        document.getElementById('bulkForm').reset();
+        document.getElementById('bulkMessage').innerHTML = '';
+        document.getElementById('userPreview').classList.add('hidden');
+    }
+
+    function closeBulkModal() {
+        document.getElementById('bulkModal').classList.add('hidden');
+        document.getElementById('bulkForm').reset();
+        document.getElementById('bulkMessage').innerHTML = '';
+        document.getElementById('userPreview').classList.add('hidden');
+    }
+
+    document.getElementById('bulkForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const eventId = parseInt(document.getElementById('bulk_event_id').value);
+        const tagId = parseInt(document.getElementById('bulk_tag_id').value);
+        const companions = parseInt(document.getElementById('bulk_companions').value);
+        const submitBtn = document.getElementById('bulkSubmitBtn');
+        const messageDiv = document.getElementById('bulkMessage');
+
+        if (!eventId || !tagId) {
+            messageDiv.innerHTML = '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Por favor complete todos los campos</div>';
+            return;
+        }
+
+        submitBtn.disabled = true;
+        messageDiv.innerHTML = '<div class="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">Creando tickets... Por favor espere.</div>';
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch('/tickets/bulk-by-tag', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    event_id: eventId,
+                    tag_id: tagId,
+                    companions: companions
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                messageDiv.innerHTML = `
+                    <div class="rounded-lg border border-green-200 bg-green-50 p-4 text-sm">
+                        <div class="flex items-center gap-2 text-green-700 mb-2">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="font-semibold">Tickets creados exitosamente</span>
+                        </div>
+                        <div class="space-y-1 text-green-700">
+                            <p><strong>Tickets creados:</strong> ${data.created_count}</p>
+                            <p><strong>Usuarios procesados:</strong> ${data.total_users}</p>
+                            ${data.skipped_count > 0 ? `<p class="text-xs"><em>Usuarios omitidos (ya tenían ticket): ${data.skipped_count}</em></p>` : ''}
+                        </div>
+                    </div>
+                `;
+                setTimeout(() => {
+                    closeBulkModal();
+                    window.location.reload();
+                }, 2000);
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                        Error: ${data.detail || 'No se pudieron crear los tickets'}
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            messageDiv.innerHTML = '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error de conexión al crear tickets</div>';
+        } finally {
+            submitBtn.disabled = false;
+        }
+    });
+
+    // ========== FUNCIONES PARA ENVÍO MASIVO POR WHATSAPP ==========
+
+    let ticketsByEvent = {};
+
+    async function loadTicketsByEvent(eventId) {
+        try {
+            const token = localStorage.getItem('access_token');
+            // Obtener todos los tickets del evento desde el servidor
+            const response = await fetch(`/tickets/?event_id=${eventId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const allTickets = await response.json();
+                // Filtrar solo los del evento seleccionado
+                const tickets = allTickets.filter(t => t.event_id == eventId);
+                ticketsByEvent[eventId] = tickets;
+                return tickets;
+            }
+            return [];
+        } catch (error) {
+            console.error('Error al cargar tickets por evento:', error);
+            return [];
+        }
+    }
+
+    async function updateTicketPreview() {
+        const eventId = document.getElementById('whatsapp_event_id').value;
+        const previewDiv = document.getElementById('ticketPreview');
+        const countP = document.getElementById('ticketPreviewCount');
+        const listDiv = document.getElementById('ticketPreviewList');
+
+        if (!eventId) {
+            previewDiv.classList.add('hidden');
+            return;
+        }
+
+        countP.textContent = 'Cargando...';
+        listDiv.innerHTML = '';
+        previewDiv.classList.remove('hidden');
+
+        const tickets = await loadTicketsByEvent(eventId);
+
+        if (tickets.length === 0) {
+            countP.textContent = 'No hay tickets para este evento';
+            listDiv.innerHTML = '<p class="text-muted-foreground">Sin tickets</p>';
+        } else {
+            const ticketsWithPhone = tickets.filter(t => t.user && t.user.phone);
+            const ticketsWithoutPhone = tickets.length - ticketsWithPhone.length;
+
+            countP.textContent = `Se enviarán ${ticketsWithPhone.length} ticket(s) de ${tickets.length} total(es):`;
+            listDiv.innerHTML = ticketsWithPhone.map(t =>
+                `<div class="flex items-center gap-2">
+                    <svg class="h-3 w-3 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                    </svg>
+                    <span>${t.user.name} (${t.user.phone})</span>
+                </div>`
+            ).join('');
+
+            if (ticketsWithoutPhone > 0) {
+                listDiv.innerHTML += `<p class="text-xs text-amber-600 mt-2">⚠ ${ticketsWithoutPhone} usuario(s) sin teléfono serán omitidos</p>`;
+            }
+        }
+    }
+
+    function openWhatsAppModal() {
+        document.getElementById('whatsappModal').classList.remove('hidden');
+        document.getElementById('whatsappForm').reset();
+        document.getElementById('whatsappMessage').innerHTML = '';
+        document.getElementById('ticketPreview').classList.add('hidden');
+    }
+
+    function closeWhatsAppModal() {
+        document.getElementById('whatsappModal').classList.add('hidden');
+        document.getElementById('whatsappForm').reset();
+        document.getElementById('whatsappMessage').innerHTML = '';
+        document.getElementById('ticketPreview').classList.add('hidden');
+    }
+
+    document.getElementById('whatsappForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const eventId = parseInt(document.getElementById('whatsapp_event_id').value);
+        const submitBtn = document.getElementById('whatsappSubmitBtn');
+        const messageDiv = document.getElementById('whatsappMessage');
+
+        if (!eventId) {
+            messageDiv.innerHTML = '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Por favor seleccione un evento</div>';
+            return;
+        }
+
+        submitBtn.disabled = true;
+
+        // Crear contenedor para progreso en tiempo real
+        messageDiv.innerHTML = `
+            <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm space-y-3">
+                <div class="flex items-center gap-2 text-blue-700">
+                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700"></div>
+                    <span class="font-semibold">Enviando tickets por WhatsApp...</span>
+                </div>
+
+                <!-- Barra de progreso -->
+                <div class="w-full bg-blue-100 rounded-full h-2">
+                    <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <p id="progressText" class="text-xs text-blue-600">Iniciando...</p>
+
+                <!-- Log de eventos -->
+                <div id="progressLog" class="mt-3 max-h-60 overflow-y-auto bg-white rounded border border-blue-200 p-2 text-xs space-y-1 font-mono"></div>
+            </div>
+        `;
+
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const progressLog = document.getElementById('progressLog');
+
+        let sentCount = 0;
+        let skippedCount = 0;
+        let totalTickets = 0;
+        let errors = [];
+
+        try {
+            const token = localStorage.getItem('access_token');
+
+            // Crear EventSource para SSE
+            const eventSource = new EventSource(`/tickets/send-whatsapp-by-event-stream?event_id=${eventId}&access_token=${token}`);
+
+            // NO funciona pasar token en headers con EventSource, lo pasamos en query
+            // Workaround: usar fetch con streaming manual
+            const response = await fetch('/tickets/send-whatsapp-by-event-stream', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ event_id: eventId })
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = JSON.parse(line.substring(6));
+
+                        if (data.event === 'start') {
+                            totalTickets = data.total;
+                            progressText.textContent = `Iniciando envío de ${totalTickets} ticket(s)...`;
+                            progressLog.innerHTML += `<div class="text-blue-600">📋 Evento: ${data.event_name}</div>`;
+                            progressLog.innerHTML += `<div class="text-blue-600">📊 Total de tickets: ${totalTickets}</div>`;
+                            progressLog.innerHTML += `<div class="text-gray-400">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</div>`;
+                        }
+                        else if (data.event === 'sending') {
+                            const percent = Math.round((data.index / totalTickets) * 100);
+                            progressBar.style.width = `${percent}%`;
+                            progressText.textContent = `Enviando ${data.index}/${totalTickets} (${percent}%)...`;
+                            progressLog.innerHTML += `<div class="text-blue-600">⏳ [${data.index}/${totalTickets}] Enviando a ${data.user} (${data.phone})...</div>`;
+                            progressLog.scrollTop = progressLog.scrollHeight;
+                        }
+                        else if (data.event === 'success') {
+                            sentCount++;
+                            progressLog.innerHTML += `<div class="text-green-600">✓ [${data.index}/${totalTickets}] ${data.user} - Enviado exitosamente</div>`;
+                            progressLog.scrollTop = progressLog.scrollHeight;
+                        }
+                        else if (data.event === 'skip') {
+                            skippedCount++;
+                            progressLog.innerHTML += `<div class="text-amber-600">⚠ [${data.index}/${totalTickets}] ${data.user} - Omitido: ${data.reason}</div>`;
+                            progressLog.scrollTop = progressLog.scrollHeight;
+                        }
+                        else if (data.event === 'error') {
+                            skippedCount++;
+                            errors.push(`${data.user}: ${data.reason}`);
+                            progressLog.innerHTML += `<div class="text-red-600">✗ [${data.index}/${totalTickets}] ${data.user} - Error: ${data.reason}</div>`;
+                            progressLog.scrollTop = progressLog.scrollHeight;
+                        }
+                        else if (data.event === 'complete') {
+                            progressBar.style.width = '100%';
+                            progressText.textContent = 'Completado';
+                            progressLog.innerHTML += `<div class="text-gray-400">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</div>`;
+                            progressLog.innerHTML += `<div class="text-green-600 font-bold">✓ Proceso completado</div>`;
+                            progressLog.scrollTop = progressLog.scrollHeight;
+
+                            // Mostrar resumen final
+                            setTimeout(() => {
+                                messageDiv.innerHTML = `
+                                    <div class="rounded-lg border border-green-200 bg-green-50 p-4 text-sm">
+                                        <div class="flex items-center gap-2 text-green-700 mb-2">
+                                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                                            </svg>
+                                            <span class="font-semibold">Tickets enviados exitosamente</span>
+                                        </div>
+                                        <div class="space-y-1 text-green-700">
+                                            <p><strong>Mensajes enviados:</strong> ${sentCount}</p>
+                                            <p><strong>Total de tickets:</strong> ${totalTickets}</p>
+                                            ${skippedCount > 0 ? `<p class="text-xs"><em>Usuarios omitidos (sin teléfono o error): ${skippedCount}</em></p>` : ''}
+                                            ${errors.length > 0 ? `
+                                                <details class="mt-2">
+                                                    <summary class="cursor-pointer text-xs">Ver errores (${errors.length})</summary>
+                                                    <ul class="text-xs mt-1 ml-4 list-disc">
+                                                        ${errors.map(err => `<li>${err}</li>`).join('')}
+                                                    </ul>
+                                                </details>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                                submitBtn.disabled = false;
+                                setTimeout(() => {
+                                    closeWhatsAppModal();
+                                }, 3000);
+                            }, 1000);
+                        }
+                    }
+                }
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            messageDiv.innerHTML = '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error de conexión al enviar tickets por WhatsApp</div>';
+            submitBtn.disabled = false;
+        }
+    });
 
     // Función de búsqueda y filtrado
     function filterTickets() {

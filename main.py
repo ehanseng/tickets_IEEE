@@ -1,13 +1,14 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Request, File, UploadFile, Form
-from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 import os
+import json
 from dotenv import load_dotenv
 import models
 import schemas
@@ -322,6 +323,304 @@ def delete_university(
     }
 
 
+# ========== ENDPOINTS DE TAGS ==========
+
+@app.get("/tags/", response_model=List[schemas.TagResponse])
+def list_tags(
+    skip: int = 0,
+    limit: int = 200,
+    active_only: bool = True,
+    db: Session = Depends(get_db)
+):
+    """Listar tags/etiquetas (público)"""
+    query = db.query(models.Tag)
+    if active_only:
+        query = query.filter(models.Tag.is_active == True)
+    tags = query.order_by(models.Tag.name).offset(skip).limit(limit).all()
+    return tags
+
+
+@app.post("/tags/", response_model=schemas.TagResponse, status_code=status.HTTP_201_CREATED)
+def create_tag(
+    tag: schemas.TagCreate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Crear un nuevo tag (solo ADMIN)"""
+    # Verificar si el nombre ya existe
+    existing = db.query(models.Tag).filter(models.Tag.name == tag.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Tag ya existe")
+
+    db_tag = models.Tag(**tag.model_dump())
+    db.add(db_tag)
+    db.commit()
+    db.refresh(db_tag)
+    return db_tag
+
+
+@app.get("/tags/{tag_id}", response_model=schemas.TagResponse)
+def get_tag(
+    tag_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Obtener un tag por ID"""
+    tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag no encontrado")
+    return tag
+
+
+@app.put("/tags/{tag_id}", response_model=schemas.TagResponse)
+def update_tag(
+    tag_id: int,
+    tag_update: schemas.TagUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Actualizar un tag (solo ADMIN)"""
+    tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag no encontrado")
+
+    # Actualizar campos
+    if tag_update.name is not None:
+        # Verificar que el nombre no esté en uso
+        existing = db.query(models.Tag).filter(
+            models.Tag.name == tag_update.name,
+            models.Tag.id != tag_id
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="El nombre ya está en uso")
+        tag.name = tag_update.name
+
+    if tag_update.color is not None:
+        tag.color = tag_update.color
+
+    if tag_update.description is not None:
+        tag.description = tag_update.description
+
+    if tag_update.is_active is not None:
+        tag.is_active = tag_update.is_active
+
+    db.commit()
+    db.refresh(tag)
+    return tag
+
+
+@app.delete("/tags/{tag_id}")
+def delete_tag(
+    tag_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Eliminar un tag (solo ADMIN)"""
+    tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag no encontrado")
+
+    # Verificar si hay usuarios asociados
+    user_count = db.query(models.User).join(models.user_tags).filter(
+        models.user_tags.c.tag_id == tag_id
+    ).count()
+
+    if user_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No se puede eliminar el tag porque tiene {user_count} usuario(s) asociado(s)"
+        )
+
+    db.delete(tag)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "Tag eliminado exitosamente",
+        "tag_id": tag_id
+    }
+
+
+@app.post("/users/{user_id}/tags/{tag_id}")
+def add_tag_to_user(
+    user_id: int,
+    tag_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Agregar un tag a un usuario (solo ADMIN)"""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag no encontrado")
+
+    # Verificar si el tag ya está asignado
+    if tag in user.tags:
+        raise HTTPException(status_code=400, detail="El usuario ya tiene este tag")
+
+    user.tags.append(tag)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Tag '{tag.name}' agregado al usuario '{user.name}'",
+        "user_id": user_id,
+        "tag_id": tag_id
+    }
+
+
+@app.delete("/users/{user_id}/tags/{tag_id}")
+def remove_tag_from_user(
+    user_id: int,
+    tag_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Remover un tag de un usuario (solo ADMIN)"""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag no encontrado")
+
+    # Verificar si el tag está asignado
+    if tag not in user.tags:
+        raise HTTPException(status_code=400, detail="El usuario no tiene este tag")
+
+    user.tags.remove(tag)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Tag '{tag.name}' removido del usuario '{user.name}'",
+        "user_id": user_id,
+        "tag_id": tag_id
+    }
+
+
+# ========== ENDPOINTS DE ORGANIZACIONES ==========
+
+@app.post("/organizations/", response_model=schemas.OrganizationResponse, status_code=status.HTTP_201_CREATED)
+def create_organization(
+    organization: schemas.OrganizationCreate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Crear una nueva organización (solo ADMIN)"""
+    # Verificar si el nombre ya existe
+    existing = db.query(models.Organization).filter(models.Organization.name == organization.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Organización ya existe")
+
+    db_organization = models.Organization(**organization.model_dump())
+    db.add(db_organization)
+    db.commit()
+    db.refresh(db_organization)
+    return db_organization
+
+
+@app.get("/organizations/", response_model=List[schemas.OrganizationResponse])
+def list_organizations(
+    skip: int = 0,
+    limit: int = 200,
+    active_only: bool = True,
+    db: Session = Depends(get_db)
+):
+    """Listar organizaciones (público para formularios)"""
+    query = db.query(models.Organization)
+    if active_only:
+        query = query.filter(models.Organization.is_active == True)
+    organizations = query.order_by(models.Organization.name).offset(skip).limit(limit).all()
+    return organizations
+
+
+@app.get("/organizations/{organization_id}", response_model=schemas.OrganizationResponse)
+def get_organization(
+    organization_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Obtener una organización por ID"""
+    organization = db.query(models.Organization).filter(models.Organization.id == organization_id).first()
+    if not organization:
+        raise HTTPException(status_code=404, detail="Organización no encontrada")
+    return organization
+
+
+@app.put("/organizations/{organization_id}", response_model=schemas.OrganizationResponse)
+def update_organization(
+    organization_id: int,
+    organization_update: schemas.OrganizationUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Actualizar una organización (solo ADMIN)"""
+    organization = db.query(models.Organization).filter(models.Organization.id == organization_id).first()
+    if not organization:
+        raise HTTPException(status_code=404, detail="Organización no encontrada")
+
+    # Actualizar campos
+    update_data = organization_update.model_dump(exclude_unset=True)
+
+    # Si se actualiza el nombre, verificar que no esté en uso
+    if "name" in update_data:
+        existing = db.query(models.Organization).filter(
+            models.Organization.name == update_data["name"],
+            models.Organization.id != organization_id
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="El nombre ya está en uso")
+
+    for key, value in update_data.items():
+        setattr(organization, key, value)
+
+    db.commit()
+    db.refresh(organization)
+    return organization
+
+
+@app.delete("/organizations/{organization_id}")
+def delete_organization(
+    organization_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Eliminar una organización (solo ADMIN)"""
+    organization = db.query(models.Organization).filter(models.Organization.id == organization_id).first()
+    if not organization:
+        raise HTTPException(status_code=404, detail="Organización no encontrada")
+
+    # Verificar si hay usuarios asociados
+    user_count = db.query(models.User).filter(models.User.organization_id == organization_id).count()
+    if user_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No se puede eliminar la organización porque tiene {user_count} usuario(s) asociado(s)"
+        )
+
+    # Verificar si hay eventos asociados
+    event_count = db.query(models.Event).filter(models.Event.organization_id == organization_id).count()
+    if event_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No se puede eliminar la organización porque tiene {event_count} evento(s) asociado(s)"
+        )
+
+    db.delete(organization)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "Organización eliminada exitosamente",
+        "organization_id": organization_id
+    }
+
+
 # ========== ENDPOINTS DE USUARIOS ==========
 
 @app.post("/users/", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
@@ -458,6 +757,136 @@ def delete_user(
     }
 
 
+@app.post("/users/import-csv")
+async def import_users_from_csv(
+    file: UploadFile = File(...),
+    tag_id: int = Form(...),
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Importar usuarios desde CSV y asignar tag (solo ADMIN)"""
+    import csv
+    import io
+
+    # Verificar que el tag existe
+    tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag no encontrado")
+
+    # Verificar que el archivo es CSV
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="El archivo debe ser CSV")
+
+    # Leer el archivo CSV
+    try:
+        content = await file.read()
+        decoded_content = content.decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(decoded_content))
+        rows = list(csv_reader)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error al leer el archivo CSV: {str(e)}")
+
+    # Estadísticas
+    stats = {
+        'created': 0,
+        'duplicates': 0,
+        'tag_added': 0,
+        'tag_already_exists': 0,
+        'errors': 0,
+        'total_processed': len(rows)
+    }
+
+    errors = []
+
+    # Procesar cada fila
+    for i, row in enumerate(rows, start=1):
+        try:
+            email = row.get('email', '').strip().lower()
+            name = row.get('name', '').strip()
+            phone = row.get('phone', '').strip()
+
+            # Validar campos obligatorios: name, email, phone
+            if not email or not name or not phone:
+                missing = []
+                if not name: missing.append('name')
+                if not email: missing.append('email')
+                if not phone: missing.append('phone')
+                errors.append(f"Fila {i}: Campos obligatorios vacíos: {', '.join(missing)}")
+                stats['errors'] += 1
+                continue
+
+            # Buscar usuario existente
+            existing_user = db.query(models.User).filter(models.User.email == email).first()
+
+            if existing_user:
+                # Usuario duplicado - agregar tag si no lo tiene
+                stats['duplicates'] += 1
+
+                if tag in existing_user.tags:
+                    stats['tag_already_exists'] += 1
+                else:
+                    existing_user.tags.append(tag)
+                    stats['tag_added'] += 1
+            else:
+                # Usuario nuevo - crear con el tag
+                # phone ya está extraído en la validación
+                country_code = row.get('country_code', '').strip() or '+57'
+                identification = row.get('identification', '').strip() or None
+                university_name = row.get('university_name', '').strip()
+                is_ieee_member = row.get('is_ieee_member', '').strip().lower() in ['true', '1', 'yes', 'sí', 'si']
+                ieee_member_id = row.get('ieee_member_id', '').strip() or None
+
+                # Buscar universidad
+                university_id = None
+                if university_name:
+                    university = db.query(models.University).filter(
+                        models.University.name == university_name
+                    ).first()
+                    if university:
+                        university_id = university.id
+
+                # Crear usuario
+                new_user = models.User(
+                    name=name,
+                    email=email,
+                    phone=phone,
+                    country_code=country_code,
+                    identification=identification,
+                    university_id=university_id,
+                    is_ieee_member=is_ieee_member,
+                    ieee_member_id=ieee_member_id,
+                    created_at=datetime.utcnow()
+                )
+
+                db.add(new_user)
+                db.flush()  # Para obtener el ID
+
+                # Agregar el tag
+                new_user.tags.append(tag)
+                stats['created'] += 1
+
+        except Exception as e:
+            errors.append(f"Fila {i}: {str(e)}")
+            stats['errors'] += 1
+            db.rollback()
+            continue
+
+    # Commit final
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al guardar los cambios: {str(e)}")
+
+    return {
+        "success": True,
+        "message": "Importación completada",
+        "stats": stats,
+        "tag_name": tag.name,
+        "errors": errors[:50]  # Limitar a 50 errores
+    }
+
+
 @app.post("/users/{user_id}/send-birthday")
 def send_birthday_greeting(
     user_id: int,
@@ -531,8 +960,29 @@ def send_birthday_greeting(
                 "details": results
             }
         )
+@app.get("/users/by-tag/{tag_id}", response_model=List[schemas.UserResponse])
+def get_users_by_tag(
+    tag_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Obtener todos los usuarios que tienen una etiqueta específica"""
+    from sqlalchemy.orm import joinedload
 
+    # Verificar que el tag existe
+    tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag no encontrado")
 
+    # Obtener usuarios con ese tag
+    users = db.query(models.User).options(
+        joinedload(models.User.university),
+        joinedload(models.User.tags)
+    ).join(models.user_tags).filter(
+        models.user_tags.c.tag_id == tag_id
+    ).all()
+
+    return users
 
 
 # ========== ENDPOINTS DE CUMPLEAÑOS ==========
@@ -805,11 +1255,22 @@ def create_ticket(
 def list_tickets(
     skip: int = 0,
     limit: int = 100,
+    event_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(require_admin)
 ):
-    """Listar todos los tickets"""
-    tickets = db.query(models.Ticket).offset(skip).limit(limit).all()
+    """Listar todos los tickets, opcionalmente filtrados por evento"""
+    from sqlalchemy.orm import joinedload
+
+    query = db.query(models.Ticket).options(
+        joinedload(models.Ticket.user),
+        joinedload(models.Ticket.event)
+    )
+
+    if event_id:
+        query = query.filter(models.Ticket.event_id == event_id)
+
+    tickets = query.offset(skip).limit(limit).all()
     return tickets
 
 
@@ -973,6 +1434,13 @@ def send_ticket_email(
     user = db.query(models.User).filter(models.User.id == ticket.user_id).first()
     event = db.query(models.Event).filter(models.Event.id == ticket.event_id).first()
 
+    # Cargar organización del evento si existe
+    organization = None
+    if event.organization_id:
+        organization = db.query(models.Organization).filter(
+            models.Organization.id == event.organization_id
+        ).first()
+
     # Construir URL completa del ticket
     ticket_url = f"{BASE_URL}/ticket/{ticket.unique_url}"
 
@@ -983,10 +1451,12 @@ def send_ticket_email(
         event_name=event.name,
         event_date=event.event_date,
         event_location=event.location,
-        event_description=event.description or "",
+        ticket_code=ticket.ticket_code,
         ticket_url=ticket_url,
         access_pin=ticket.access_pin,
-        companions=ticket.companions
+        companions=ticket.companions,
+        organization=organization,
+        event=event
     )
 
     if success:
@@ -1008,6 +1478,13 @@ def send_ticket_whatsapp_endpoint(
 
     user = db.query(models.User).filter(models.User.id == ticket.user_id).first()
     event = db.query(models.Event).filter(models.Event.id == ticket.event_id).first()
+
+    # Cargar organización del evento si existe
+    organization = None
+    if event.organization_id:
+        organization = db.query(models.Organization).filter(
+            models.Organization.id == event.organization_id
+        ).first()
 
     # Verificar que el usuario tenga teléfono
     if not user.phone or not user.country_code:
@@ -1043,7 +1520,9 @@ def send_ticket_whatsapp_endpoint(
         ticket_code=ticket.ticket_code,
         ticket_url=ticket_url,
         access_pin=ticket.access_pin,
-        companions=ticket.companions or 0
+        companions=ticket.companions or 0,
+        organization=organization,
+        event=event
     )
 
     if success:
@@ -1054,6 +1533,437 @@ def send_ticket_whatsapp_endpoint(
         }
     else:
         raise HTTPException(status_code=500, detail="Error al enviar el ticket por WhatsApp")
+
+
+@app.get("/tickets/{ticket_id}/whatsapp-preview")
+def get_whatsapp_preview(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Obtiene un preview del mensaje de WhatsApp que se enviará para este ticket
+    """
+    ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+
+    user = db.query(models.User).filter(models.User.id == ticket.user_id).first()
+    event = db.query(models.Event).filter(models.Event.id == ticket.event_id).first()
+
+    # Cargar organización del evento si existe
+    organization = None
+    if event.organization_id:
+        organization = db.query(models.Organization).filter(
+            models.Organization.id == event.organization_id
+        ).first()
+
+    # Construir URL completa del ticket
+    ticket_url = f"{BASE_URL}/ticket/{ticket.unique_url}"
+
+    # Formatear fecha del evento
+    event_date_formatted = event.event_date.strftime('%d/%m/%Y a las %H:%M')
+
+    # Generar preview del mensaje usando template service
+    from template_service import template_service
+
+    message_preview = template_service.render_whatsapp_template(
+        organization=organization,
+        user_name=user.name,
+        event_name=event.name,
+        event_date=event_date_formatted,
+        event_location=event.location,
+        ticket_code=ticket.ticket_code,
+        ticket_url=ticket_url,
+        access_pin=ticket.access_pin,
+        companions=ticket.companions or 0,
+        event=event
+    )
+
+    return {
+        "ticket_id": ticket_id,
+        "user_name": user.name,
+        "phone": f"{user.country_code}{user.phone}" if user.phone else None,
+        "event_name": event.name,
+        "message_preview": message_preview,
+        "template_source": "evento" if event.whatsapp_template else ("organizacion" if organization and organization.whatsapp_template else "default")
+    }
+
+
+@app.post("/tickets/bulk-by-tag")
+def create_bulk_tickets_by_tag(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Crear tickets masivos para todos los usuarios con una etiqueta específica
+
+    Body:
+    - event_id: ID del evento
+    - tag_id: ID de la etiqueta
+    - companions: Número de acompañantes (0-4) para todos los tickets
+    """
+    event_id = data.get('event_id')
+    tag_id = data.get('tag_id')
+    companions = data.get('companions', 0)
+
+    if not event_id or not tag_id:
+        raise HTTPException(status_code=400, detail="event_id y tag_id son requeridos")
+
+    # Verificar que el evento existe
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    # Verificar que el tag existe
+    tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag no encontrado")
+
+    # Obtener todos los usuarios con ese tag
+    users = db.query(models.User).join(models.user_tags).filter(
+        models.user_tags.c.tag_id == tag_id
+    ).all()
+
+    if not users:
+        raise HTTPException(status_code=404, detail=f"No se encontraron usuarios con la etiqueta '{tag.name}'")
+
+    # Crear tickets para cada usuario
+    created_count = 0
+    skipped_count = 0
+    errors = []
+
+    for user in users:
+        try:
+            # Verificar si el usuario ya tiene un ticket para este evento
+            existing_ticket = db.query(models.Ticket).filter(
+                models.Ticket.user_id == user.id,
+                models.Ticket.event_id == event_id
+            ).first()
+
+            if existing_ticket:
+                skipped_count += 1
+                continue
+
+            # Generar código de ticket
+            ticket_code = ticket_service.generate_ticket_code(user.id, event_id)
+
+            # Generar URL única y PIN
+            unique_url = ticket_service.generate_unique_url()
+            access_pin = ticket_service.generate_pin()
+
+            # Generar QR code
+            qr_path = ticket_service.generate_qr_code(
+                ticket_code=ticket_code,
+                user_name=user.name,
+                event_name=event.name,
+                event_date=event.event_date.isoformat()
+            )
+
+            # Crear ticket en la BD
+            db_ticket = models.Ticket(
+                ticket_code=ticket_code,
+                user_id=user.id,
+                event_id=event_id,
+                qr_path=qr_path,
+                unique_url=unique_url,
+                access_pin=access_pin,
+                companions=companions
+            )
+            db.add(db_ticket)
+            created_count += 1
+
+        except Exception as e:
+            errors.append(f"Error al crear ticket para {user.name}: {str(e)}")
+            continue
+
+    # Commit de todos los tickets creados
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al guardar tickets: {str(e)}")
+
+    return {
+        "success": True,
+        "message": f"Se crearon {created_count} tickets exitosamente",
+        "created_count": created_count,
+        "skipped_count": skipped_count,
+        "total_users": len(users),
+        "tag_name": tag.name,
+        "event_name": event.name,
+        "errors": errors if errors else []
+    }
+
+
+@app.post("/tickets/send-whatsapp-by-event")
+def send_tickets_whatsapp_by_event(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Enviar tickets por WhatsApp masivamente a todos los usuarios con ticket de un evento
+
+    Body:
+    - event_id: ID del evento
+    """
+    event_id = data.get('event_id')
+
+    if not event_id:
+        raise HTTPException(status_code=400, detail="event_id es requerido")
+
+    # Verificar que el evento existe
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    # Cargar organización del evento si existe
+    organization = None
+    if event.organization_id:
+        organization = db.query(models.Organization).filter(
+            models.Organization.id == event.organization_id
+        ).first()
+
+    # Verificar que WhatsApp esté disponible
+    from whatsapp_client import send_ticket_whatsapp, WhatsAppClient
+
+    whatsapp_client = WhatsAppClient()
+    if not whatsapp_client.is_ready():
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio de WhatsApp no disponible. Verifica que esté conectado."
+        )
+
+    # Obtener todos los tickets del evento con sus usuarios
+    from sqlalchemy.orm import joinedload
+
+    tickets = db.query(models.Ticket).options(
+        joinedload(models.Ticket.user)
+    ).filter(
+        models.Ticket.event_id == event_id
+    ).all()
+
+    if not tickets:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No se encontraron tickets para el evento '{event.name}'"
+        )
+
+    # Enviar tickets por WhatsApp con delay entre mensajes
+    sent_count = 0
+    skipped_count = 0
+    errors = []
+
+    # Formatear fecha del evento
+    event_date_formatted = event.event_date.strftime('%d/%m/%Y a las %H:%M')
+
+    import time
+
+    for idx, ticket in enumerate(tickets):
+        user = ticket.user
+
+        try:
+            # Verificar que el usuario tenga teléfono
+            if not user.phone or not user.country_code:
+                skipped_count += 1
+                errors.append(f"{user.name}: Sin número de teléfono")
+                continue
+
+            # Construir URL completa del ticket
+            ticket_url = f"{BASE_URL}/ticket/{ticket.unique_url}"
+
+            # Enviar por WhatsApp
+            success = send_ticket_whatsapp(
+                phone=user.phone,
+                country_code=user.country_code,
+                user_name=user.name,
+                event_name=event.name,
+                event_location=event.location,
+                event_date=event_date_formatted,
+                ticket_code=ticket.ticket_code,
+                ticket_url=ticket_url,
+                access_pin=ticket.access_pin,
+                companions=ticket.companions or 0,
+                organization=organization,
+                event=event
+            )
+
+            if success:
+                sent_count += 1
+            else:
+                skipped_count += 1
+                errors.append(f"{user.name}: Error al enviar mensaje")
+
+            # Delay progresivo entre mensajes para evitar colapso
+            # 2 segundos base + 0.5s extra cada 10 mensajes
+            base_delay = 2.0
+            extra_delay = (idx // 10) * 0.5
+            total_delay = min(base_delay + extra_delay, 5.0)  # Max 5 segundos
+
+            if idx < len(tickets) - 1:  # No esperar después del último
+                time.sleep(total_delay)
+
+        except Exception as e:
+            skipped_count += 1
+            errors.append(f"{user.name}: {str(e)}")
+            continue
+
+    return {
+        "success": True,
+        "message": f"Se enviaron {sent_count} tickets exitosamente por WhatsApp",
+        "sent_count": sent_count,
+        "skipped_count": skipped_count,
+        "total_tickets": len(tickets),
+        "event_name": event.name,
+        "errors": errors if errors else []
+    }
+
+
+@app.post("/tickets/send-whatsapp-by-event-stream")
+async def send_tickets_whatsapp_by_event_stream(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Enviar tickets por WhatsApp masivamente con Server-Sent Events para progreso en tiempo real
+
+    Body:
+    - event_id: ID del evento
+
+    Retorna un stream de eventos con el formato:
+    - event: progress -> Progreso de envío individual
+    - event: complete -> Resumen final
+    """
+    event_id = data.get('event_id')
+
+    if not event_id:
+        raise HTTPException(status_code=400, detail="event_id es requerido")
+
+    # Función generadora para SSE
+    async def event_generator():
+        try:
+            # Verificar que el evento existe
+            event = db.query(models.Event).filter(models.Event.id == event_id).first()
+            if not event:
+                yield f"data: {json.dumps({'event': 'error', 'message': 'Evento no encontrado'})}\n\n"
+                return
+
+            # Cargar organización del evento si existe
+            organization = None
+            if event.organization_id:
+                organization = db.query(models.Organization).filter(
+                    models.Organization.id == event.organization_id
+                ).first()
+
+            # Verificar que WhatsApp esté disponible
+            from whatsapp_client import send_ticket_whatsapp, WhatsAppClient
+
+            whatsapp_client = WhatsAppClient()
+            if not whatsapp_client.is_ready():
+                yield f"data: {json.dumps({'event': 'error', 'message': 'Servicio de WhatsApp no disponible'})}\n\n"
+                return
+
+            # Obtener todos los tickets del evento con sus usuarios
+            from sqlalchemy.orm import joinedload
+
+            tickets = db.query(models.Ticket).options(
+                joinedload(models.Ticket.user)
+            ).filter(
+                models.Ticket.event_id == event_id
+            ).all()
+
+            if not tickets:
+                yield f"data: {json.dumps({'event': 'error', 'message': 'No se encontraron tickets para este evento'})}\n\n"
+                return
+
+            # Enviar evento de inicio
+            yield f"data: {json.dumps({'event': 'start', 'total': len(tickets), 'event_name': event.name})}\n\n"
+
+            # Enviar tickets por WhatsApp con delay entre mensajes
+            sent_count = 0
+            skipped_count = 0
+            errors = []
+
+            # Formatear fecha del evento
+            event_date_formatted = event.event_date.strftime('%d/%m/%Y a las %H:%M')
+
+            import time
+            import asyncio
+
+            for idx, ticket in enumerate(tickets):
+                user = ticket.user
+
+                try:
+                    # Verificar que el usuario tenga teléfono
+                    if not user.phone or not user.country_code:
+                        skipped_count += 1
+                        error_msg = f"{user.name}: Sin número de teléfono"
+                        errors.append(error_msg)
+
+                        # Enviar evento de skip
+                        yield f"data: {json.dumps({'event': 'skip', 'index': idx + 1, 'total': len(tickets), 'user': user.name, 'reason': 'Sin teléfono'})}\n\n"
+                        continue
+
+                    # Enviar evento de progreso - enviando
+                    yield f"data: {json.dumps({'event': 'sending', 'index': idx + 1, 'total': len(tickets), 'user': user.name, 'phone': f'{user.country_code}{user.phone}'})}\n\n"
+
+                    # Construir URL completa del ticket
+                    ticket_url = f"{BASE_URL}/ticket/{ticket.unique_url}"
+
+                    # Enviar por WhatsApp
+                    success = send_ticket_whatsapp(
+                        phone=user.phone,
+                        country_code=user.country_code,
+                        user_name=user.name,
+                        event_name=event.name,
+                        event_location=event.location,
+                        event_date=event_date_formatted,
+                        ticket_code=ticket.ticket_code,
+                        ticket_url=ticket_url,
+                        access_pin=ticket.access_pin,
+                        companions=ticket.companions or 0,
+                        organization=organization,
+                        event=event
+                    )
+
+                    if success:
+                        sent_count += 1
+                        # Enviar evento de éxito
+                        yield f"data: {json.dumps({'event': 'success', 'index': idx + 1, 'total': len(tickets), 'user': user.name, 'phone': f'{user.country_code}{user.phone}'})}\n\n"
+                    else:
+                        skipped_count += 1
+                        error_msg = f"{user.name}: Error al enviar mensaje"
+                        errors.append(error_msg)
+                        # Enviar evento de error
+                        yield f"data: {json.dumps({'event': 'error', 'index': idx + 1, 'total': len(tickets), 'user': user.name, 'reason': 'Error al enviar'})}\n\n"
+
+                    # Delay progresivo entre mensajes para evitar colapso
+                    # 2 segundos base + 0.5s extra cada 10 mensajes
+                    base_delay = 2.0
+                    extra_delay = (idx // 10) * 0.5
+                    total_delay = min(base_delay + extra_delay, 5.0)  # Max 5 segundos
+
+                    if idx < len(tickets) - 1:  # No esperar después del último
+                        await asyncio.sleep(total_delay)
+
+                except Exception as e:
+                    skipped_count += 1
+                    error_msg = f"{user.name}: {str(e)}"
+                    errors.append(error_msg)
+                    # Enviar evento de error
+                    yield f"data: {json.dumps({'event': 'error', 'index': idx + 1, 'total': len(tickets), 'user': user.name, 'reason': str(e)})}\n\n"
+                    continue
+
+            # Enviar evento de finalización
+            yield f"data: {json.dumps({'event': 'complete', 'sent_count': sent_count, 'skipped_count': skipped_count, 'total_tickets': len(tickets), 'errors': errors})}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'event': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 # ========== ENDPOINTS DE VALIDACIÓN ==========
@@ -1287,44 +2197,47 @@ async def admin_users(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    """Página de gestión de usuarios"""
+    """Página de gestión de usuarios - Con soporte para tags"""
     from birthday_utils import get_birthday_status
 
     # Obtener usuarios con conteo de tickets
+    from sqlalchemy.orm import joinedload
+
     users = db.query(
         models.User,
         func.count(models.Ticket.id).label('ticket_count')
+    ).options(
+        joinedload(models.User.university),
+        joinedload(models.User.tags)
     ).outerjoin(models.Ticket).group_by(models.User.id).all()
 
     users_list = []
     for user, ticket_count in users:
-        # Cargar la universidad manualmente si existe
-        university = None
-        if user.university_id:
-            university = db.query(models.University).filter(
-                models.University.id == user.university_id
-            ).first()
-
         # Obtener información del cumpleaños
         birthday_status = get_birthday_status(user.birthday)
 
-        user_dict = {
-            'id': user.id,
-            'name': user.name,
-            'nick': user.nick,
-            'email': user.email,
-            'country_code': user.country_code,
-            'phone': user.phone,
-            'identification': user.identification,
-            'university_id': user.university_id,
-            'is_ieee_member': user.is_ieee_member,
-            'birthday': user.birthday,
-            'created_at': user.created_at,
-            'ticket_count': ticket_count,
-            'university': university,
-            'birthday_status': birthday_status
-        }
-        users_list.append(type('User', (), user_dict))
+        # Crear objeto con atributos accesibles directamente
+        class UserWrapper:
+            pass
+
+        user_obj = UserWrapper()
+        user_obj.id = user.id
+        user_obj.name = user.name
+        user_obj.nick = user.nick
+        user_obj.email = user.email
+        user_obj.country_code = user.country_code
+        user_obj.phone = user.phone
+        user_obj.identification = user.identification
+        user_obj.university_id = user.university_id
+        user_obj.is_ieee_member = user.is_ieee_member
+        user_obj.birthday = user.birthday
+        user_obj.created_at = user.created_at
+        user_obj.ticket_count = ticket_count
+        user_obj.university = user.university
+        user_obj.tags = user.tags
+        user_obj.birthday_status = birthday_status
+
+        users_list.append(user_obj)
 
     return templates.TemplateResponse("users.html", {
         "request": request,
@@ -1342,22 +2255,34 @@ async def admin_universities(
     })
 
 
+@app.get("/admin/organizations", response_class=HTMLResponse)
+async def admin_organizations(
+    request: Request
+):
+    """Página de gestión de organizaciones"""
+    return templates.TemplateResponse("organizations.html", {
+        "request": request
+    })
+
+
 @app.get("/admin/events", response_class=HTMLResponse)
 async def admin_events(
     request: Request,
     db: Session = Depends(get_db)
 ):
     """Página de gestión de eventos"""
+    from sqlalchemy.orm import joinedload
+
     events = db.query(
         models.Event,
         func.count(models.Ticket.id).label('ticket_count')
-    ).outerjoin(models.Ticket).group_by(models.Event.id).all()
+    ).options(joinedload(models.Event.organization)).outerjoin(models.Ticket).group_by(models.Event.id).all()
 
     events_list = []
     for event, ticket_count in events:
-        event_dict = event.__dict__.copy()
-        event_dict['ticket_count'] = ticket_count
-        events_list.append(type('Event', (), event_dict))
+        # Agregar el ticket_count como atributo temporal del evento
+        event.ticket_count = ticket_count
+        events_list.append(event)
 
     return templates.TemplateResponse("events.html", {
         "request": request,
@@ -1554,8 +2479,10 @@ async def bulk_send_messages(
 
     print(f"[CAMPAIGN] Created campaign ID {campaign.id}: '{subject}' to {len(users)} users")
 
+    import time
+
     # Enviar mensajes y crear registros de destinatarios
-    for user in users:
+    for idx, user in enumerate(users):
         # Personalizar mensaje
         display_name = user.nick if user.nick else user.name.split()[0]
         personalized_message = message.replace("{nombre}", display_name)
@@ -1633,6 +2560,15 @@ async def bulk_send_messages(
                 recipient.whatsapp_sent = False
                 recipient.whatsapp_error = str(e)
                 print(f"[ERROR] WhatsApp to {user.phone}: {str(e)}")
+
+        # Delay progresivo entre mensajes para evitar colapso del servicio de WhatsApp
+        # Solo si se envió WhatsApp y no es el último usuario
+        if send_whatsapp_bool and idx < len(users) - 1:
+            # 2 segundos base + 0.5s extra cada 10 mensajes (max 5 segundos)
+            base_delay = 2.0
+            extra_delay = (idx // 10) * 0.5
+            total_delay = min(base_delay + extra_delay, 5.0)
+            time.sleep(total_delay)
 
     # Commit todas las transacciones
     db.commit()

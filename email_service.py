@@ -7,6 +7,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 import resend
 import base64
+import models
+from template_service import template_service
 
 # Cargar variables de entorno desde .env
 load_dotenv()
@@ -82,215 +84,53 @@ class EmailService:
         event_name: str,
         event_date: datetime,
         event_location: str,
-        event_description: str,
+        ticket_code: str,
         ticket_url: str,
         access_pin: str,
-        companions: int
+        companions: int = 0,
+        organization: Optional[models.Organization] = None,
+        event: Optional[models.Event] = None
     ) -> bool:
         """
-        Envía un correo con la información del ticket y el PIN de acceso
+        Envía un correo con la información del ticket usando templates personalizados
+
+        Args:
+            to_email: Email del destinatario
+            user_name: Nombre del usuario
+            event_name: Nombre del evento
+            event_date: Fecha del evento
+            event_location: Ubicación del evento
+            ticket_code: Código del ticket
+            ticket_url: URL del ticket
+            access_pin: PIN de acceso
+            companions: Número de acompañantes
+            organization: Organización del evento (None = IEEE Tadeo)
+            event: Evento (opcional, para usar template específico del evento)
 
         Returns:
             bool: True si el correo se envió correctamente, False en caso contrario
         """
-        # Formato de fecha
+        # Formato de fecha en español
         event_date_str = event_date.strftime('%d de %B de %Y a las %H:%M')
 
-        subject = f'Tu Ticket para {event_name} - IEEE Tadeo'
+        # Generar asunto usando template service
+        subject = template_service.get_email_subject(organization, event_name)
 
-        # Crear contenido HTML
-        html_content = f"""
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }}
-        .container {{
-            background-color: white;
-            border-radius: 8px;
-            padding: 30px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }}
-        .header {{
-            text-align: center;
-            border-bottom: 3px solid #0066cc;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }}
-        .header h1 {{
-            color: #0066cc;
-            margin: 0;
-            font-size: 28px;
-        }}
-        .pin-box {{
-            background-color: #f0f7ff;
-            border: 2px solid #0066cc;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            margin: 30px 0;
-        }}
-        .pin-code {{
-            font-size: 36px;
-            font-weight: bold;
-            color: #0066cc;
-            letter-spacing: 8px;
-            font-family: 'Courier New', monospace;
-        }}
-        .info-section {{
-            margin: 25px 0;
-        }}
-        .info-section h2 {{
-            color: #0066cc;
-            font-size: 18px;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 8px;
-        }}
-        .info-row {{
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #f0f0f0;
-        }}
-        .info-label {{
-            font-weight: 600;
-            color: #666;
-        }}
-        .info-value {{
-            color: #333;
-        }}
-        .btn {{
-            display: inline-block;
-            background-color: #0066cc;
-            color: white;
-            text-decoration: none;
-            padding: 15px 40px;
-            border-radius: 6px;
-            font-weight: 600;
-            text-align: center;
-            margin: 20px 0;
-        }}
-        .btn:hover {{
-            background-color: #0052a3;
-        }}
-        .footer {{
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e0e0e0;
-            color: #666;
-            font-size: 14px;
-        }}
-        .warning {{
-            background-color: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🎟️ Tu Ticket IEEE Tadeo</h1>
-            <p style="color: #666; margin: 10px 0 0 0;">Confirmación de Registro</p>
-        </div>
+        # Generar contenido HTML usando template service
+        html_content = template_service.render_email_template(
+            organization=organization,
+            user_name=user_name,
+            event_name=event_name,
+            event_date=event_date_str,
+            event_location=event_location,
+            ticket_code=ticket_code,
+            ticket_url=ticket_url,
+            access_pin=access_pin,
+            companions=companions,
+            event=event
+        )
 
-        <p>Hola <strong>{user_name}</strong>,</p>
-        <p>¡Gracias por registrarte! Tu ticket para el evento ha sido generado exitosamente.</p>
-
-        <div class="info-section">
-            <h2>📅 Información del Evento</h2>
-            <div class="info-row">
-                <span class="info-label">Evento:</span>
-                <span class="info-value">{event_name}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Fecha:</span>
-                <span class="info-value">{event_date_str}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Ubicación:</span>
-                <span class="info-value">{event_location}</span>
-            </div>
-            {f'<div class="info-row"><span class="info-label">Acompañantes:</span><span class="info-value">{companions}</span></div>' if companions > 0 else ''}
-        </div>
-
-        <div class="pin-box">
-            <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">Tu PIN de Acceso</p>
-            <div class="pin-code">{access_pin}</div>
-            <p style="margin: 10px 0 0 0; color: #666; font-size: 12px;">Guarda este PIN, lo necesitarás para acceder a tu ticket</p>
-        </div>
-
-        <div style="text-align: center;">
-            <a href="{ticket_url}" class="btn">Ver Mi Ticket</a>
-        </div>
-
-        <div class="warning">
-            <strong>⚠️ Importante:</strong>
-            <ul style="margin: 10px 0 0 0; padding-left: 20px;">
-                <li>Guarda este correo en un lugar seguro</li>
-                <li>No compartas tu PIN con nadie</li>
-                <li>Presenta el código QR en la entrada del evento</li>
-                <li>Llega con 15 minutos de anticipación</li>
-            </ul>
-        </div>
-
-        {f'<div class="info-section"><h2>ℹ️ Sobre el Evento</h2><p>{event_description}</p></div>' if event_description else ''}
-
-        <div class="footer">
-            <p>Este correo fue generado automáticamente por el Control System IEEE Tadeo.</p>
-            <p>Si tienes alguna pregunta, contacta al organizador del evento.</p>
-        </div>
-    </div>
-</body>
-</html>
-        """
-
-        # Crear versión texto plano
-        text_content = f"""
-Tu Ticket IEEE Tadeo - {event_name}
-
-Hola {user_name},
-
-¡Gracias por registrarte! Tu ticket para el evento ha sido generado exitosamente.
-
-INFORMACIÓN DEL EVENTO:
-- Evento: {event_name}
-- Fecha: {event_date_str}
-- Ubicación: {event_location}
-{f'- Acompañantes: {companions}' if companions > 0 else ''}
-
-TU PIN DE ACCESO: {access_pin}
-
-Para ver tu ticket y código QR, accede al siguiente enlace:
-{ticket_url}
-
-IMPORTANTE:
-- Guarda este correo en un lugar seguro
-- No compartas tu PIN con nadie
-- Presenta el código QR en la entrada del evento
-- Llega con 15 minutos de anticipación
-
-{f'SOBRE EL EVENTO:\\n{event_description}\\n' if event_description else ''}
-
----
-Este correo fue generado automáticamente por el Control System IEEE Tadeo.
-        """
-
-        return self.send_email(to_email, subject, html_content, text_content)
+        return self.send_email(to_email, subject, html_content)
 
     def send_birthday_email(self, to_email: str, user_name: str, nick: Optional[str] = None) -> bool:
         """
