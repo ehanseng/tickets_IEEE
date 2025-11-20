@@ -1142,6 +1142,12 @@ def update_event(
         event.event_date = event_update.event_date
     if event_update.is_active is not None:
         event.is_active = event_update.is_active
+    if event_update.organization_id is not None:
+        event.organization_id = event_update.organization_id
+    if event_update.whatsapp_template is not None:
+        event.whatsapp_template = event_update.whatsapp_template
+    if event_update.email_template is not None:
+        event.email_template = event_update.email_template
 
     db.commit()
     db.refresh(event)

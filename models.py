@@ -1,8 +1,65 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Enum, Table
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
 import enum
+
+
+# Tabla de asociación many-to-many entre Users y Tags
+user_tags = Table(
+    'user_tags',
+    Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
+    Column('tag_id', Integer, ForeignKey('tags.id'), primary_key=True),
+    Column('created_at', DateTime, default=datetime.utcnow)
+)
+
+
+class Tag(Base):
+    """Modelo de Tag/Etiqueta para categorizar usuarios"""
+    __tablename__ = "tags"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, unique=True)  # Nombre del tag (ej: "IEEE Tadeo", "IEEE YP Co")
+    color = Column(String, nullable=True, default="#3B82F6")  # Color hex para el badge
+    description = Column(Text, nullable=True)  # Descripción del tag
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relación many-to-many con usuarios
+    users = relationship("User", secondary=user_tags, back_populates="tags")
+
+
+class Organization(Base):
+    """Modelo de Organización/Entidad Externa"""
+    __tablename__ = "organizations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, unique=True)  # Nombre de la organización
+    short_name = Column(String, nullable=True)  # Nombre corto
+    description = Column(Text, nullable=True)  # Descripción
+    logo_path = Column(String, nullable=True)  # Ruta del logo
+
+    # Templates personalizados
+    email_template = Column(Text, nullable=True)  # Template de email personalizado
+    whatsapp_template = Column(Text, nullable=True)  # Template de WhatsApp personalizado
+
+    # Información de contacto
+    contact_email = Column(String, nullable=True)
+    contact_phone = Column(String, nullable=True)
+    website = Column(String, nullable=True)
+
+    # Redes sociales
+    facebook = Column(String, nullable=True)
+    instagram = Column(String, nullable=True)
+    twitter = Column(String, nullable=True)
+
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relaciones
+    users = relationship("User", back_populates="organization")
+    events = relationship("Event", back_populates="organization")
 
 
 class University(Base):
@@ -40,6 +97,7 @@ class User(Base):
     identification = Column(String, nullable=True)  # Cédula
     birthday = Column(DateTime, nullable=True)  # Fecha de cumpleaños
     university_id = Column(Integer, ForeignKey("universities.id"), nullable=True)  # Universidad (FK)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)  # Organización externa (FK)
     is_ieee_member = Column(Boolean, default=False)  # Miembro activo de IEEE
     ieee_member_id = Column(String, nullable=True)  # ID de membresía IEEE
     password_reset_token = Column(String, nullable=True)  # Token para recuperar contraseña
@@ -49,6 +107,8 @@ class User(Base):
     # Relaciones
     tickets = relationship("Ticket", back_populates="user")
     university = relationship("University", back_populates="users")
+    organization = relationship("Organization", back_populates="users")
+    tags = relationship("Tag", secondary=user_tags, back_populates="users")
 
 
 class Event(Base):
@@ -60,11 +120,17 @@ class Event(Base):
     description = Column(Text, nullable=True)
     location = Column(String, nullable=False)
     event_date = Column(DateTime, nullable=False)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)  # Organización del evento
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 
-    # Relación con tickets
+    # Templates personalizados para este evento (opcional)
+    whatsapp_template = Column(Text, nullable=True)  # Template de WhatsApp para este evento
+    email_template = Column(Text, nullable=True)  # Template de Email para este evento
+
+    # Relaciones
     tickets = relationship("Ticket", back_populates="event")
+    organization = relationship("Organization", back_populates="events")
 
 
 class Ticket(Base):

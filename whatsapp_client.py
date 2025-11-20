@@ -4,6 +4,8 @@ Cliente Python para comunicarse con el servicio de WhatsApp
 import requests
 from typing import Optional, List, Dict
 from country_codes import format_phone_number
+import models
+from template_service import template_service
 
 
 class WhatsAppClient:
@@ -176,10 +178,12 @@ def send_ticket_whatsapp(
     ticket_code: str,
     ticket_url: str,
     access_pin: str,
-    companions: int = 0
+    companions: int = 0,
+    organization: Optional[models.Organization] = None,
+    event: Optional[models.Event] = None
 ) -> bool:
     """
-    Envía un mensaje con el ticket de evento por WhatsApp con toda la información
+    Envía un mensaje con el ticket de evento por WhatsApp usando templates personalizados
 
     Args:
         phone: Número de teléfono
@@ -192,6 +196,8 @@ def send_ticket_whatsapp(
         ticket_url: URL del ticket
         access_pin: PIN de acceso al ticket
         companions: Número de acompañantes
+        organization: Organización del evento (None = IEEE Tadeo)
+        event: Evento (opcional, para usar template específico del evento)
 
     Returns:
         True si se envió correctamente
@@ -202,48 +208,19 @@ def send_ticket_whatsapp(
         print("[ERROR] WhatsApp no esta listo")
         return False
 
-    # Construir información de acompañantes
-    companions_text = ""
-    if companions > 0:
-        companions_text = f"\n👥 *Acompañantes:* {companions} persona{'s' if companions != 1 else ''}"
-
-    message = f"""🎟️ *¡Tu Ticket está listo!*
-
-Hola *{user_name}*,
-
-Tu registro para el evento ha sido confirmado.
-
-📋 *INFORMACIÓN DEL EVENTO*
-━━━━━━━━━━━━━━━━━━━
-🎯 *Evento:* {event_name}
-📍 *Lugar:* {event_location}
-📅 *Fecha y Hora:* {event_date}
-
-🎫 *INFORMACIÓN DEL TICKET*
-━━━━━━━━━━━━━━━━━━━
-👤 *Titular:* {user_name}
-🔢 *Código:* {ticket_code}
-🔐 *PIN de acceso:* {access_pin}{companions_text}
-
-✅ *TICKET VÁLIDO*
-Este ticket es válido para el ingreso al evento. El código QR será escaneado en la entrada.
-
-🔗 *Accede a tu ticket web aquí:*
-{ticket_url}
-
-🌐 *Portal de usuarios:*
-https://ticket.ieeetadeo.org/portal/login
-
-*IMPORTANTE:*
-• Presenta este ticket en el evento
-• El código QR será escaneado en la entrada
-• Guarda este enlace para acceder cuando lo necesites
-• Llega con anticipación para evitar congestiones
-
-¡Nos vemos en el evento! 🎉
-
----
-IEEE Tadeo Student Branch"""
+    # Generar mensaje usando template service
+    message = template_service.render_whatsapp_template(
+        organization=organization,
+        user_name=user_name,
+        event_name=event_name,
+        event_date=event_date,
+        event_location=event_location,
+        ticket_code=ticket_code,
+        ticket_url=ticket_url,
+        access_pin=access_pin,
+        companions=companions,
+        event=event
+    )
 
     result = client.send_message(phone, message, country_code)
 

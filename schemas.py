@@ -1,6 +1,36 @@
+from __future__ import annotations
 from pydantic import BaseModel, EmailStr, validator
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
+
+
+# Schemas de Tag/Etiqueta
+class TagCreate(BaseModel):
+    """Schema para crear tag"""
+    name: str
+    color: str = "#3B82F6"
+    description: Optional[str] = None
+
+
+class TagUpdate(BaseModel):
+    """Schema para actualizar tag"""
+    name: Optional[str] = None
+    color: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class TagResponse(BaseModel):
+    """Schema para respuesta de tag"""
+    id: int
+    name: str
+    color: str
+    description: Optional[str]
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 # Schemas de Universidad
@@ -50,6 +80,62 @@ class UniversityResponse(BaseModel):
         from_attributes = True
 
 
+# Schemas de Organización
+class OrganizationCreate(BaseModel):
+    """Schema para crear organización"""
+    name: str
+    short_name: Optional[str] = None
+    description: Optional[str] = None
+    logo_path: Optional[str] = None
+    email_template: Optional[str] = None
+    whatsapp_template: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    website: Optional[str] = None
+    facebook: Optional[str] = None
+    instagram: Optional[str] = None
+    twitter: Optional[str] = None
+
+
+class OrganizationUpdate(BaseModel):
+    """Schema para actualizar organización"""
+    name: Optional[str] = None
+    short_name: Optional[str] = None
+    description: Optional[str] = None
+    logo_path: Optional[str] = None
+    email_template: Optional[str] = None
+    whatsapp_template: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    website: Optional[str] = None
+    facebook: Optional[str] = None
+    instagram: Optional[str] = None
+    twitter: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class OrganizationResponse(BaseModel):
+    """Schema para respuesta de organización"""
+    id: int
+    name: str
+    short_name: Optional[str]
+    description: Optional[str]
+    logo_path: Optional[str]
+    email_template: Optional[str]
+    whatsapp_template: Optional[str]
+    contact_email: Optional[str]
+    contact_phone: Optional[str]
+    website: Optional[str]
+    facebook: Optional[str]
+    instagram: Optional[str]
+    twitter: Optional[str]
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # Schemas de Usuario
 class UserCreate(BaseModel):
     """Schema para crear usuario"""
@@ -60,6 +146,7 @@ class UserCreate(BaseModel):
     phone: Optional[str] = None
     identification: Optional[str] = None  # Cédula
     university_id: Optional[int] = None  # ID de universidad
+    organization_id: Optional[int] = None  # ID de organización externa
     birthday: Optional[datetime] = None  # Fecha de cumpleaños
     is_ieee_member: bool = False  # Miembro activo de IEEE
     ieee_member_id: Optional[str] = None  # ID de membresía IEEE
@@ -74,6 +161,7 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = None
     identification: Optional[str] = None
     university_id: Optional[int] = None
+    organization_id: Optional[int] = None
     birthday: Optional[datetime] = None
     is_ieee_member: Optional[bool] = None
     ieee_member_id: Optional[str] = None
@@ -89,11 +177,14 @@ class UserResponse(BaseModel):
     phone: Optional[str]
     identification: Optional[str]
     university_id: Optional[int]
+    organization_id: Optional[int]
     birthday: Optional[datetime]
     is_ieee_member: bool
     ieee_member_id: Optional[str]
     created_at: datetime
     university: Optional[UniversityResponse] = None
+    organization: Optional[OrganizationResponse] = None
+    tags: List[TagResponse] = []
 
     class Config:
         from_attributes = True
@@ -105,6 +196,9 @@ class EventCreate(BaseModel):
     description: Optional[str] = None
     location: str
     event_date: datetime
+    organization_id: Optional[int] = None  # ID de organización (opcional)
+    whatsapp_template: Optional[str] = None  # Template personalizado de WhatsApp
+    email_template: Optional[str] = None  # Template personalizado de Email
 
 
 class EventUpdate(BaseModel):
@@ -113,7 +207,10 @@ class EventUpdate(BaseModel):
     description: Optional[str] = None
     location: Optional[str] = None
     event_date: Optional[datetime] = None
+    organization_id: Optional[int] = None
     is_active: Optional[bool] = None
+    whatsapp_template: Optional[str] = None  # Template personalizado de WhatsApp
+    email_template: Optional[str] = None  # Template personalizado de Email
 
 
 class EventResponse(BaseModel):
@@ -123,8 +220,12 @@ class EventResponse(BaseModel):
     description: Optional[str]
     location: str
     event_date: datetime
+    organization_id: Optional[int]
+    whatsapp_template: Optional[str] = None  # Template personalizado de WhatsApp
+    email_template: Optional[str] = None  # Template personalizado de Email
     is_active: bool
     created_at: datetime
+    organization: Optional[OrganizationResponse] = None
 
     class Config:
         from_attributes = True
@@ -164,6 +265,8 @@ class TicketResponse(BaseModel):
     created_at: datetime
     is_used: bool
     used_at: Optional[datetime]
+    user: Optional[UserResponse] = None
+    event: Optional[EventResponse] = None
 
     class Config:
         from_attributes = True
