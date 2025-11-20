@@ -1604,29 +1604,36 @@ def send_ticket_whatsapp_endpoint(
             detail="Servicio de WhatsApp no disponible. Verifica que esté conectado."
         )
 
-    success = send_ticket_whatsapp(
-        phone=user.phone,
-        country_code=user.country_code,
-        user_name=user.name,
-        event_name=event.name,
-        event_location=event.location,
-        event_date=event_date_formatted,
-        ticket_code=ticket.ticket_code,
-        ticket_url=ticket_url,
-        access_pin=ticket.access_pin,
-        companions=ticket.companions or 0,
-        organization=organization,
-        event=event
-    )
+    try:
+        success = send_ticket_whatsapp(
+            phone=user.phone,
+            country_code=user.country_code,
+            user_name=user.name,
+            event_name=event.name,
+            event_location=event.location,
+            event_date=event_date_formatted,
+            ticket_code=ticket.ticket_code,
+            ticket_url=ticket_url,
+            access_pin=ticket.access_pin,
+            companions=ticket.companions or 0,
+            organization=organization,
+            event=event
+        )
 
-    if success:
-        return {
-            "message": "Ticket enviado por WhatsApp exitosamente",
-            "phone": f"{user.country_code}{user.phone}",
-            "user_name": user.name
-        }
-    else:
-        raise HTTPException(status_code=500, detail="Error al enviar el ticket por WhatsApp")
+        if success:
+            return {
+                "message": "Ticket enviado por WhatsApp exitosamente",
+                "phone": f"{user.country_code}{user.phone}",
+                "user_name": user.name
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Error al enviar el ticket por WhatsApp")
+    except Exception as e:
+        import traceback
+        error_detail = f"Error al enviar WhatsApp: {str(e)}"
+        print(f"[ERROR] {error_detail}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=error_detail)
 
 
 @app.get("/tickets/{ticket_id}/whatsapp-preview")
@@ -1682,7 +1689,8 @@ def get_whatsapp_preview(
         "message_preview": message_preview,
         "template_source": "evento" if event.whatsapp_template else ("organizacion" if organization and organization.whatsapp_template else "default"),
         "has_image": bool(event.whatsapp_image_path),
-        "image_url": f"/{event.whatsapp_image_path}" if event.whatsapp_image_path else None
+        "image_url": f"/{event.whatsapp_image_path}" if event.whatsapp_image_path else None,
+        "send_qr_with_whatsapp": event.send_qr_with_whatsapp if hasattr(event, 'send_qr_with_whatsapp') else False
     }
 
 
@@ -1733,7 +1741,8 @@ def get_event_whatsapp_template_preview(
         "template_source": "evento" if event.whatsapp_template else ("organizacion" if organization and organization.whatsapp_template else "default"),
         "template_source_name": event.name if event.whatsapp_template else (organization.name if organization and organization.whatsapp_template else "IEEE Tadeo (predeterminado)"),
         "has_image": bool(event.whatsapp_image_path),
-        "image_url": f"/{event.whatsapp_image_path}" if event.whatsapp_image_path else None
+        "image_url": f"/{event.whatsapp_image_path}" if event.whatsapp_image_path else None,
+        "send_qr_with_whatsapp": event.send_qr_with_whatsapp if hasattr(event, 'send_qr_with_whatsapp') else False
     }
 
 
@@ -2179,7 +2188,7 @@ def validate_scanned_qr(
         ticket_code = qr_data.get("ticket_code")
 
         # Validar usando el código de ticket
-        return validate_ticket(schemas.TicketValidation(ticket_code=ticket_code), db)
+        return validate_ticket(schemas.TicketValidation(ticket_code=ticket_code), db, current_user)
 
     except ValueError as e:
         return schemas.TicketValidationResponse(
@@ -2204,7 +2213,7 @@ def validate_qr_data(
         ticket_code = decrypted_data.get("ticket_code")
 
         # Validar usando el código de ticket
-        return validate_ticket(schemas.TicketValidation(ticket_code=ticket_code), db)
+        return validate_ticket(schemas.TicketValidation(ticket_code=ticket_code), db, current_user)
 
     except Exception as e:
         return schemas.TicketValidationResponse(

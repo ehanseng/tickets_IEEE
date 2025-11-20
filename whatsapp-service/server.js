@@ -88,13 +88,39 @@ function initializeWhatsApp() {
 
     // Evento: Desconectado
     client.on('disconnected', (reason) => {
-        console.log('[WARN] Cliente desconectado:', reason);
+        console.error('[WARN] Cliente desconectado. Razón:', reason);
+        console.error('[WARN] Timestamp:', new Date().toISOString());
         isReady = false;
-        // Reintentar conexión después de 5 segundos
+        qrCodeData = null;
+
+        // Si es un LOGOUT explícito, NO reintentar automáticamente
+        // (probablemente es un bloqueo o sesión inválida)
+        if (reason === 'LOGOUT') {
+            console.error('[ERROR] Sesión terminada por LOGOUT. Requiere intervención manual.');
+            console.error('[ERROR] Posibles causas:');
+            console.error('  - Número bloqueado por WhatsApp');
+            console.error('  - Sesión cerrada desde otro dispositivo');
+            console.error('  - Sesión inválida o corrupta');
+            console.error('[INFO] Usa POST /logout para limpiar y reiniciar con un nuevo número');
+            return;
+        }
+
+        // Para otras desconexiones, reintentar
         setTimeout(() => {
             console.log('[INFO] Reintentando conexión...');
-            client.initialize();
+            client.initialize(); // Usar initialize() en lugar de initializeWhatsApp()
         }, 5000);
+    });
+
+    // Evento: Error general
+    client.on('error', (error) => {
+        console.error('[ERROR] Error en el cliente de WhatsApp:', error);
+        console.error('[ERROR] Stack:', error.stack);
+    });
+
+    // Evento: Cambio de estado (para debugging)
+    client.on('change_state', (state) => {
+        console.log('[DEBUG] Estado del cliente cambió a:', state);
     });
 
     // Evento: Cambio de estado del mensaje (ACK)

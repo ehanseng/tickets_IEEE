@@ -123,6 +123,57 @@ class WhatsAppClient:
                 "error": f"Error al cerrar sesión: {str(e)}"
             }
 
+    def send_message_with_image(self, phone: str, message: str, image_base64: str, country_code: Optional[str] = None) -> Dict:
+        """
+        Envía un mensaje de WhatsApp con una imagen adjunta
+
+        Args:
+            phone: Número de teléfono (puede ser con o sin código de país)
+            message: Mensaje a enviar (puede estar vacío si solo se quiere enviar la imagen)
+            image_base64: Imagen en formato base64 data URL (ej: "data:image/png;base64,...")
+            country_code: Código de país opcional (ej: "+57")
+
+        Returns:
+            Dict con el resultado del envío
+        """
+        # Si se proporciona country_code, formatear el número completo
+        if country_code:
+            full_phone = format_phone_number(country_code, phone)
+        else:
+            full_phone = phone
+
+        try:
+            response = requests.post(
+                f"{self.base_url}/send-media",
+                json={
+                    "phone": full_phone,
+                    "message": message,
+                    "imageBase64": image_base64
+                },
+                timeout=60
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                return {
+                    "success": result.get("success", False),
+                    "message_id": result.get("messageId"),
+                    "error": result.get("error")
+                }
+            else:
+                error_data = response.json() if response.text else {}
+                return {
+                    "success": False,
+                    "error": error_data.get("error", "Error desconocido"),
+                    "status_code": response.status_code
+                }
+
+        except requests.exceptions.RequestException as e:
+            return {
+                "success": False,
+                "error": f"Error de conexión: {str(e)}"
+            }
+
 
 def send_birthday_whatsapp(phone: str, country_code: str, user_name: str, nick: Optional[str] = None) -> bool:
     """
@@ -222,12 +273,9 @@ def send_ticket_whatsapp(
         event=event
     )
 
-    # Determinar qué imagen enviar: QR, imagen del evento, o ambas
-    image_base64 = None
-    images_to_send = []
-
-    # Si el evento está configurado para enviar QR directamente
-    if event and event.send_qr_with_whatsapp:
+    # Preparar QR si está habilitado
+    qr_base64 = None
+    if event and hasattr(event, 'send_qr_with_whatsapp') and event.send_qr_with_whatsapp:
         try:
             from ticket_service import ticket_service
             qr_base64 = ticket_service.generate_qr_base64(
@@ -236,20 +284,19 @@ def send_ticket_whatsapp(
                 event_name=event_name,
                 event_date=event_date
             )
-            images_to_send.append(qr_base64)
-            print(f"[INFO] QR code agregado para envío por WhatsApp")
+            print(f"[INFO] QR code generado para envío")
         except Exception as e:
             print(f"[WARNING] No se pudo generar el QR: {e}")
 
-    # Si el evento tiene imagen promocional, agregarla también
-    if event and event.whatsapp_image_path:
+    # Preparar imagen promocional si existe
+    promo_image = None
+    if event and hasattr(event, 'whatsapp_image_path') and event.whatsapp_image_path:
         import os
         import base64
         if os.path.exists(event.whatsapp_image_path):
             try:
                 with open(event.whatsapp_image_path, 'rb') as f:
                     image_data = f.read()
-                    # Determinar el tipo de imagen
                     ext = os.path.splitext(event.whatsapp_image_path)[1].lower()
                     mime_types = {
                         '.jpg': 'image/jpeg',
@@ -259,26 +306,63 @@ def send_ticket_whatsapp(
                     }
                     mime_type = mime_types.get(ext, 'image/jpeg')
                     promo_image = f"data:{mime_type};base64,{base64.b64encode(image_data).decode()}"
-                    images_to_send.append(promo_image)
-                    print(f"[INFO] Imagen promocional agregada para envío por WhatsApp")
+                    print(f"[INFO] Imagen promocional cargada")
             except Exception as e:
                 print(f"[WARNING] No se pudo cargar la imagen del evento: {e}")
 
-    # Enviar mensaje con imagen(es) o solo texto
-    # Si hay múltiples imágenes, enviar la primera (prioridad al QR si está habilitado)
-    if images_to_send:
-        result = client.send_message_with_image(phone, message, images_to_send[0], country_code)
-        # TODO: Si se necesita enviar múltiples imágenes, habría que hacer múltiples llamadas
-        # o implementar una nueva función en WhatsAppClient
-    else:
-        result = client.send_message(phone, message, country_code)
+    # Nueva lógica: Mensaje de texto con QR (si está habilitado), luego banner promocional
+    import time
 
-    if result.get("success"):
-        print(f"[OK] Ticket enviado a {user_name} ({country_code}{phone})")
-        return True
+    result = None
+
+    # 1. Enviar mensaje principal: texto + QR (si está habilitado)
+    if qr_base64:
+        # Enviar mensaje de texto con el QR como imagen
+        max_retries = 2
+        msg_sent = False
+
+        for attempt in range(max_retries):
+            msg_result = client.send_message_with_image(phone, message, qr_base64, country_code)
+            if msg_result.get("success"):
+                print(f"[OK] Mensaje de texto con QR enviado a {user_name}")
+                msg_sent = True
+                result = msg_result
+                break
+            else:
+                print(f"[WARNING] Intento {attempt + 1}/{max_retries} fallido al enviar mensaje con QR: {msg_result.get('error')}")
+                if attempt < max_retries - 1:
+                    time.sleep(2)  # Esperar antes de reintentar
+
+        if not msg_sent:
+            print(f"[ERROR] No se pudo enviar el mensaje con QR después de {max_retries} intentos, enviando solo texto")
+            # Fallback: enviar solo texto sin QR
+            result = client.send_message(phone, message, country_code)
+            if result.get("success"):
+                print(f"[OK] Mensaje de texto enviado (sin QR) a {user_name}")
+            else:
+                print(f"[ERROR] No se pudo enviar ni siquiera el mensaje de texto")
+                return False
     else:
-        print(f"[ERROR] No se pudo enviar ticket: {result.get('error')}")
-        return False
+        # Si no hay QR habilitado, enviar solo mensaje de texto
+        result = client.send_message(phone, message, country_code)
+        if result.get("success"):
+            print(f"[OK] Mensaje de texto enviado a {user_name}")
+        else:
+            print(f"[ERROR] No se pudo enviar el mensaje de texto: {result.get('error')}")
+            return False
+
+    # 2. Si hay imagen promocional, enviarla después (opcional)
+    if promo_image:
+        time.sleep(3)  # Esperar 3 segundos antes de enviar el banner
+
+        banner_result = client.send_message_with_image(phone, "📢 *Información del evento:*", promo_image, country_code)
+        if banner_result.get("success"):
+            print(f"[OK] Banner promocional enviado a {user_name}")
+        else:
+            print(f"[WARNING] No se pudo enviar el banner promocional (pero el mensaje principal sí llegó): {banner_result.get('error')}")
+            # No retornamos False porque el mensaje principal ya se envió
+
+    return True
 
 
 def send_bulk_whatsapp(

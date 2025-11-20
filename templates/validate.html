@@ -202,18 +202,31 @@
             console.log('Datos escaneados del QR:', qrData);
             console.log('Longitud:', qrData.length);
 
+            const token = localStorage.getItem('access_token');
+
             // El QR ahora contiene directamente el ticket_code (64 caracteres SHA-256)
             // Validar directamente
             const response = await fetch('/validate/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ ticket_code: qrData })
             });
 
+            console.log('Status code:', response.status);
             const data = await response.json();
             console.log('Respuesta del servidor:', data);
+
+            // Si hay error de autenticación, mostrar mensaje específico
+            if (response.status === 401 || response.status === 403) {
+                displayValidationResult({
+                    valid: false,
+                    message: `Error de autenticación: ${data.detail || 'No autorizado'}`
+                });
+                return;
+            }
 
             displayValidationResult(data);
         } catch (error) {
@@ -230,17 +243,31 @@
         e.preventDefault();
 
         const ticketCode = document.getElementById('ticket_code').value;
+        const token = localStorage.getItem('access_token');
 
         try {
             const response = await fetch('/validate/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ ticket_code: ticketCode })
             });
 
+            console.log('Status code (manual):', response.status);
             const data = await response.json();
+            console.log('Respuesta del servidor (manual):', data);
+
+            // Si hay error de autenticación, mostrar mensaje específico
+            if (response.status === 401 || response.status === 403) {
+                displayValidationResult({
+                    valid: false,
+                    message: `Error de autenticación: ${data.detail || 'No autorizado'}`
+                });
+                return;
+            }
+
             displayValidationResult(data);
 
             // Limpiar formulario

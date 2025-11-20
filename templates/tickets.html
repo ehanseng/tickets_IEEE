@@ -372,7 +372,7 @@
 
 <!-- Modal para envío masivo de tickets por WhatsApp -->
 <div id="whatsappModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-lg">
+    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div class="flex flex-col space-y-1.5 p-6 border-b">
             <div class="flex items-center justify-between">
                 <h2 class="text-2xl font-semibold leading-none tracking-tight">Enviar Tickets por WhatsApp</h2>
@@ -422,6 +422,9 @@
                             <div class="text-xs font-medium text-muted-foreground mb-2">Imagen adjunta:</div>
                             <img id="templatePreviewImage" src="" alt="Imagen del evento" class="max-w-xs rounded border">
                         </div>
+
+                        <!-- Indicador de envío de QR -->
+                        <div id="templateQrIndicator" class="p-2 rounded-lg text-xs"></div>
 
                         <!-- Mensaje -->
                         <div>
@@ -498,6 +501,9 @@
                         <img id="previewImage" src="" alt="Imagen del evento" class="max-w-full rounded">
                     </div>
                 </div>
+
+                <!-- Indicador de envío de QR -->
+                <div id="previewQrIndicator" class="p-3 rounded-lg text-sm"></div>
 
                 <!-- Preview del mensaje -->
                 <div>
@@ -786,6 +792,16 @@
                     document.getElementById('previewImageSection').classList.remove('hidden');
                 } else {
                     document.getElementById('previewImageSection').classList.add('hidden');
+                }
+
+                // Mostrar indicador de envío de QR
+                const qrIndicator = document.getElementById('previewQrIndicator');
+                if (data.send_qr_with_whatsapp) {
+                    qrIndicator.className = 'p-3 rounded-lg text-sm bg-blue-50 border border-blue-200';
+                    qrIndicator.innerHTML = '✅ <strong>El código QR se enviará directamente en WhatsApp</strong>';
+                } else {
+                    qrIndicator.className = 'p-3 rounded-lg text-sm bg-gray-50 border border-gray-200';
+                    qrIndicator.innerHTML = '🔗 <strong>El código QR se enviará como enlace</strong>';
                 }
 
                 // Abrir modal de preview
@@ -1156,6 +1172,16 @@
                     document.getElementById('templateImageSection').classList.add('hidden');
                 }
 
+                // Mostrar indicador de envío de QR
+                const qrIndicator = document.getElementById('templateQrIndicator');
+                if (data.send_qr_with_whatsapp) {
+                    qrIndicator.className = 'p-2 rounded-lg text-xs bg-blue-50 border border-blue-200';
+                    qrIndicator.innerHTML = '✅ <strong>El código QR se enviará directamente en WhatsApp</strong>';
+                } else {
+                    qrIndicator.className = 'p-2 rounded-lg text-xs bg-gray-50 border border-gray-200';
+                    qrIndicator.innerHTML = '🔗 <strong>El código QR se enviará como enlace</strong>';
+                }
+
                 previewSection.classList.remove('hidden');
             } else {
                 previewSection.classList.add('hidden');
@@ -1227,11 +1253,7 @@
         try {
             const token = localStorage.getItem('access_token');
 
-            // Crear EventSource para SSE
-            const eventSource = new EventSource(`/tickets/send-whatsapp-by-event-stream?event_id=${eventId}&access_token=${token}`);
-
-            // NO funciona pasar token en headers con EventSource, lo pasamos en query
-            // Workaround: usar fetch con streaming manual
+            // Usar fetch con streaming manual (EventSource no permite headers personalizados)
             const response = await fetch('/tickets/send-whatsapp-by-event-stream', {
                 method: 'POST',
                 headers: {
