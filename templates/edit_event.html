@@ -88,15 +88,24 @@
                             {% if event.whatsapp_image_path %}
                             <div class="flex items-center gap-2 text-xs">
                                 <span class="text-green-700">✓ Imagen actual:</span>
-                                <a href="{{ event.whatsapp_image_path }}" target="_blank" class="text-blue-600 hover:underline">Ver imagen</a>
+                                <a href="/{{ event.whatsapp_image_path }}" target="_blank" class="text-blue-600 hover:underline">Ver imagen</a>
                                 <button type="button" onclick="removeWhatsAppImage()" class="text-red-600 hover:text-red-800 ml-2">🗑 Eliminar</button>
                             </div>
-                            <img src="{{ event.whatsapp_image_path }}" alt="Preview" class="mt-2 max-w-xs rounded border">
+                            <img src="/{{ event.whatsapp_image_path }}" alt="Preview" class="mt-2 max-w-xs rounded border">
                             {% endif %}
                             <div id="whatsapp_image_preview" class="hidden mt-2">
                                 <img id="whatsapp_image_preview_img" src="" alt="Preview" class="max-w-xs rounded border">
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Opción de enviar QR con WhatsApp -->
+                    <div class="space-y-2">
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" id="send_qr_with_whatsapp" name="send_qr_with_whatsapp" {% if event.send_qr_with_whatsapp %}checked{% endif %} class="rounded border-gray-300 text-green-600 focus:ring-green-500">
+                            <span class="text-sm font-medium">Enviar código QR directamente en WhatsApp</span>
+                        </label>
+                        <p class="text-xs text-muted-foreground">Si se activa, el código QR se enviará como imagen en el mensaje de WhatsApp, sin necesidad de que el usuario acceda a una página externa</p>
                     </div>
 
                     <!-- Template de Email -->
@@ -372,7 +381,8 @@ IEEE Tadeo Student Branch`;
             organization_id: orgId ? parseInt(orgId) : null,
             is_active: document.getElementById('is_active').checked,
             whatsapp_template: whatsappTemplate || null,
-            email_template: emailTemplate || null
+            email_template: emailTemplate || null,
+            send_qr_with_whatsapp: document.getElementById('send_qr_with_whatsapp').checked
         };
 
         try {

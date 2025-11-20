@@ -222,8 +222,26 @@ def send_ticket_whatsapp(
         event=event
     )
 
-    # Si el evento tiene imagen, enviar con imagen
+    # Determinar qué imagen enviar: QR, imagen del evento, o ambas
     image_base64 = None
+    images_to_send = []
+
+    # Si el evento está configurado para enviar QR directamente
+    if event and event.send_qr_with_whatsapp:
+        try:
+            from ticket_service import ticket_service
+            qr_base64 = ticket_service.generate_qr_base64(
+                ticket_code=ticket_code,
+                user_name=user_name,
+                event_name=event_name,
+                event_date=event_date
+            )
+            images_to_send.append(qr_base64)
+            print(f"[INFO] QR code agregado para envío por WhatsApp")
+        except Exception as e:
+            print(f"[WARNING] No se pudo generar el QR: {e}")
+
+    # Si el evento tiene imagen promocional, agregarla también
     if event and event.whatsapp_image_path:
         import os
         import base64
@@ -240,13 +258,18 @@ def send_ticket_whatsapp(
                         '.gif': 'image/gif'
                     }
                     mime_type = mime_types.get(ext, 'image/jpeg')
-                    image_base64 = f"data:{mime_type};base64,{base64.b64encode(image_data).decode()}"
+                    promo_image = f"data:{mime_type};base64,{base64.b64encode(image_data).decode()}"
+                    images_to_send.append(promo_image)
+                    print(f"[INFO] Imagen promocional agregada para envío por WhatsApp")
             except Exception as e:
                 print(f"[WARNING] No se pudo cargar la imagen del evento: {e}")
 
-    # Enviar mensaje (con o sin imagen)
-    if image_base64:
-        result = client.send_message_with_image(phone, message, image_base64, country_code)
+    # Enviar mensaje con imagen(es) o solo texto
+    # Si hay múltiples imágenes, enviar la primera (prioridad al QR si está habilitado)
+    if images_to_send:
+        result = client.send_message_with_image(phone, message, images_to_send[0], country_code)
+        # TODO: Si se necesita enviar múltiples imágenes, habría que hacer múltiples llamadas
+        # o implementar una nueva función en WhatsAppClient
     else:
         result = client.send_message(phone, message, country_code)
 

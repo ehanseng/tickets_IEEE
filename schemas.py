@@ -200,6 +200,7 @@ class EventCreate(BaseModel):
     whatsapp_template: Optional[str] = None  # Template personalizado de WhatsApp
     email_template: Optional[str] = None  # Template personalizado de Email
     whatsapp_image_path: Optional[str] = None  # Ruta de la imagen para WhatsApp
+    send_qr_with_whatsapp: Optional[bool] = False  # Enviar QR con mensaje de WhatsApp
 
 
 class EventUpdate(BaseModel):
@@ -213,6 +214,7 @@ class EventUpdate(BaseModel):
     whatsapp_template: Optional[str] = None  # Template personalizado de WhatsApp
     email_template: Optional[str] = None  # Template personalizado de Email
     whatsapp_image_path: Optional[str] = None  # Ruta de la imagen para WhatsApp
+    send_qr_with_whatsapp: Optional[bool] = None  # Enviar QR con mensaje de WhatsApp
 
 
 class EventResponse(BaseModel):
@@ -226,6 +228,7 @@ class EventResponse(BaseModel):
     whatsapp_template: Optional[str] = None  # Template personalizado de WhatsApp
     email_template: Optional[str] = None  # Template personalizado de Email
     whatsapp_image_path: Optional[str] = None  # Ruta de la imagen para WhatsApp
+    send_qr_with_whatsapp: bool = False  # Enviar QR con mensaje de WhatsApp
     is_active: bool
     created_at: datetime
     organization: Optional[OrganizationResponse] = None

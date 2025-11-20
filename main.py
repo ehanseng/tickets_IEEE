@@ -1148,6 +1148,8 @@ def update_event(
         event.whatsapp_template = event_update.whatsapp_template
     if event_update.email_template is not None:
         event.email_template = event_update.email_template
+    if event_update.send_qr_with_whatsapp is not None:
+        event.send_qr_with_whatsapp = event_update.send_qr_with_whatsapp
 
     db.commit()
     db.refresh(event)

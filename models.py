@@ -128,6 +128,7 @@ class Event(Base):
     whatsapp_template = Column(Text, nullable=True)  # Template de WhatsApp para este evento
     email_template = Column(Text, nullable=True)  # Template de Email para este evento
     whatsapp_image_path = Column(String, nullable=True)  # Ruta de la imagen para WhatsApp
+    send_qr_with_whatsapp = Column(Boolean, default=False)  # Enviar QR junto con mensaje de WhatsApp
 
     # Relaciones
     tickets = relationship("Ticket", back_populates="event")
