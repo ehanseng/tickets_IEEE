@@ -57,6 +57,18 @@ class TemplateService:
             color: #0066cc;
             letter-spacing: 8px;
             font-family: 'Courier New', monospace;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }}
+        .ticket-code {{
+            font-size: 20px;
+            font-weight: bold;
+            color: #0066cc;
+            letter-spacing: 2px;
+            font-family: 'Courier New', monospace;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-all;
         }}
         .info-section {{
             margin: 25px 0;
@@ -120,6 +132,11 @@ class TemplateService:
             {companions_info}
         </div>
 
+        <div style="text-align: center; margin: 30px 0;">
+            <img src="{qr_base64}" alt="Código QR del Ticket" style="max-width: 250px; border: 3px solid #0066cc; border-radius: 8px; margin: 20px auto; display: block;">
+            <p style="color: #666; font-size: 14px; margin-top: 10px;">Presenta este código QR en la entrada del evento</p>
+        </div>
+
         <div class="pin-box">
             <p style="margin: 0 0 10px 0; color: #666;">Tu PIN de acceso es:</p>
             <div class="pin-code">{access_pin}</div>
@@ -127,7 +144,7 @@ class TemplateService:
         </div>
 
         <div style="text-align: center;">
-            <a href="{ticket_url}" class="button">Ver Mi Ticket</a>
+            <a href="{ticket_url}" class="button">Ver Mi Ticket Completo</a>
         </div>
 
         <div class="note">
@@ -198,6 +215,7 @@ IEEE Tadeo Student Branch"""
         ticket_url: str,
         access_pin: str,
         companions: int = 0,
+        qr_base64: str = "",
         event: Optional[models.Event] = None
     ) -> str:
         """
@@ -213,6 +231,7 @@ IEEE Tadeo Student Branch"""
             ticket_url: URL del ticket
             access_pin: PIN de acceso
             companions: Número de acompañantes
+            qr_base64: Código QR en formato base64
             event: Evento (opcional, para usar template específico del evento)
 
         Returns:
@@ -241,7 +260,8 @@ IEEE Tadeo Student Branch"""
             ticket_url=ticket_url,
             access_pin=access_pin,
             companions=companions,
-            companions_info=companions_info
+            companions_info=companions_info,
+            qr_base64=qr_base64
         )
 
         return html

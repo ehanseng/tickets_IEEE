@@ -35,7 +35,9 @@ class EmailService:
         to_email: str,
         subject: str,
         html_content: str,
-        text_content: Optional[str] = None
+        text_content: Optional[str] = None,
+        from_name: Optional[str] = None,
+        reply_to: Optional[str] = None
     ) -> bool:
         """
         Envía un correo genérico con contenido HTML
@@ -45,6 +47,8 @@ class EmailService:
             subject: Asunto del correo
             html_content: Contenido HTML del correo
             text_content: Contenido de texto plano (opcional)
+            from_name: Nombre del remitente (opcional, usa el por defecto si no se especifica)
+            reply_to: Email para respuestas (opcional)
 
         Returns:
             bool: True si el correo se envió correctamente, False en caso contrario
@@ -53,6 +57,8 @@ class EmailService:
             print("⚠️  RESEND_API_KEY no configurado - El correo NO se enviará")
             print(f"📧 Correo simulado enviado a: {to_email}")
             print(f"📬 Asunto: {subject}")
+            print(f"📤 De: {from_name or self.from_name}")
+            print(f"↩️  Reply-To: {reply_to or 'N/A'}")
             return True
 
         try:
@@ -61,16 +67,25 @@ class EmailService:
                 import re
                 text_content = re.sub('<[^<]+?>', '', html_content)
 
+            # Usar el nombre personalizado o el por defecto
+            sender_name = from_name or self.from_name
+
             params = {
-                "from": f"{self.from_name} <{self.from_email}>",
+                "from": f"{sender_name} <{self.from_email}>",
                 "to": [to_email],
                 "subject": subject,
                 "html": html_content,
                 "text": text_content
             }
 
+            # Agregar reply_to si se especifica
+            if reply_to:
+                params["reply_to"] = [reply_to]
+
             response = resend.Emails.send(params)
             print(f"[OK] Correo enviado exitosamente a {to_email} (ID: {response.get('id', 'N/A')})")
+            if reply_to:
+                print(f"    ↩️  Reply-To configurado: {reply_to}")
             return True
 
         except Exception as e:
@@ -116,7 +131,19 @@ class EmailService:
         # Generar asunto usando template service
         subject = template_service.get_email_subject(organization, event_name)
 
-        # Generar contenido HTML usando template service
+        # Generar QR code
+        from ticket_service import ticket_service as ts
+        qr_base64 = ts.generate_qr_base64(
+            ticket_code=ticket_code,
+            user_name=user_name,
+            event_name=event_name,
+            event_date=event_date.isoformat()
+        )
+
+        # Extraer solo el base64 sin el prefijo data:image
+        qr_base64_clean = qr_base64.split(',')[1] if ',' in qr_base64 else qr_base64
+
+        # Generar contenido HTML usando template service con CID
         html_content = template_service.render_email_template(
             organization=organization,
             user_name=user_name,
@@ -127,10 +154,72 @@ class EmailService:
             ticket_url=ticket_url,
             access_pin=access_pin,
             companions=companions,
+            qr_base64="cid:ticket_qr",  # Usar CID para adjunto inline
             event=event
         )
 
-        return self.send_email(to_email, subject, html_content)
+        # Personalizar remitente según la organización
+        from_name = None
+        reply_to = None
+
+        if organization:
+            # Usar el nombre corto o el nombre completo del organizador
+            org_name = organization.short_name or organization.name
+            from_name = f"{org_name} - Sistema de Tickets"
+
+            # Si tiene email de contacto, usarlo como reply_to
+            if organization.contact_email:
+                reply_to = organization.contact_email
+
+        # Enviar email con QR como adjunto inline (compatible con todos los clientes)
+        if not self.api_key:
+            print("⚠️  RESEND_API_KEY no configurado - El correo NO se enviará")
+            print(f"📧 Correo simulado enviado a: {to_email}")
+            print(f"📬 Asunto: {subject}")
+            print(f"📤 De: {from_name or self.from_name}")
+            print(f"↩️  Reply-To: {reply_to or 'N/A'}")
+            return True
+
+        try:
+            import re
+            text_content = re.sub('<[^<]+?>', '', html_content)
+
+            sender_name = from_name or self.from_name
+
+            # Decodificar el base64 a bytes para Resend
+            qr_bytes = base64.b64decode(qr_base64_clean)
+            qr_base64_encoded = base64.b64encode(qr_bytes).decode('utf-8')
+
+            params = {
+                "from": f"{sender_name} <{self.from_email}>",
+                "to": [to_email],
+                "subject": subject,
+                "html": html_content,
+                "text": text_content,
+                "attachments": [
+                    {
+                        "content": qr_base64_encoded,
+                        "filename": "ticket_qr.png",
+                        "content_id": "ticket_qr",
+                        "disposition": "inline"
+                    }
+                ]
+            }
+
+            if reply_to:
+                params["reply_to"] = [reply_to]
+
+            response = resend.Emails.send(params)
+            print(f"[OK] Correo con QR enviado exitosamente a {to_email} (ID: {response.get('id', 'N/A')})")
+            if reply_to:
+                print(f"    ↩️  Reply-To configurado: {reply_to}")
+            return True
+
+        except Exception as e:
+            print(f"[ERROR] Error al enviar correo: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return False
 
     def send_birthday_email(self, to_email: str, user_name: str, nick: Optional[str] = None) -> bool:
         """

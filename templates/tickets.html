@@ -14,6 +14,12 @@
                     </svg>
                     Enviar por WhatsApp
                 </button>
+                <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-10 px-4 py-2" onclick="openEmailModal()">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                    Enviar por Email
+                </button>
                 <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2" onclick="openBulkModal()">
                     <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
@@ -529,6 +535,162 @@
         </div>
     </div>
 </div>
+
+<!-- Modal para envío masivo de Email -->
+<div id="emailModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-semibold leading-none tracking-tight">Enviar Tickets por Email</h2>
+                <button onclick="closeEmailModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-sm">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                    <span class="font-semibold text-blue-900">Envío masivo por evento</span>
+                </div>
+                <p class="text-blue-700 text-xs">
+                    Esta función enviará los tickets por correo electrónico a todos los usuarios que tengan ticket para el evento seleccionado.
+                    Se omitirán usuarios sin correo electrónico registrado.
+                </p>
+            </div>
+
+            <form id="emailForm" class="space-y-4">
+                <div class="space-y-2">
+                    <label for="email_event_id" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Evento *</label>
+                    <select id="email_event_id" name="email_event_id" required onchange="updateEmailTemplatePreview();" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                        <option value="">Seleccione un evento</option>
+                        {% for event in events %}
+                        <option value="{{ event.id }}">{{ event.name }} - {{ event.event_date.strftime('%d/%m/%Y') }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-xs text-muted-foreground">Selecciona el evento cuyos tickets deseas enviar</p>
+                </div>
+
+                <!-- Preview del template de email -->
+                <div id="emailTemplatePreviewSection" class="hidden space-y-2">
+                    <label class="text-sm font-medium">Preview del Email</label>
+                    <div class="border rounded-lg p-4 bg-white space-y-3">
+                        <div>
+                            <span class="text-xs font-medium text-muted-foreground">Template:</span>
+                            <span id="emailTemplateSourceName" class="text-xs italic ml-1"></span>
+                        </div>
+
+                        <div>
+                            <span class="text-xs font-medium text-muted-foreground">Asunto:</span>
+                            <div id="emailSubjectPreview" class="text-sm font-semibold mt-1"></div>
+                        </div>
+
+                        <!-- Preview HTML del email -->
+                        <div>
+                            <div class="text-xs font-medium text-muted-foreground mb-2">Vista previa del email:</div>
+                            <div class="border rounded-lg bg-white max-h-96 overflow-y-auto">
+                                <iframe id="emailPreviewFrame" class="w-full h-96 border-0" sandbox="allow-same-origin"></iframe>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="emailSubmitBtn" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-10 px-4 py-2 w-full">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                    Enviar Tickets por Email
+                </button>
+            </form>
+
+            <div id="emailMessage" class="mt-4"></div>
+
+            <!-- Progress container -->
+            <div id="emailProgressContainer" class="hidden mt-4">
+                <div class="bg-muted rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-medium">Enviando emails...</span>
+                        <span id="emailProgressText" class="text-xs text-muted-foreground">0/0</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="emailProgressBar" class="bg-blue-600 h-2.5 rounded-full transition-all" style="width: 0%"></div>
+                    </div>
+                    <div id="emailProgressLog" class="mt-3 max-h-60 overflow-y-auto text-xs space-y-1"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para preview de email individual -->
+<div id="emailPreviewModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-semibold leading-none tracking-tight">Preview de Email</h2>
+                <button onclick="closeEmailPreviewModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-sm">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                    <span class="font-semibold text-blue-900">Vista previa del email</span>
+                </div>
+                <p class="text-blue-700 text-xs">
+                    Este es el email que se enviará al usuario
+                </p>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Info del destinatario -->
+                <div class="bg-muted rounded-lg p-3 text-sm">
+                    <div class="space-y-1">
+                        <div><strong>Usuario:</strong> <span id="emailPreviewUserName"></span></div>
+                        <div><strong>Email:</strong> <span id="emailPreviewEmail"></span></div>
+                        <div><strong>Evento:</strong> <span id="emailPreviewEventName"></span></div>
+                        <div><strong>Template:</strong> <span id="emailPreviewTemplateSource" class="text-xs italic"></span></div>
+                    </div>
+                </div>
+
+                <!-- Asunto del email -->
+                <div>
+                    <label class="text-sm font-medium">Asunto:</label>
+                    <div id="emailPreviewSubject" class="mt-2 text-base font-semibold"></div>
+                </div>
+
+                <!-- Preview del HTML -->
+                <div>
+                    <label class="text-sm font-medium">Vista previa del email:</label>
+                    <div class="mt-2 border rounded-lg bg-white max-h-96 overflow-y-auto">
+                        <iframe id="emailPreviewHTMLFrame" class="w-full h-96 border-0" sandbox="allow-same-origin"></iframe>
+                    </div>
+                </div>
+
+                <!-- Botones de acción -->
+                <div class="flex gap-2">
+                    <button onclick="confirmSendEmail()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 h-10 px-4 py-2 flex-1">
+                        <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        Enviar Ahora
+                    </button>
+                    <button onclick="closeEmailPreviewModal()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -726,14 +888,64 @@
         }
     });
 
+    let currentEmailPreviewTicketId = null;
+
     async function sendEmail(ticketId) {
-        if (!confirm('¿Enviar ticket por correo electrónico al usuario?')) {
+        try {
+            const token = localStorage.getItem('access_token');
+
+            // Obtener preview del email
+            const response = await fetch(`/tickets/${ticketId}/email-preview`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Guardar el ID del ticket para enviar después
+                currentEmailPreviewTicketId = ticketId;
+
+                // Mostrar el preview en el modal
+                document.getElementById('emailPreviewUserName').textContent = data.user_name;
+                document.getElementById('emailPreviewEmail').textContent = data.email || 'Sin email';
+                document.getElementById('emailPreviewEventName').textContent = data.event_name;
+                document.getElementById('emailPreviewTemplateSource').textContent = data.template_source || 'default';
+                document.getElementById('emailPreviewSubject').textContent = data.subject;
+
+                // Mostrar el HTML en el iframe
+                const iframe = document.getElementById('emailPreviewHTMLFrame');
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                iframeDoc.open();
+                iframeDoc.write(data.html_preview);
+                iframeDoc.close();
+
+                // Abrir el modal
+                document.getElementById('emailPreviewModal').classList.remove('hidden');
+            } else {
+                alert(`Error: ${data.detail || 'No se pudo obtener el preview del email'}`);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al obtener preview del email');
+        }
+    }
+
+    function closeEmailPreviewModal() {
+        document.getElementById('emailPreviewModal').classList.add('hidden');
+        currentEmailPreviewTicketId = null;
+    }
+
+    async function confirmSendEmail() {
+        if (!currentEmailPreviewTicketId) {
+            alert('Error: No hay ticket seleccionado');
             return;
         }
 
         try {
             const token = localStorage.getItem('access_token');
-            const response = await fetch(`/tickets/${ticketId}/send-email`, {
+            const response = await fetch(`/tickets/${currentEmailPreviewTicketId}/send-email`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -744,6 +956,9 @@
 
             if (response.ok) {
                 alert(`✓ Correo enviado exitosamente a ${data.email}`);
+                closeEmailPreviewModal();
+                // Recargar la tabla de tickets
+                location.reload();
             } else {
                 alert(`Error: ${data.detail || 'No se pudo enviar el correo'}`);
             }
@@ -752,6 +967,14 @@
             alert('Error al enviar el correo');
         }
     }
+
+    // Cerrar modal de email preview al hacer clic fuera
+    const emailPreviewModal = document.getElementById('emailPreviewModal');
+    window.addEventListener('click', function(event) {
+        if (event.target == emailPreviewModal) {
+            closeEmailPreviewModal();
+        }
+    });
 
     let currentPreviewTicketId = null;
 
@@ -1355,6 +1578,217 @@
             submitBtn.disabled = false;
         }
     });
+
+    // ============================================
+    // Funciones para Email Modal
+    // ============================================
+
+    function openEmailModal() {
+        document.getElementById('emailModal').classList.remove('hidden');
+        document.getElementById('emailForm').reset();
+        document.getElementById('emailMessage').innerHTML = '';
+        document.getElementById('emailTemplatePreviewSection').classList.add('hidden');
+        document.getElementById('emailProgressContainer').classList.add('hidden');
+    }
+
+    function closeEmailModal() {
+        document.getElementById('emailModal').classList.add('hidden');
+        document.getElementById('emailForm').reset();
+        document.getElementById('emailMessage').innerHTML = '';
+        document.getElementById('emailTemplatePreviewSection').classList.add('hidden');
+        document.getElementById('emailProgressContainer').classList.add('hidden');
+    }
+
+    async function updateEmailTemplatePreview() {
+        const eventId = document.getElementById('email_event_id').value;
+
+        if (!eventId) {
+            document.getElementById('emailTemplatePreviewSection').classList.add('hidden');
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`/events/${eventId}/email-template-preview`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                console.error('Error al obtener preview del email');
+                return;
+            }
+
+            const data = await response.json();
+
+            // Mostrar sección de preview
+            document.getElementById('emailTemplatePreviewSection').classList.remove('hidden');
+
+            // Actualizar información
+            document.getElementById('emailTemplateSourceName').textContent = data.template_source_name;
+            document.getElementById('emailSubjectPreview').textContent = data.subject;
+
+            // Mostrar el HTML del email en el iframe
+            const iframe = document.getElementById('emailPreviewFrame');
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(data.html_preview);
+            iframeDoc.close();
+
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+
+    document.getElementById('emailForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const eventId = parseInt(document.getElementById('email_event_id').value);
+        const submitBtn = document.getElementById('emailSubmitBtn');
+        const messageDiv = document.getElementById('emailMessage');
+        const progressContainer = document.getElementById('emailProgressContainer');
+
+        if (!eventId) {
+            messageDiv.innerHTML = '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Por favor seleccione un evento</div>';
+            return;
+        }
+
+        submitBtn.disabled = true;
+        progressContainer.classList.remove('hidden');
+        messageDiv.innerHTML = '';
+
+        const progressBar = document.getElementById('emailProgressBar');
+        const progressText = document.getElementById('emailProgressText');
+        const progressLog = document.getElementById('emailProgressLog');
+
+        progressLog.innerHTML = '';
+        progressBar.style.width = '0%';
+        progressText.textContent = '0/0';
+
+        let sentCount = 0;
+        let skippedCount = 0;
+        let totalTickets = 0;
+        let errors = [];
+
+        try {
+            const token = localStorage.getItem('access_token');
+
+            const response = await fetch('/tickets/send-email-by-event-stream', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ event_id: eventId })
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = JSON.parse(line.substring(6));
+
+                        if (data.event === 'start') {
+                            totalTickets = data.total;
+                            progressText.textContent = `0/${totalTickets}`;
+                            progressLog.innerHTML += `<div class="text-blue-600">📋 Evento: ${data.event_name}</div>`;
+                            progressLog.innerHTML += `<div class="text-blue-600">📊 Total de tickets: ${totalTickets}</div>`;
+                            progressLog.innerHTML += `<div class="text-gray-400">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</div>`;
+                        }
+                        else if (data.event === 'sending') {
+                            const percent = Math.round((data.index / totalTickets) * 100);
+                            progressBar.style.width = `${percent}%`;
+                            progressText.textContent = `${data.index}/${totalTickets}`;
+                            progressLog.innerHTML += `<div class="text-blue-600">⏳ [${data.index}/${totalTickets}] Enviando a ${data.user} (${data.email})...</div>`;
+                            progressLog.scrollTop = progressLog.scrollHeight;
+                        }
+                        else if (data.event === 'success') {
+                            sentCount++;
+                            progressLog.innerHTML += `<div class="text-green-600">✓ [${data.index}/${totalTickets}] ${data.user} - Enviado exitosamente</div>`;
+                            progressLog.scrollTop = progressLog.scrollHeight;
+                        }
+                        else if (data.event === 'skip') {
+                            skippedCount++;
+                            progressLog.innerHTML += `<div class="text-amber-600">⚠ [${data.index}/${totalTickets}] ${data.user} - Omitido: ${data.reason}</div>`;
+                            progressLog.scrollTop = progressLog.scrollHeight;
+                        }
+                        else if (data.event === 'error') {
+                            skippedCount++;
+                            errors.push(`${data.user}: ${data.reason}`);
+                            progressLog.innerHTML += `<div class="text-red-600">✗ [${data.index}/${totalTickets}] ${data.user} - Error: ${data.reason}</div>`;
+                            progressLog.scrollTop = progressLog.scrollHeight;
+                        }
+                        else if (data.event === 'complete') {
+                            progressBar.style.width = '100%';
+                            progressText.textContent = `${totalTickets}/${totalTickets}`;
+                            progressLog.innerHTML += `<div class="text-gray-400">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</div>`;
+                            progressLog.innerHTML += `<div class="text-green-600 font-bold">✓ Proceso completado</div>`;
+                            progressLog.scrollTop = progressLog.scrollHeight;
+
+                            // Mostrar resumen final
+                            setTimeout(() => {
+                                messageDiv.innerHTML = `
+                                    <div class="rounded-lg border border-green-200 bg-green-50 p-4 text-sm">
+                                        <div class="flex items-center gap-2 text-green-700 mb-2">
+                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                            </svg>
+                                            <span class="font-semibold">Tickets enviados exitosamente por Email</span>
+                                        </div>
+                                        <div class="space-y-1 text-green-700">
+                                            <p><strong>Emails enviados:</strong> ${sentCount}</p>
+                                            <p><strong>Total de tickets:</strong> ${totalTickets}</p>
+                                            ${skippedCount > 0 ? `<p class="text-xs"><em>Usuarios omitidos (sin email o error): ${skippedCount}</em></p>` : ''}
+                                            ${errors.length > 0 ? `
+                                                <details class="mt-2">
+                                                    <summary class="cursor-pointer text-xs">Ver errores (${errors.length})</summary>
+                                                    <ul class="text-xs mt-1 ml-4 list-disc">
+                                                        ${errors.map(err => `<li>${err}</li>`).join('')}
+                                                    </ul>
+                                                </details>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                                submitBtn.disabled = false;
+                                progressContainer.classList.add('hidden');
+                                setTimeout(() => {
+                                    closeEmailModal();
+                                }, 3000);
+                            }, 1000);
+                        }
+                    }
+                }
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            messageDiv.innerHTML = '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error de conexión al enviar tickets por Email</div>';
+            submitBtn.disabled = false;
+            progressContainer.classList.add('hidden');
+        }
+    });
+
+    // Cerrar modal al hacer clic fuera de él
+    const emailModal = document.getElementById('emailModal');
+    window.addEventListener('click', function(event) {
+        if (event.target == emailModal) {
+            closeEmailModal();
+        }
+    });
+
+    // ============================================
+    // Fin de funciones para Email Modal
+    // ============================================
 
     // Función de búsqueda y filtrado
     function filterTickets() {

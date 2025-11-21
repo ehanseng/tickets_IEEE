@@ -1559,6 +1559,140 @@ def send_ticket_email(
         raise HTTPException(status_code=500, detail="Error al enviar el correo")
 
 
+@app.post("/tickets/send-email-by-event-stream")
+async def send_tickets_email_by_event_stream(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Enviar tickets por Email masivamente con Server-Sent Events para progreso en tiempo real
+
+    Body:
+    - event_id: ID del evento
+
+    Retorna un stream de eventos con el formato:
+    - event: progress -> Progreso de envío individual
+    - event: complete -> Resumen final
+    """
+    event_id = data.get('event_id')
+
+    if not event_id:
+        raise HTTPException(status_code=400, detail="event_id es requerido")
+
+    # Función generadora para SSE
+    async def event_generator():
+        try:
+            # Verificar que el evento existe
+            event = db.query(models.Event).filter(models.Event.id == event_id).first()
+            if not event:
+                yield f"data: {json.dumps({'event': 'error', 'message': 'Evento no encontrado'})}\n\n"
+                return
+
+            # Cargar organización del evento si existe
+            organization = None
+            if event.organization_id:
+                organization = db.query(models.Organization).filter(
+                    models.Organization.id == event.organization_id
+                ).first()
+
+            # Obtener todos los tickets del evento con sus usuarios
+            from sqlalchemy.orm import joinedload
+
+            tickets = db.query(models.Ticket).options(
+                joinedload(models.Ticket.user)
+            ).filter(
+                models.Ticket.event_id == event_id
+            ).all()
+
+            if not tickets:
+                yield f"data: {json.dumps({'event': 'error', 'message': 'No se encontraron tickets para este evento'})}\n\n"
+                return
+
+            # Enviar evento de inicio
+            yield f"data: {json.dumps({'event': 'start', 'total': len(tickets), 'event_name': event.name})}\n\n"
+
+            # Enviar tickets por Email
+            sent_count = 0
+            skipped_count = 0
+            errors = []
+
+            import asyncio
+
+            for idx, ticket in enumerate(tickets):
+                user = ticket.user
+
+                try:
+                    # Verificar que el usuario tenga email
+                    if not user.email:
+                        skipped_count += 1
+                        error_msg = f"{user.name}: Sin correo electrónico"
+                        errors.append(error_msg)
+
+                        # Enviar evento de skip
+                        yield f"data: {json.dumps({'event': 'skip', 'index': idx + 1, 'total': len(tickets), 'user': user.name, 'reason': 'Sin email'})}\n\n"
+                        continue
+
+                    # Enviar evento de progreso - enviando
+                    yield f"data: {json.dumps({'event': 'sending', 'index': idx + 1, 'total': len(tickets), 'user': user.name, 'email': user.email})}\n\n"
+
+                    # Construir URL completa del ticket
+                    ticket_url = f"{BASE_URL}/ticket/{ticket.unique_url}"
+
+                    # Enviar por Email
+                    success = email_service.send_ticket_email(
+                        to_email=user.email,
+                        user_name=user.name,
+                        event_name=event.name,
+                        event_date=event.event_date,
+                        event_location=event.location,
+                        ticket_code=ticket.ticket_code,
+                        ticket_url=ticket_url,
+                        access_pin=ticket.access_pin,
+                        companions=ticket.companions,
+                        organization=organization,
+                        event=event
+                    )
+
+                    if success:
+                        sent_count += 1
+                        # Enviar evento de éxito
+                        yield f"data: {json.dumps({'event': 'success', 'index': idx + 1, 'total': len(tickets), 'user': user.name, 'email': user.email})}\n\n"
+                    else:
+                        skipped_count += 1
+                        error_msg = f"{user.name}: Error al enviar email"
+                        errors.append(error_msg)
+                        # Enviar evento de error
+                        yield f"data: {json.dumps({'event': 'error', 'index': idx + 1, 'total': len(tickets), 'user': user.name, 'reason': 'Error al enviar'})}\n\n"
+
+                    # Pequeño delay entre envíos para evitar rate limiting
+                    await asyncio.sleep(0.5)
+
+                except Exception as e:
+                    skipped_count += 1
+                    error_msg = f"{user.name}: {str(e)}"
+                    errors.append(error_msg)
+                    # Enviar evento de error
+                    yield f"data: {json.dumps({'event': 'error', 'index': idx + 1, 'total': len(tickets), 'user': user.name, 'reason': str(e)})}\n\n"
+                    continue
+
+            # Enviar evento de completado
+            yield f"data: {json.dumps({'event': 'complete', 'sent': sent_count, 'skipped': skipped_count, 'total': len(tickets), 'errors': errors})}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'event': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
 @app.post("/tickets/{ticket_id}/send-whatsapp")
 def send_ticket_whatsapp_endpoint(
     ticket_id: int,
@@ -1694,6 +1828,86 @@ def get_whatsapp_preview(
     }
 
 
+@app.get("/tickets/{ticket_id}/email-preview")
+def get_email_preview(
+    ticket_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Obtiene un preview del email que se enviará para este ticket
+    """
+    try:
+        ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Ticket no encontrado")
+
+        user = db.query(models.User).filter(models.User.id == ticket.user_id).first()
+        event = db.query(models.Event).filter(models.Event.id == ticket.event_id).first()
+
+        # Cargar organización del evento si existe
+        organization = None
+        if event.organization_id:
+            organization = db.query(models.Organization).filter(
+                models.Organization.id == event.organization_id
+            ).first()
+
+        # Construir URL completa del ticket
+        ticket_url = f"{BASE_URL}/ticket/{ticket.unique_url}"
+
+        # Generar preview del email usando template service
+        from template_service import template_service
+        from ticket_service import ticket_service as ts
+
+        # Formatear fecha del evento
+        event_date_str = event.event_date.strftime("%d/%m/%Y %I:%M %p")
+
+        # Generar QR code
+        qr_base64 = ts.generate_qr_base64(
+            ticket_code=ticket.ticket_code,
+            user_name=user.name,
+            event_name=event.name,
+            event_date=event.event_date.isoformat()
+        )
+
+        # Renderizar HTML del email (para preview usamos base64 directo, no CID)
+        html_preview = template_service.render_email_template(
+            organization=organization,
+            user_name=user.name,
+            event_name=event.name,
+            event_date=event_date_str,  # Pasar como string formateado
+            event_location=event.location,
+            ticket_code=ticket.ticket_code,
+            ticket_url=ticket_url,
+            access_pin=ticket.access_pin,
+            companions=ticket.companions,
+            qr_base64=qr_base64,  # Para preview en navegador, usar base64 completo
+            event=event
+        )
+
+        # Obtener subject del email
+        subject = template_service.get_email_subject(organization, event.name)
+
+        return {
+            "ticket_id": ticket_id,
+            "user_name": user.name,
+            "email": user.email,
+            "event_name": event.name,
+            "subject": subject,
+            "html_preview": html_preview,
+            "template_source": "evento" if event.email_template else ("organizacion" if organization and organization.email_template else "default"),
+            "qr_base64": qr_base64
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"\n[ERROR] Error en email preview: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error al generar preview: {str(e)}")
+
+
 @app.get("/events/{event_id}/whatsapp-template-preview")
 def get_event_whatsapp_template_preview(
     event_id: int,
@@ -1743,6 +1957,68 @@ def get_event_whatsapp_template_preview(
         "has_image": bool(event.whatsapp_image_path),
         "image_url": f"/{event.whatsapp_image_path}" if event.whatsapp_image_path else None,
         "send_qr_with_whatsapp": event.send_qr_with_whatsapp if hasattr(event, 'send_qr_with_whatsapp') else False
+    }
+
+
+@app.get("/events/{event_id}/email-template-preview")
+def get_event_email_template_preview(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Obtiene un preview del template de Email que se usará para este evento
+    """
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    # Cargar organización del evento si existe
+    organization = None
+    if event.organization_id:
+        organization = db.query(models.Organization).filter(
+            models.Organization.id == event.organization_id
+        ).first()
+
+    # Generar preview del email usando template service
+    from template_service import template_service
+    from ticket_service import ticket_service as ts
+
+    # Generar QR de ejemplo
+    example_ticket_url = f"{BASE_URL}/ticket/ejemplo-preview"
+    qr_base64 = ts.generate_qr_base64(
+        ticket_code="XXXX-XXXX-XXXX",
+        user_name="[Nombre del Usuario]",
+        event_name=event.name,
+        event_date=event.event_date.isoformat()
+    )
+
+    # Renderizar HTML del email
+    html_preview = template_service.render_email_template(
+        organization=organization,
+        user_name="[Nombre del Usuario]",
+        event_name=event.name,
+        event_date=event.event_date,
+        event_location=event.location,
+        ticket_code="XXXX-XXXX-XXXX",
+        ticket_url=example_ticket_url,
+        access_pin="****",
+        companions=0,
+        qr_base64=qr_base64,
+        event=event
+    )
+
+    # Obtener subject del email
+    subject = template_service.get_email_subject(organization, event.name)
+
+    return {
+        "event_id": event_id,
+        "event_name": event.name,
+        "subject": subject,
+        "html_preview": html_preview,
+        "template_source": "evento" if event.email_template else ("organizacion" if organization and organization.email_template else "default"),
+        "template_source_name": event.name if event.email_template else (organization.name if organization and organization.email_template else "IEEE Tadeo (predeterminado)"),
+        "qr_base64": qr_base64
     }
 
 
