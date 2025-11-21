@@ -1693,6 +1693,96 @@ async def send_tickets_email_by_event_stream(
     )
 
 
+# ============================================
+# WhatsApp Webhook Endpoints
+# ============================================
+
+@app.get("/webhooks/whatsapp")
+async def whatsapp_webhook_verification(request: Request):
+    """
+    Endpoint de verificación del webhook de WhatsApp.
+    Meta enviará una petición GET con estos parámetros para verificar el webhook.
+    """
+    # Obtener parámetros de la query
+    mode = request.query_params.get("hub.mode")
+    token = request.query_params.get("hub.verify_token")
+    challenge = request.query_params.get("hub.challenge")
+
+    # Token de verificación (configurable en .env)
+    WEBHOOK_VERIFY_TOKEN = os.getenv("WHATSAPP_WEBHOOK_VERIFY_TOKEN", "mi_token_secreto_123")
+
+    # Verificar que el modo sea "subscribe" y el token coincida
+    if mode == "subscribe" and token == WEBHOOK_VERIFY_TOKEN:
+        print(f"[WEBHOOK] Verificación exitosa del webhook de WhatsApp")
+        # Retornar el challenge para completar la verificación
+        return int(challenge)
+    else:
+        print(f"[WEBHOOK] Verificación fallida - Mode: {mode}, Token válido: {token == WEBHOOK_VERIFY_TOKEN}")
+        raise HTTPException(status_code=403, detail="Verificación fallida")
+
+
+@app.post("/webhooks/whatsapp")
+async def whatsapp_webhook_handler(request: Request):
+    """
+    Endpoint que recibe notificaciones de WhatsApp sobre:
+    - Mensajes recibidos
+    - Estados de mensajes enviados (entregado, leído, etc.)
+    - Otros eventos
+    """
+    try:
+        body = await request.json()
+
+        # Logging del evento recibido
+        print(f"[WEBHOOK] Evento de WhatsApp recibido:")
+        print(json.dumps(body, indent=2))
+
+        # Procesar el webhook
+        # Aquí puedes agregar lógica para:
+        # - Guardar estados de mensajes en la base de datos
+        # - Responder a mensajes automáticamente
+        # - Registrar métricas de entrega
+
+        # Por ahora solo loggeamos
+        if "entry" in body:
+            for entry in body["entry"]:
+                if "changes" in entry:
+                    for change in entry["changes"]:
+                        if "value" in change:
+                            value = change["value"]
+
+                            # Mensaje recibido
+                            if "messages" in value:
+                                messages = value["messages"]
+                                for message in messages:
+                                    from_number = message.get("from")
+                                    msg_type = message.get("type")
+                                    msg_id = message.get("id")
+                                    print(f"[WEBHOOK] Mensaje recibido de {from_number} (Tipo: {msg_type}, ID: {msg_id})")
+
+                            # Estado de mensaje
+                            if "statuses" in value:
+                                statuses = value["statuses"]
+                                for status in statuses:
+                                    msg_id = status.get("id")
+                                    status_type = status.get("status")
+                                    recipient = status.get("recipient_id")
+                                    print(f"[WEBHOOK] Estado de mensaje {msg_id}: {status_type} (Destinatario: {recipient})")
+
+        # Siempre retornar 200 OK para confirmar recepción
+        return {"status": "ok"}
+
+    except Exception as e:
+        print(f"[WEBHOOK] Error procesando webhook: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        # Aún así retornar 200 para no causar reintentos innecesarios
+        return {"status": "error", "message": str(e)}
+
+
+# ============================================
+# WhatsApp Sending Endpoints
+# ============================================
+
 @app.post("/tickets/{ticket_id}/send-whatsapp")
 def send_ticket_whatsapp_endpoint(
     ticket_id: int,
