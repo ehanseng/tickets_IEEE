@@ -120,6 +120,8 @@ class Event(Base):
     description = Column(Text, nullable=True)
     location = Column(String, nullable=False)
     event_date = Column(DateTime, nullable=False)
+    event_end_date = Column(DateTime, nullable=True)  # Fecha de finalización del evento
+    event_duration_days = Column(Integer, default=1)  # Duración del evento en días
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)  # Organización del evento
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
@@ -145,9 +147,12 @@ class Ticket(Base):
     event_id = Column(Integer, ForeignKey("events.id"), nullable=False)
     companions = Column(Integer, default=0)  # Cantidad de acompañantes (0-4)
     created_at = Column(DateTime, default=datetime.utcnow)
-    is_used = Column(Boolean, default=False)
-    used_at = Column(DateTime, nullable=True)
+    is_used = Column(Boolean, default=False)  # Deprecated: usar validation_logs para verificar estado
+    used_at = Column(DateTime, nullable=True)  # Deprecated: usar validation_logs para ver última validación
     qr_path = Column(String, nullable=True)  # Ruta del archivo QR generado
+
+    # Configuración de validaciones
+    validation_mode = Column(String, default='once')  # 'once' = 1 vez total, 'daily' = 1 vez por día
 
     # URL única y PIN para acceso del usuario
     unique_url = Column(String, unique=True, index=True, nullable=True)  # URL única del ticket
@@ -156,6 +161,7 @@ class Ticket(Base):
     # Relaciones
     user = relationship("User", back_populates="tickets")
     event = relationship("Event", back_populates="tickets")
+    validations = relationship("ValidationLog", back_populates="ticket")
 
 
 class RoleEnum(enum.Enum):

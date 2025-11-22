@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, Request, File, Uplo
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from datetime import datetime, timedelta
@@ -15,6 +15,13 @@ import schemas
 from database import engine, get_db
 from ticket_service import ticket_service
 from email_service import email_service
+from timezone_utils import (
+    get_bogota_now_naive,
+    format_datetime_bogota,
+    is_same_day_bogota,
+    get_day_start_bogota,
+    get_day_end_bogota
+)
 from auth import (
     authenticate_user,
     create_access_token,
@@ -855,7 +862,7 @@ async def import_users_from_csv(
                     university_id=university_id,
                     is_ieee_member=is_ieee_member,
                     ieee_member_id=ieee_member_id,
-                    created_at=datetime.utcnow()
+                    created_at=get_bogota_now_naive()
                 )
 
                 db.add(new_user)
@@ -1395,6 +1402,11 @@ def reactivate_ticket(
     if not ticket.is_used:
         raise HTTPException(status_code=400, detail="El ticket no ha sido usado aún")
 
+    # Eliminar todos los registros de validación de este ticket
+    db.query(models.ValidationLog).filter(
+        models.ValidationLog.ticket_id == ticket_id
+    ).delete()
+
     # Reactivar el ticket
     ticket.is_used = False
     ticket.used_at = None
@@ -1403,7 +1415,7 @@ def reactivate_ticket(
 
     return {
         "success": True,
-        "message": "Ticket reactivado exitosamente",
+        "message": "Ticket reactivado exitosamente (validaciones eliminadas)",
         "ticket_id": ticket.id,
         "ticket_code": ticket.ticket_code
     }
@@ -1416,7 +1428,7 @@ def update_ticket(
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(require_admin)
 ):
-    """Actualizar un ticket (solo acompañantes por ahora)"""
+    """Actualizar un ticket (acompañantes y modo de validación)"""
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket no encontrado")
@@ -1424,6 +1436,9 @@ def update_ticket(
     # Actualizar solo los campos proporcionados
     if ticket_update.companions is not None:
         ticket.companions = ticket_update.companions
+
+    if ticket_update.validation_mode is not None:
+        ticket.validation_mode = ticket_update.validation_mode
 
     db.commit()
     db.refresh(ticket)
@@ -2496,7 +2511,12 @@ def validate_ticket(
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(require_validator)
 ):
-    """Validar un ticket en la entrada del evento"""
+    """
+    Validar un ticket en la entrada del evento.
+    Soporta validaciones múltiples según la configuración del ticket:
+    - 'once': Ticket puede ser validado una sola vez
+    - 'daily': Ticket puede ser validado una vez por día durante la duración del evento
+    """
     try:
         # Buscar el ticket por código
         ticket = db.query(models.Ticket).filter(
@@ -2509,32 +2529,110 @@ def validate_ticket(
                 message="Ticket no encontrado o inválido"
             )
 
-        # Verificar si ya fue usado
-        if ticket.is_used:
-            return schemas.TicketValidationResponse(
-                valid=False,
-                message=f"Ticket ya fue utilizado el {ticket.used_at.strftime('%d/%m/%Y %H:%M')}"
-            )
-
         # Obtener usuario y evento
         user = db.query(models.User).filter(models.User.id == ticket.user_id).first()
         event = db.query(models.Event).filter(models.Event.id == ticket.event_id).first()
 
-        # Marcar ticket como usado
+        if not user or not event:
+            return schemas.TicketValidationResponse(
+                valid=False,
+                message="Error: Usuario o evento no encontrado"
+            )
+
+        # Obtener todas las validaciones previas del ticket
+        previous_validations = db.query(models.ValidationLog).filter(
+            models.ValidationLog.ticket_id == ticket.id,
+            models.ValidationLog.success == True
+        ).order_by(models.ValidationLog.validated_at.desc()).all()
+
+        validation_count = len(previous_validations)
+        current_time_bogota = get_bogota_now_naive()
+
+        # Lógica de validación según el modo
+        if ticket.validation_mode == 'once':
+            # Modo: Una sola validación
+            if validation_count > 0:
+                last_validation = previous_validations[0]
+                last_validation_time = format_datetime_bogota(
+                    last_validation.validated_at,
+                    '%d/%m/%Y %H:%M'
+                )
+                return schemas.TicketValidationResponse(
+                    valid=False,
+                    message=f"Ticket ya fue utilizado el {last_validation_time}",
+                    validation_count=validation_count
+                )
+
+        elif ticket.validation_mode == 'daily':
+            # Modo: Una validación por día
+            if validation_count > 0:
+                # Verificar si ya hay una validación hoy
+                validations_today = [
+                    v for v in previous_validations
+                    if is_same_day_bogota(v.validated_at, current_time_bogota)
+                ]
+
+                if validations_today:
+                    last_validation_today = validations_today[0]
+                    last_validation_time = format_datetime_bogota(
+                        last_validation_today.validated_at,
+                        '%d/%m/%Y %H:%M'
+                    )
+                    return schemas.TicketValidationResponse(
+                        valid=False,
+                        message=f"Ticket ya fue validado hoy a las {last_validation_time}. En modo diario solo se permite 1 validación por día.",
+                        validation_count=validation_count
+                    )
+
+                # Hay validaciones previas pero no de hoy - es válido
+                # Informar que es una validación adicional
+                is_second_validation = True
+                last_validation = previous_validations[0]
+                last_validation_date = format_datetime_bogota(
+                    last_validation.validated_at,
+                    '%d/%m/%Y'
+                )
+                message = f"Ticket válido - Acceso permitido. Validación #{validation_count + 1}. Última validación: {last_validation_date}"
+
+        # Si llegamos aquí, el ticket es válido
+        # Crear registro de validación
+        validation_log = models.ValidationLog(
+            ticket_id=ticket.id,
+            validator_id=current_user.id,
+            validated_at=current_time_bogota,
+            success=True,
+            notes=f"Validación en modo {ticket.validation_mode}"
+        )
+        db.add(validation_log)
+
+        # Actualizar campos deprecated para compatibilidad
         ticket.is_used = True
-        ticket.used_at = datetime.utcnow()
+        ticket.used_at = current_time_bogota
+
         db.commit()
         db.refresh(ticket)
 
+        # Preparar mensaje apropiado
+        if ticket.validation_mode == 'once':
+            message = "Ticket válido - Acceso permitido"
+        elif ticket.validation_mode == 'daily' and validation_count == 0:
+            message = "Ticket válido - Acceso permitido. Primera validación"
+        else:
+            # Ya definido arriba para validaciones adicionales
+            pass
+
         return schemas.TicketValidationResponse(
             valid=True,
-            message="Ticket válido - Acceso permitido",
+            message=message,
             ticket=schemas.TicketResponse.model_validate(ticket),
             user=schemas.UserResponse.model_validate(user),
-            event=schemas.EventResponse.model_validate(event)
+            event=schemas.EventResponse.model_validate(event),
+            validation_count=validation_count + 1,
+            is_second_validation=(validation_count > 0)
         )
 
     except Exception as e:
+        db.rollback()
         return schemas.TicketValidationResponse(
             valid=False,
             message=f"Error al validar ticket: {str(e)}"
@@ -2586,6 +2684,172 @@ def validate_qr_data(
             valid=False,
             message=f"QR inválido o corrupto: {str(e)}"
         )
+
+
+# ========== ENDPOINTS DE GESTIÓN DE MODO DE VALIDACIÓN ==========
+
+class ChangeValidationModeRequest(BaseModel):
+    """Request para cambiar modo de validación"""
+    validation_mode: str
+    ticket_ids: Optional[List[int]] = None  # IDs específicos de tickets (opcional)
+
+    @validator('validation_mode')
+    def validate_mode(cls, v):
+        if v not in ['once', 'daily']:
+            raise ValueError('El modo de validación debe ser "once" o "daily"')
+        return v
+
+
+@app.post("/events/{event_id}/change-validation-mode")
+def change_event_validation_mode(
+    event_id: int,
+    request: ChangeValidationModeRequest,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Cambiar el modo de validación de todos los tickets de un evento.
+    Útil para eventos de varios días donde se necesita validación diaria.
+    """
+    # Verificar que el evento existe
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    # Si se especificaron ticket_ids, solo cambiar esos tickets
+    if request.ticket_ids:
+        tickets = db.query(models.Ticket).filter(
+            models.Ticket.event_id == event_id,
+            models.Ticket.id.in_(request.ticket_ids)
+        ).all()
+    else:
+        # Cambiar todos los tickets del evento
+        tickets = db.query(models.Ticket).filter(
+            models.Ticket.event_id == event_id
+        ).all()
+
+    if not tickets:
+        raise HTTPException(
+            status_code=404,
+            detail="No se encontraron tickets para este evento"
+        )
+
+    # Actualizar modo de validación
+    updated_count = 0
+    for ticket in tickets:
+        ticket.validation_mode = request.validation_mode
+        updated_count += 1
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"{updated_count} tickets actualizados a modo '{request.validation_mode}'",
+        "event_id": event_id,
+        "event_name": event.name,
+        "updated_count": updated_count,
+        "validation_mode": request.validation_mode
+    }
+
+
+@app.post("/tickets/batch-change-validation-mode")
+def batch_change_validation_mode(
+    request: ChangeValidationModeRequest,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Cambiar el modo de validación de múltiples tickets por sus IDs.
+    """
+    if not request.ticket_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="Debes especificar al menos un ticket_id"
+        )
+
+    tickets = db.query(models.Ticket).filter(
+        models.Ticket.id.in_(request.ticket_ids)
+    ).all()
+
+    if not tickets:
+        raise HTTPException(
+            status_code=404,
+            detail="No se encontraron tickets con los IDs especificados"
+        )
+
+    updated_count = 0
+    for ticket in tickets:
+        ticket.validation_mode = request.validation_mode
+        updated_count += 1
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"{updated_count} tickets actualizados a modo '{request.validation_mode}'",
+        "updated_count": updated_count,
+        "validation_mode": request.validation_mode,
+        "ticket_ids": request.ticket_ids
+    }
+
+
+@app.get("/events/{event_id}/validation-stats")
+def get_event_validation_stats(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Obtener estadísticas de validación para un evento.
+    """
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    # Contar tickets por modo
+    total_tickets = db.query(func.count(models.Ticket.id)).filter(
+        models.Ticket.event_id == event_id
+    ).scalar()
+
+    once_tickets = db.query(func.count(models.Ticket.id)).filter(
+        models.Ticket.event_id == event_id,
+        models.Ticket.validation_mode == 'once'
+    ).scalar()
+
+    daily_tickets = db.query(func.count(models.Ticket.id)).filter(
+        models.Ticket.event_id == event_id,
+        models.Ticket.validation_mode == 'daily'
+    ).scalar()
+
+    # Contar validaciones
+    total_validations = db.query(func.count(models.ValidationLog.id)).join(
+        models.Ticket
+    ).filter(
+        models.Ticket.event_id == event_id,
+        models.ValidationLog.success == True
+    ).scalar()
+
+    validated_tickets = db.query(func.count(func.distinct(models.ValidationLog.ticket_id))).join(
+        models.Ticket
+    ).filter(
+        models.Ticket.event_id == event_id,
+        models.ValidationLog.success == True
+    ).scalar()
+
+    return {
+        "event_id": event_id,
+        "event_name": event.name,
+        "total_tickets": total_tickets,
+        "validation_modes": {
+            "once": once_tickets,
+            "daily": daily_tickets
+        },
+        "validations": {
+            "total_validations": total_validations,
+            "validated_tickets": validated_tickets,
+            "pending_tickets": total_tickets - validated_tickets
+        }
+    }
 
 
 # ========== RUTAS DE ADMINISTRACIÓN ==========
@@ -3031,7 +3295,7 @@ async def bulk_send_messages(
                 )
 
                 recipient.email_sent = success
-                recipient.email_sent_at = datetime.utcnow() if success else None
+                recipient.email_sent_at = get_bogota_now_naive() if success else None
 
                 if success:
                     campaign.emails_sent += 1
@@ -3064,7 +3328,7 @@ async def bulk_send_messages(
 
                     if result.get("success"):
                         recipient.whatsapp_sent = True
-                        recipient.whatsapp_sent_at = datetime.utcnow()
+                        recipient.whatsapp_sent_at = get_bogota_now_naive()
                         recipient.whatsapp_message_id = result.get("message_id")
                         recipient.whatsapp_status = "pending"
                         campaign.whatsapp_sent += 1
@@ -3298,7 +3562,7 @@ async def whatsapp_status_webhook(
 
         # Actualizar estado
         recipient.whatsapp_status = status
-        recipient.whatsapp_status_updated_at = datetime.utcnow()
+        recipient.whatsapp_status_updated_at = get_bogota_now_naive()
 
         # Si el estado es "failed", marcar como no enviado
         if status == "failed":
@@ -3440,6 +3704,26 @@ async def root(request: Request):
     </body>
     </html>
     """
+
+
+# ========== PÁGINAS LEGALES (Para Meta/Facebook) ==========
+
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy_policy(request: Request):
+    """Política de Privacidad"""
+    return templates.TemplateResponse("privacy.html", {"request": request})
+
+
+@app.get("/terms", response_class=HTMLResponse)
+async def terms_of_service(request: Request):
+    """Términos del Servicio"""
+    return templates.TemplateResponse("terms.html", {"request": request})
+
+
+@app.get("/data-deletion", response_class=HTMLResponse)
+async def data_deletion(request: Request):
+    """Instrucciones para Eliminación de Datos"""
+    return templates.TemplateResponse("data_deletion.html", {"request": request})
 
 
 if __name__ == "__main__":

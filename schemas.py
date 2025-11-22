@@ -196,6 +196,8 @@ class EventCreate(BaseModel):
     description: Optional[str] = None
     location: str
     event_date: datetime
+    event_end_date: Optional[datetime] = None  # Fecha de finalización del evento
+    event_duration_days: Optional[int] = 1  # Duración del evento en días
     organization_id: Optional[int] = None  # ID de organización (opcional)
     whatsapp_template: Optional[str] = None  # Template personalizado de WhatsApp
     email_template: Optional[str] = None  # Template personalizado de Email
@@ -209,6 +211,8 @@ class EventUpdate(BaseModel):
     description: Optional[str] = None
     location: Optional[str] = None
     event_date: Optional[datetime] = None
+    event_end_date: Optional[datetime] = None
+    event_duration_days: Optional[int] = None
     organization_id: Optional[int] = None
     is_active: Optional[bool] = None
     whatsapp_template: Optional[str] = None  # Template personalizado de WhatsApp
@@ -224,6 +228,8 @@ class EventResponse(BaseModel):
     description: Optional[str]
     location: str
     event_date: datetime
+    event_end_date: Optional[datetime] = None
+    event_duration_days: int = 1
     organization_id: Optional[int]
     whatsapp_template: Optional[str] = None  # Template personalizado de WhatsApp
     email_template: Optional[str] = None  # Template personalizado de Email
@@ -242,6 +248,7 @@ class TicketCreate(BaseModel):
     user_id: int
     event_id: int
     companions: int = 0  # Cantidad de acompañantes (0-4)
+    validation_mode: Optional[str] = 'once'  # 'once' = 1 vez total, 'daily' = 1 vez por día
 
     @validator('companions')
     def validate_companions(cls, v):
@@ -249,16 +256,42 @@ class TicketCreate(BaseModel):
             raise ValueError('La cantidad de acompañantes debe estar entre 0 y 4')
         return v
 
+    @validator('validation_mode')
+    def validate_validation_mode(cls, v):
+        if v not in ['once', 'daily']:
+            raise ValueError('El modo de validación debe ser "once" o "daily"')
+        return v
+
 
 class TicketUpdate(BaseModel):
     """Schema para actualizar ticket"""
     companions: Optional[int] = None
+    validation_mode: Optional[str] = None
 
     @validator('companions')
     def validate_companions(cls, v):
         if v is not None and (v < 0 or v > 4):
             raise ValueError('La cantidad de acompañantes debe estar entre 0 y 4')
         return v
+
+    @validator('validation_mode')
+    def validate_validation_mode(cls, v):
+        if v is not None and v not in ['once', 'daily']:
+            raise ValueError('El modo de validación debe ser "once" o "daily"')
+        return v
+
+
+class ValidationLogResponse(BaseModel):
+    """Schema para respuesta de log de validación"""
+    id: int
+    ticket_id: int
+    validator_id: int
+    validated_at: datetime
+    success: bool
+    notes: Optional[str]
+
+    class Config:
+        from_attributes = True
 
 
 class TicketResponse(BaseModel):
@@ -268,11 +301,13 @@ class TicketResponse(BaseModel):
     user_id: int
     event_id: int
     companions: int
+    validation_mode: str
     created_at: datetime
     is_used: bool
     used_at: Optional[datetime]
     user: Optional[UserResponse] = None
     event: Optional[EventResponse] = None
+    validations: List[ValidationLogResponse] = []
 
     class Config:
         from_attributes = True
@@ -290,6 +325,8 @@ class TicketValidationResponse(BaseModel):
     ticket: Optional[TicketResponse] = None
     user: Optional[UserResponse] = None
     event: Optional[EventResponse] = None
+    validation_count: Optional[int] = None  # Número de validaciones previas
+    is_second_validation: Optional[bool] = False  # Si es la segunda validación del día
 
 
 # Schemas de Autenticación

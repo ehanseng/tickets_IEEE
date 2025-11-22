@@ -8,6 +8,7 @@ from datetime import datetime
 from cryptography.fernet import Fernet
 from io import BytesIO
 import base64
+from timezone_utils import get_bogota_now_naive
 
 
 class TicketService:
@@ -26,7 +27,7 @@ class TicketService:
 
     def generate_ticket_code(self, user_id: int, event_id: int) -> str:
         """Genera un código único de ticket"""
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = get_bogota_now_naive().isoformat()
         data = f"{user_id}-{event_id}-{timestamp}-{secrets.token_hex(8)}"
         return hashlib.sha256(data.encode()).hexdigest()
 
@@ -45,7 +46,7 @@ class TicketService:
             "user_name": user_name,
             "event_name": event_name,
             "event_date": event_date,
-            "generated_at": datetime.utcnow().isoformat()
+            "generated_at": get_bogota_now_naive().isoformat()
         }
         json_data = json.dumps(data)
         encrypted_data = self.cipher.encrypt(json_data.encode())
@@ -108,6 +109,47 @@ class TicketService:
         img_str = base64.b64encode(buffered.getvalue()).decode()
 
         return f"data:image/png;base64,{img_str}"
+
+    def save_qr_as_file(self, ticket_code: str, user_name: str, event_name: str, event_date: str) -> str:
+        """
+        Genera el QR y lo guarda como archivo en el servidor
+
+        Returns:
+            str: URL pública del QR guardado
+        """
+        import os
+        from pathlib import Path
+
+        # Usar solo el código del ticket
+        qr_data = ticket_code
+
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_H,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(qr_data)
+        qr.make(fit=True)
+
+        img = qr.make_image(fill_color="black", back_color="white")
+
+        # Crear directorio si no existe
+        qr_dir = Path("static/qr_codes")
+        qr_dir.mkdir(parents=True, exist_ok=True)
+
+        # Nombre del archivo basado en ticket_code (limpio para filesystem)
+        safe_filename = ticket_code.replace("/", "-").replace("\\", "-")
+        file_path = qr_dir / f"{safe_filename}.png"
+
+        # Guardar imagen
+        img.save(str(file_path))
+
+        # Obtener BASE_URL del .env
+        base_url = os.getenv("BASE_URL", "http://127.0.0.1:8000")
+
+        # Retornar URL pública
+        return f"{base_url}/static/qr_codes/{safe_filename}.png"
 
 
 # Instancia global del servicio

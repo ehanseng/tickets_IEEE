@@ -7,7 +7,13 @@
     <div class="p-6">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-3xl font-bold tracking-tight">Gestión de Tickets</h2>
-            <div class="flex gap-2">
+            <div class="flex gap-2 flex-wrap">
+                <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-purple-600 text-white hover:bg-purple-700 h-10 px-4 py-2" onclick="openValidationModeModal()">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                    </svg>
+                    Modo de Validación
+                </button>
                 <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:bg-green-700 h-10 px-4 py-2" onclick="openWhatsAppModal()">
                     <svg class="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
@@ -61,15 +67,23 @@
                     <option value="{{ event.id }}">{{ event.name }}</option>
                     {% endfor %}
                 </select>
+                <select id="validationModeFilter" onchange="filterTickets()" class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <option value="all">Todos los modos</option>
+                    <option value="once">Solo modo 'Once'</option>
+                    <option value="daily">Solo modo 'Daily'</option>
+                </select>
             </div>
         </div>
 
         {% if tickets %}
-        <div class="relative w-full overflow-auto">
+        <div class="relative w-full overflow-auto max-h-[calc(100vh-300px)]">
             <table class="w-full caption-bottom text-sm">
-                <thead class="[&_tr]:border-b">
-                    <tr class="border-b transition-colors hover:bg-muted/50">
-                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(0)">
+                <thead class="[&_tr]:border-b sticky top-0 z-10 bg-background">
+                    <tr class="border-b transition-colors bg-background">
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-12">
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded border-gray-300">
+                        </th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(1)">
                             <div class="flex items-center gap-1">
                                 ID
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,7 +91,7 @@
                                 </svg>
                             </div>
                         </th>
-                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(1)">
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(2)">
                             <div class="flex items-center gap-1">
                                 Usuario
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -85,7 +99,7 @@
                                 </svg>
                             </div>
                         </th>
-                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(2)">
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(3)">
                             <div class="flex items-center gap-1">
                                 Evento
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,8 +108,9 @@
                             </div>
                         </th>
                         <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Personas</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Modo</th>
                         <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Código</th>
-                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(5)">
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground" onclick="sortTable(7)">
                             <div class="flex items-center gap-1">
                                 Fecha Creación
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,6 +125,9 @@
                 <tbody class="[&_tr:last-child]:border-0" id="ticketsTableBody">
                     {% for ticket in tickets %}
                     <tr class="border-b transition-colors hover:bg-muted/50" data-event-id="{{ ticket.event_id if ticket.event_id is defined else '' }}">
+                        <td class="p-2 align-middle">
+                            <input type="checkbox" name="ticketSelect" value="{{ ticket.id }}" onchange="updateSelectedCount()" class="rounded border-gray-300">
+                        </td>
                         <td class="p-2 align-middle">{{ ticket.id }}</td>
                         <td class="p-2 align-middle font-medium">{{ ticket.user_name }}</td>
                         <td class="p-2 align-middle">{{ ticket.event_name }}</td>
@@ -130,6 +148,23 @@
                                     {% endif %}
                                 </span>
                             </div>
+                        </td>
+                        <td class="p-2 align-middle">
+                            {% if ticket.validation_mode == 'daily' %}
+                            <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+                                <svg class="mr-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                </svg>
+                                Diario
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-orange-100 text-orange-700 border border-orange-200">
+                                <svg class="mr-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Una vez
+                            </span>
+                            {% endif %}
                         </td>
                         <td class="p-2 align-middle">
                             <div class="flex items-center gap-2">
@@ -1795,6 +1830,7 @@
         const searchInput = document.getElementById('searchInput').value.toLowerCase();
         const statusFilter = document.getElementById('statusFilter').value;
         const eventFilter = document.getElementById('eventFilter').value;
+        const validationModeFilter = document.getElementById('validationModeFilter')?.value || 'all';
         const tbody = document.getElementById('ticketsTableBody');
         const rows = tbody.getElementsByTagName('tr');
 
@@ -1810,15 +1846,20 @@
 
             if (cells.length === 0) continue;
 
-            // Obtener texto de las columnas relevantes
-            const id = cells[0] ? cells[0].textContent.toLowerCase() : '';
-            const userName = cells[1] ? cells[1].textContent.toLowerCase() : '';
-            const eventName = cells[2] ? cells[2].textContent.toLowerCase() : '';
-            const ticketCode = cells[4] ? cells[4].textContent.toLowerCase() : '';
+            // Obtener texto de las columnas relevantes (cells[0] es el checkbox ahora)
+            const id = cells[1] ? cells[1].textContent.toLowerCase() : '';
+            const userName = cells[2] ? cells[2].textContent.toLowerCase() : '';
+            const eventName = cells[3] ? cells[3].textContent.toLowerCase() : '';
+            const ticketCode = cells[6] ? cells[6].textContent.toLowerCase() : '';
 
             // Verificar estado (buscar si tiene el badge de "Usado")
-            const statusCell = cells[6];
+            const statusCell = cells[8];
             const isUsed = statusCell ? statusCell.innerHTML.includes('Usado') : false;
+
+            // Verificar modo de validación (buscar "Diario" o "Una vez")
+            const modeCell = cells[5];
+            const isDaily = modeCell ? modeCell.textContent.includes('Diario') : false;
+            const isOnce = modeCell ? modeCell.textContent.includes('Una vez') : false;
 
             // Obtener event_id del data attribute
             const rowEventId = row.getAttribute('data-event-id');
@@ -1841,8 +1882,14 @@
                 eventFilter === 'all' ||
                 rowEventId === eventFilter;
 
+            // Filtrar por modo de validación
+            const matchesValidationMode =
+                validationModeFilter === 'all' ||
+                (validationModeFilter === 'daily' && isDaily) ||
+                (validationModeFilter === 'once' && isOnce);
+
             // Mostrar u ocultar fila
-            if (matchesSearch && matchesStatusFilter && matchesEventFilter) {
+            if (matchesSearch && matchesStatusFilter && matchesEventFilter && matchesValidationMode) {
                 row.style.display = '';
                 visibleCount++;
             } else {
@@ -1907,13 +1954,13 @@
             let valueB = cellB ? cellB.textContent.trim() : '';
 
             // Para columna ID (numérica)
-            if (columnIndex === 0) {
+            if (columnIndex === 1) {
                 valueA = parseInt(valueA) || 0;
                 valueB = parseInt(valueB) || 0;
             }
 
             // Para columna de fecha (convertir a timestamp para comparar)
-            if (columnIndex === 5) {
+            if (columnIndex === 7) {
                 valueA = valueA ? new Date(valueA.split('/').reverse().join('-')).getTime() : 0;
                 valueB = valueB ? new Date(valueB.split('/').reverse().join('-')).getTime() : 0;
             }
@@ -1931,5 +1978,364 @@
         // Reordenar las filas en el DOM
         rows.forEach(row => tbody.appendChild(row));
     }
+</script>
+
+<!-- Modal para cambiar modo de validación -->
+<!-- AGREGAR ESTE FRAGMENTO AL ARCHIVO tickets.html ANTES DEL TAG </div> FINAL -->
+
+<div id="validationModeModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <h3 class="text-2xl font-semibold leading-none tracking-tight">Gestionar Modo de Validación</h3>
+            <p class="text-sm text-muted-foreground">Cambia cómo se validan los tickets: una vez total o una vez por día</p>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <!-- Selector de método -->
+            <div class="space-y-4">
+                <label class="text-sm font-medium">Selecciona el método de cambio:</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button onclick="selectValidationMethod('event')" id="methodEventBtn" class="p-4 border-2 border-purple-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all text-left">
+                        <div class="flex items-start gap-3">
+                            <svg class="h-6 w-6 text-purple-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            <div class="flex-1">
+                                <div class="font-semibold">Por Evento Completo</div>
+                                <div class="text-sm text-muted-foreground">Cambiar todos los tickets de un evento específico</div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button onclick="selectValidationMethod('selected')" id="methodSelectedBtn" class="p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all text-left">
+                        <div class="flex items-start gap-3">
+                            <svg class="h-6 w-6 text-purple-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                            </svg>
+                            <div class="flex-1">
+                                <div class="font-semibold">Tickets Seleccionados</div>
+                                <div class="text-sm text-muted-foreground">Cambiar solo los tickets que marques en la tabla</div>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Formulario para evento completo -->
+            <div id="eventMethodForm" class="space-y-4">
+                <div>
+                    <label class="text-sm font-medium">Selecciona el evento:</label>
+                    <select id="validationEventSelect" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring mt-2">
+                        <option value="">-- Selecciona un evento --</option>
+                        {% for event in events %}
+                        <option value="{{ event.id }}">{{ event.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Estadísticas del evento -->
+                <div id="eventStats" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                    <div class="font-semibold text-blue-900">Estadísticas del Evento</div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        <div>
+                            <div class="text-muted-foreground">Total Tickets</div>
+                            <div class="text-lg font-bold text-blue-700" id="statTotal">-</div>
+                        </div>
+                        <div>
+                            <div class="text-muted-foreground">Modo 'Once'</div>
+                            <div class="text-lg font-bold text-orange-600" id="statOnce">-</div>
+                        </div>
+                        <div>
+                            <div class="text-muted-foreground">Modo 'Daily'</div>
+                            <div class="text-lg font-bold text-green-600" id="statDaily">-</div>
+                        </div>
+                        <div>
+                            <div class="text-muted-foreground">Validados</div>
+                            <div class="text-lg font-bold text-purple-600" id="statValidated">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información para tickets seleccionados -->
+            <div id="selectedMethodInfo" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div class="flex items-start gap-2">
+                    <svg class="h-5 w-5 text-yellow-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div class="flex-1">
+                        <div class="font-semibold text-yellow-900">Marca los tickets en la tabla</div>
+                        <div class="text-sm text-yellow-700">Usa los checkboxes en la tabla principal para seleccionar los tickets que deseas modificar</div>
+                        <div class="mt-2 font-medium text-yellow-900">Tickets seleccionados: <span id="selectedCount">0</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Selector de modo de validación -->
+            <div class="space-y-3">
+                <label class="text-sm font-medium">Nuevo modo de validación:</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button onclick="selectValidationMode('once')" id="modeOnceBtn" class="p-4 border-2 border-orange-200 bg-orange-50 rounded-lg hover:border-orange-500 transition-all text-left">
+                        <div class="flex items-start gap-3">
+                            <svg class="h-6 w-6 text-orange-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div class="flex-1">
+                                <div class="font-semibold text-orange-900">Modo 'Once' (Una vez)</div>
+                                <div class="text-sm text-orange-700">El ticket solo se puede validar UNA VEZ durante todo el evento</div>
+                                <div class="text-xs text-orange-600 mt-1">✓ Ideal para eventos de 1 día o acceso único</div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button onclick="selectValidationMode('daily')" id="modeDailyBtn" class="p-4 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all text-left">
+                        <div class="flex items-start gap-3">
+                            <svg class="h-6 w-6 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                            </svg>
+                            <div class="flex-1">
+                                <div class="font-semibold text-green-900">Modo 'Daily' (Diario)</div>
+                                <div class="text-sm text-green-700">El ticket se puede validar UNA VEZ POR DÍA durante el evento</div>
+                                <div class="text-xs text-green-600 mt-1">✓ Ideal para conferencias multi-día, talleres de varios días</div>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mensaje de confirmación -->
+            <div id="validationMessage" class="hidden"></div>
+        </div>
+
+        <div class="flex items-center p-6 border-t gap-2">
+            <button type="button" onclick="closeValidationModeModal()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
+                Cancelar
+            </button>
+            <button id="applyValidationModeBtn" onclick="applyValidationMode()" disabled class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-purple-600 text-white hover:bg-purple-700 h-10 px-4 py-2">
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Aplicar Cambios
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales para el modal de validación
+let validationMethod = 'event'; // 'event' o 'selected'
+let validationMode = 'once'; // 'once' o 'daily'
+let selectedTicketIds = [];
+
+function openValidationModeModal() {
+    document.getElementById('validationModeModal').classList.remove('hidden');
+    validationMethod = 'event';
+    validationMode = 'once';
+    selectValidationMethod('event');
+    selectValidationMode('once');
+    updateApplyButton();
+}
+
+function closeValidationModeModal() {
+    document.getElementById('validationModeModal').classList.add('hidden');
+    document.getElementById('validationMessage').classList.add('hidden');
+    document.getElementById('eventStats').classList.add('hidden');
+}
+
+function selectValidationMethod(method) {
+    validationMethod = method;
+
+    // Actualizar botones de método
+    document.getElementById('methodEventBtn').className = method === 'event'
+        ? 'p-4 border-2 border-purple-500 bg-purple-50 rounded-lg transition-all text-left'
+        : 'p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all text-left';
+
+    document.getElementById('methodSelectedBtn').className = method === 'selected'
+        ? 'p-4 border-2 border-purple-500 bg-purple-50 rounded-lg transition-all text-left'
+        : 'p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all text-left';
+
+    // Mostrar/ocultar formularios
+    if (method === 'event') {
+        document.getElementById('eventMethodForm').classList.remove('hidden');
+        document.getElementById('selectedMethodInfo').classList.add('hidden');
+    } else {
+        document.getElementById('eventMethodForm').classList.add('hidden');
+        document.getElementById('selectedMethodInfo').classList.remove('hidden');
+        updateSelectedCount();
+    }
+
+    updateApplyButton();
+}
+
+function selectValidationMode(mode) {
+    validationMode = mode;
+
+    // Actualizar botones de modo
+    document.getElementById('modeOnceBtn').className = mode === 'once'
+        ? 'p-4 border-2 border-orange-500 bg-orange-50 rounded-lg transition-all text-left'
+        : 'p-4 border-2 border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all text-left';
+
+    document.getElementById('modeDailyBtn').className = mode === 'daily'
+        ? 'p-4 border-2 border-green-500 bg-green-50 rounded-lg transition-all text-left'
+        : 'p-4 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all text-left';
+
+    updateApplyButton();
+}
+
+function updateSelectedCount() {
+    selectedTicketIds = Array.from(document.querySelectorAll('input[name="ticketSelect"]:checked'))
+        .map(cb => parseInt(cb.value));
+    document.getElementById('selectedCount').textContent = selectedTicketIds.length;
+    updateApplyButton();
+}
+
+function updateApplyButton() {
+    const btn = document.getElementById('applyValidationModeBtn');
+    let enabled = false;
+
+    if (validationMethod === 'event') {
+        const eventId = document.getElementById('validationEventSelect').value;
+        enabled = eventId !== '';
+    } else if (validationMethod === 'selected') {
+        enabled = selectedTicketIds.length > 0;
+    }
+
+    btn.disabled = !enabled;
+}
+
+// Cargar estadísticas cuando se selecciona un evento
+document.getElementById('validationEventSelect')?.addEventListener('change', async function() {
+    const eventId = this.value;
+    if (!eventId) {
+        document.getElementById('eventStats').classList.add('hidden');
+        updateApplyButton();
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('access_token');
+        const response = await fetch(`/events/${eventId}/validation-stats`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('statTotal').textContent = data.total_tickets;
+            document.getElementById('statOnce').textContent = data.validation_modes.once;
+            document.getElementById('statDaily').textContent = data.validation_modes.daily;
+            document.getElementById('statValidated').textContent = data.validations.validated_tickets;
+            document.getElementById('eventStats').classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Error loading event stats:', error);
+    }
+
+    updateApplyButton();
+});
+
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll').checked;
+    document.querySelectorAll('input[name="ticketSelect"]').forEach(cb => {
+        cb.checked = selectAll;
+    });
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const selected = document.querySelectorAll('input[name="ticketSelect"]:checked');
+    const count = selected.length;
+
+    // Actualizar el array de IDs seleccionados
+    selectedTicketIds = Array.from(selected).map(cb => parseInt(cb.value));
+
+    // Actualizar el contador en el modal
+    const countElement = document.getElementById('selectedCount');
+    if (countElement) {
+        countElement.textContent = count;
+    }
+
+    // Actualizar el botón de aplicar si el método es 'selected'
+    if (validationMethod === 'selected') {
+        updateApplyButton();
+    }
+}
+
+async function applyValidationMode() {
+    const btn = document.getElementById('applyValidationModeBtn');
+    const messageDiv = document.getElementById('validationMessage');
+
+    btn.disabled = true;
+    messageDiv.classList.remove('hidden');
+    messageDiv.innerHTML = `
+        <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+            <div class="flex items-center gap-2">
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700"></div>
+                <span>Aplicando cambios...</span>
+            </div>
+        </div>
+    `;
+
+    try {
+        const token = localStorage.getItem('access_token');
+        let url, body;
+
+        if (validationMethod === 'event') {
+            const eventId = document.getElementById('validationEventSelect').value;
+            url = `/events/${eventId}/change-validation-mode`;
+            body = { validation_mode: validationMode };
+        } else {
+            url = '/tickets/batch-change-validation-mode';
+            body = {
+                validation_mode: validationMode,
+                ticket_ids: selectedTicketIds
+            };
+        }
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            messageDiv.innerHTML = `
+                <div class="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+                    <div class="font-semibold mb-2">✅ ${data.message}</div>
+                    <div class="text-xs space-y-1">
+                        <div>• ${data.updated_count} tickets actualizados</div>
+                        <div>• Nuevo modo: <strong>${data.validation_mode}</strong></div>
+                    </div>
+                </div>
+            `;
+
+            // Recargar la página después de 2 segundos
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            messageDiv.innerHTML = `
+                <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    Error: ${data.detail || 'No se pudieron aplicar los cambios'}
+                </div>
+            `;
+            btn.disabled = false;
+        }
+    } catch (error) {
+        messageDiv.innerHTML = `
+            <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                Error: ${error.message}
+            </div>
+        `;
+        btn.disabled = false;
+    }
+}
+
 </script>
 {% endblock %}
