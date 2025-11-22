@@ -51,6 +51,27 @@
         <div id="validationHistory"></div>
     </div>
 </div>
+
+<!-- Historial completo por día (Acordeón) -->
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm mt-6">
+    <div class="p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-2xl font-bold tracking-tight">Mi Historial de Validaciones</h2>
+            <button onclick="loadMyValidationsHistory()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2">
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Actualizar
+            </button>
+        </div>
+
+        <!-- Estadísticas -->
+        <div id="validationStats" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"></div>
+
+        <!-- Acordeón de validaciones por día -->
+        <div id="validationHistoryAccordion" class="space-y-2"></div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_css %}
@@ -125,6 +146,51 @@
         #reader video {
             max-height: 250px;
         }
+    }
+
+    /* Estilos para el acordeón */
+    .accordion-item {
+        border: 1px solid hsl(var(--border));
+        border-radius: 0.5rem;
+        overflow: hidden;
+        transition: all 0.2s;
+    }
+
+    .accordion-item:hover {
+        border-color: hsl(var(--primary));
+    }
+
+    .accordion-header {
+        cursor: pointer;
+        padding: 1rem;
+        background: hsl(var(--card));
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background 0.2s;
+    }
+
+    .accordion-header:hover {
+        background: hsl(var(--muted));
+    }
+
+    .accordion-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+    }
+
+    .accordion-content.open {
+        max-height: 2000px;
+        transition: max-height 0.5s ease-in;
+    }
+
+    .accordion-chevron {
+        transition: transform 0.3s;
+    }
+
+    .accordion-chevron.open {
+        transform: rotate(180deg);
     }
 </style>
 {% endblock %}
@@ -381,6 +447,131 @@
         if (html5QrCode && html5QrCode.isScanning) {
             html5QrCode.stop();
         }
+    });
+
+    // ===== Funciones para historial completo de validaciones =====
+
+    async function loadMyValidationsHistory() {
+        const token = localStorage.getItem('access_token');
+
+        try {
+            const response = await fetch('/validator/my-validations-history', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al cargar historial');
+            }
+
+            const data = await response.json();
+            displayValidationStats(data);
+            displayValidationAccordion(data);
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('validationHistoryAccordion').innerHTML =
+                '<p class="text-center text-red-500 py-4">Error al cargar el historial de validaciones</p>';
+        }
+    }
+
+    function displayValidationStats(data) {
+        const statsHTML = `
+            <div class="rounded-lg border bg-card p-4">
+                <div class="text-sm font-medium text-muted-foreground">Total Validaciones</div>
+                <div class="text-2xl font-bold text-primary mt-1">${data.total_validations}</div>
+            </div>
+            <div class="rounded-lg border bg-card p-4">
+                <div class="text-sm font-medium text-muted-foreground">Tickets Únicos</div>
+                <div class="text-2xl font-bold text-emerald-600 mt-1">${data.unique_tickets}</div>
+            </div>
+            <div class="rounded-lg border bg-card p-4">
+                <div class="text-sm font-medium text-muted-foreground">Eventos</div>
+                <div class="text-2xl font-bold text-blue-600 mt-1">${data.unique_events}</div>
+            </div>
+        `;
+        document.getElementById('validationStats').innerHTML = statsHTML;
+    }
+
+    function displayValidationAccordion(data) {
+        if (data.validations_by_day.length === 0) {
+            document.getElementById('validationHistoryAccordion').innerHTML =
+                '<p class="text-center text-muted-foreground py-8">No has realizado validaciones aún</p>';
+            return;
+        }
+
+        const accordionHTML = data.validations_by_day.map((dayGroup, index) => {
+            const dayId = `day-${index}`;
+
+            const validationsHTML = dayGroup.validations.map(val => {
+                const modeBadge = val.validation_mode === 'daily'
+                    ? '<span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-green-100 text-green-700 border border-green-200">Diario</span>'
+                    : '<span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-orange-100 text-orange-700 border border-orange-200">Una vez</span>';
+
+                const totalPeople = 1 + val.companions;
+
+                return `
+                    <div class="flex justify-between items-start p-3 border-b border-border last:border-b-0 hover:bg-muted/50">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <p class="font-semibold text-sm">${val.user_name}</p>
+                                ${modeBadge}
+                            </div>
+                            <p class="text-xs text-muted-foreground mb-1">${val.event_name}</p>
+                            <div class="flex items-center gap-3 text-xs text-muted-foreground">
+                                <span>
+                                    <svg class="inline h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    ${val.validated_at}
+                                </span>
+                                <span>
+                                    <svg class="inline h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                    </svg>
+                                    ${totalPeople} persona${totalPeople !== 1 ? 's' : ''}
+                                </span>
+                                ${val.validation_count > 1 ? `<span class="text-blue-600 font-medium">Validación #${val.validation_count}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleAccordion('${dayId}')">
+                        <div>
+                            <h3 class="font-semibold text-base">${dayGroup.date}</h3>
+                            <p class="text-sm text-muted-foreground mt-1">${dayGroup.count} validación${dayGroup.count !== 1 ? 'es' : ''}</p>
+                        </div>
+                        <svg id="chevron-${dayId}" class="accordion-chevron h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </div>
+                    <div id="${dayId}" class="accordion-content">
+                        <div class="bg-muted/30">
+                            ${validationsHTML}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        document.getElementById('validationHistoryAccordion').innerHTML = accordionHTML;
+    }
+
+    function toggleAccordion(dayId) {
+        const content = document.getElementById(dayId);
+        const chevron = document.getElementById(`chevron-${dayId}`);
+
+        content.classList.toggle('open');
+        chevron.classList.toggle('open');
+    }
+
+    // Cargar historial al cargar la página
+    window.addEventListener('load', () => {
+        loadMyValidationsHistory();
     });
 </script>
 {% endblock %}

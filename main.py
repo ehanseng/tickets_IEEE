@@ -2852,6 +2852,172 @@ def get_event_validation_stats(
     }
 
 
+@app.get("/events/{event_id}/validation-history")
+def get_event_validation_history(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Obtener historial completo de validaciones para un evento, agrupado por día.
+    """
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    # Obtener todas las validaciones exitosas del evento con información completa
+    validations = db.query(
+        models.ValidationLog,
+        models.Ticket,
+        models.User,
+        models.AdminUser
+    ).join(
+        models.Ticket, models.ValidationLog.ticket_id == models.Ticket.id
+    ).join(
+        models.User, models.Ticket.user_id == models.User.id
+    ).join(
+        models.AdminUser, models.ValidationLog.validator_id == models.AdminUser.id
+    ).filter(
+        models.Ticket.event_id == event_id,
+        models.ValidationLog.success == True
+    ).order_by(
+        models.ValidationLog.validated_at.desc()
+    ).all()
+
+    # Agrupar validaciones por día
+    from collections import defaultdict
+    from timezone_utils import format_datetime_bogota, get_date_only_bogota
+
+    validations_by_day = defaultdict(list)
+
+    for val_log, ticket, user, validator in validations:
+        # Obtener fecha en formato legible
+        date_str = format_datetime_bogota(val_log.validated_at, '%A %d de %B, %Y')
+
+        # Contar cuántas validaciones tiene este ticket
+        ticket_validation_count = db.query(func.count(models.ValidationLog.id)).filter(
+            models.ValidationLog.ticket_id == ticket.id,
+            models.ValidationLog.success == True,
+            models.ValidationLog.id <= val_log.id
+        ).scalar()
+
+        validations_by_day[date_str].append({
+            "validation_id": val_log.id,
+            "ticket_id": ticket.id,
+            "user_name": user.name,
+            "user_email": user.email,
+            "validation_mode": ticket.validation_mode,
+            "validator_name": validator.full_name or validator.username,
+            "validated_at": val_log.validated_at.isoformat(),
+            "notes": val_log.notes,
+            "validation_count": ticket_validation_count
+        })
+
+    # Convertir a lista ordenada por fecha (más reciente primero)
+    validations_list = [
+        {
+            "date": date,
+            "validations": validations
+        }
+        for date, validations in sorted(validations_by_day.items(), reverse=True)
+    ]
+
+    # Estadísticas generales
+    total_validations = len(validations)
+    unique_tickets = len(set(val_log.ticket_id for val_log, _, _, _ in validations))
+
+    return {
+        "event_id": event_id,
+        "event_name": event.name,
+        "total_validations": total_validations,
+        "unique_tickets": unique_tickets,
+        "validations_by_day": validations_list
+    }
+
+
+@app.get("/validator/my-validations-history")
+def get_my_validations_history(
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(get_current_user)
+):
+    """
+    Obtener historial de validaciones realizadas por el usuario actual, agrupadas por día.
+    Solo incluye las validaciones realizadas por el validador logueado.
+    """
+    # Obtener todas las validaciones exitosas del usuario actual
+    validations = db.query(
+        models.ValidationLog,
+        models.Ticket,
+        models.User,
+        models.Event
+    ).join(
+        models.Ticket, models.ValidationLog.ticket_id == models.Ticket.id
+    ).join(
+        models.User, models.Ticket.user_id == models.User.id
+    ).join(
+        models.Event, models.Ticket.event_id == models.Event.id
+    ).filter(
+        models.ValidationLog.validator_id == current_user.id,
+        models.ValidationLog.success == True
+    ).order_by(
+        models.ValidationLog.validated_at.desc()
+    ).all()
+
+    # Agrupar validaciones por día
+    from collections import defaultdict
+    from timezone_utils import format_datetime_bogota
+
+    validations_by_day = defaultdict(list)
+
+    for val_log, ticket, user, event in validations:
+        # Obtener fecha en formato legible
+        date_str = format_datetime_bogota(val_log.validated_at, '%A %d de %B, %Y')
+
+        # Contar cuántas validaciones tiene este ticket
+        ticket_validation_count = db.query(func.count(models.ValidationLog.id)).filter(
+            models.ValidationLog.ticket_id == ticket.id,
+            models.ValidationLog.success == True,
+            models.ValidationLog.id <= val_log.id
+        ).scalar()
+
+        validations_by_day[date_str].append({
+            "validation_id": val_log.id,
+            "ticket_id": ticket.id,
+            "ticket_code": ticket.ticket_code,
+            "user_name": user.name,
+            "user_email": user.email,
+            "event_name": event.name,
+            "event_id": event.id,
+            "validation_mode": ticket.validation_mode,
+            "validated_at": format_datetime_bogota(val_log.validated_at, '%H:%M:%S'),
+            "validation_count": ticket_validation_count,
+            "companions": ticket.companions
+        })
+
+    # Convertir a lista ordenada por fecha (más reciente primero)
+    validations_list = [
+        {
+            "date": date,
+            "count": len(validations),
+            "validations": validations
+        }
+        for date, validations in sorted(validations_by_day.items(), reverse=True)
+    ]
+
+    # Estadísticas generales
+    total_validations = len(validations)
+    unique_tickets = len(set(val_log.ticket_id for val_log, _, _, _ in validations))
+    unique_events = len(set(event.id for _, _, _, event in validations))
+
+    return {
+        "validator_name": current_user.full_name or current_user.username,
+        "total_validations": total_validations,
+        "unique_tickets": unique_tickets,
+        "unique_events": unique_events,
+        "validations_by_day": validations_list
+    }
+
+
 # ========== RUTAS DE ADMINISTRACIÓN ==========
 
 @app.get("/login", response_class=HTMLResponse)
