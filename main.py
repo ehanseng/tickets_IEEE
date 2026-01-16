@@ -1744,6 +1744,7 @@ async def whatsapp_webhook_handler(request: Request):
     - Estados de mensajes enviados (entregado, leído, etc.)
     - Otros eventos
     """
+    db = next(get_db())
     try:
         body = await request.json()
 
@@ -1751,13 +1752,6 @@ async def whatsapp_webhook_handler(request: Request):
         print(f"[WEBHOOK] Evento de WhatsApp recibido:")
         print(json.dumps(body, indent=2))
 
-        # Procesar el webhook
-        # Aquí puedes agregar lógica para:
-        # - Guardar estados de mensajes en la base de datos
-        # - Responder a mensajes automáticamente
-        # - Registrar métricas de entrega
-
-        # Por ahora solo loggeamos
         if "entry" in body:
             for entry in body["entry"]:
                 if "changes" in entry:
@@ -1765,33 +1759,127 @@ async def whatsapp_webhook_handler(request: Request):
                         if "value" in change:
                             value = change["value"]
 
-                            # Mensaje recibido
+                            # Procesar mensajes recibidos
                             if "messages" in value:
+                                contacts = value.get("contacts", [])
                                 messages = value["messages"]
+
                                 for message in messages:
                                     from_number = message.get("from")
                                     msg_type = message.get("type")
                                     msg_id = message.get("id")
-                                    print(f"[WEBHOOK] Mensaje recibido de {from_number} (Tipo: {msg_type}, ID: {msg_id})")
+                                    timestamp = message.get("timestamp")
 
-                            # Estado de mensaje
+                                    # Obtener nombre del contacto
+                                    contact_name = None
+                                    for contact in contacts:
+                                        if contact.get("wa_id") == from_number:
+                                            contact_name = contact.get("profile", {}).get("name")
+                                            break
+
+                                    print(f"[WEBHOOK] Mensaje de {from_number} ({contact_name}): {msg_type}")
+
+                                    # Verificar si el mensaje ya existe
+                                    existing = db.query(models.WhatsAppMessage).filter(
+                                        models.WhatsAppMessage.wa_message_id == msg_id
+                                    ).first()
+
+                                    if not existing:
+                                        # Extraer contenido según tipo
+                                        text_body = None
+                                        media_id = None
+                                        caption = None
+
+                                        if msg_type == "text":
+                                            text_body = message.get("text", {}).get("body")
+                                        elif msg_type in ["image", "video", "audio", "document", "sticker"]:
+                                            media_data = message.get(msg_type, {})
+                                            media_id = media_data.get("id")
+                                            caption = media_data.get("caption")
+                                        elif msg_type == "location":
+                                            loc = message.get("location", {})
+                                            text_body = f"Ubicación: {loc.get('latitude')}, {loc.get('longitude')}"
+
+                                        # Crear mensaje en BD
+                                        new_message = models.WhatsAppMessage(
+                                            wa_message_id=msg_id,
+                                            from_number=from_number,
+                                            from_name=contact_name,
+                                            message_type=msg_type,
+                                            text_body=text_body,
+                                            media_id=media_id,
+                                            caption=caption,
+                                            context_message_id=message.get("context", {}).get("id"),
+                                            is_forwarded=message.get("context", {}).get("forwarded", False),
+                                            timestamp=datetime.fromtimestamp(int(timestamp)) if timestamp else datetime.utcnow(),
+                                            raw_payload=json.dumps(message)
+                                        )
+                                        db.add(new_message)
+
+                                        # Actualizar o crear conversación
+                                        conversation = db.query(models.WhatsAppConversation).filter(
+                                            models.WhatsAppConversation.phone_number == from_number
+                                        ).first()
+
+                                        if conversation:
+                                            conversation.last_message_at = datetime.utcnow()
+                                            conversation.last_user_message_at = datetime.utcnow()
+                                            conversation.unread_count += 1
+                                            conversation.is_active = True
+                                            if contact_name and not conversation.contact_name:
+                                                conversation.contact_name = contact_name
+                                        else:
+                                            # Buscar usuario por teléfono
+                                            user = db.query(models.User).filter(
+                                                models.User.phone == from_number[-10:]  # Últimos 10 dígitos
+                                            ).first()
+
+                                            conversation = models.WhatsAppConversation(
+                                                phone_number=from_number,
+                                                contact_name=contact_name,
+                                                user_id=user.id if user else None,
+                                                last_message_at=datetime.utcnow(),
+                                                last_user_message_at=datetime.utcnow(),
+                                                unread_count=1,
+                                                is_active=True
+                                            )
+                                            db.add(conversation)
+
+                                        db.commit()
+
+                            # Procesar estados de mensajes
                             if "statuses" in value:
                                 statuses = value["statuses"]
-                                for status in statuses:
-                                    msg_id = status.get("id")
-                                    status_type = status.get("status")
-                                    recipient = status.get("recipient_id")
-                                    print(f"[WEBHOOK] Estado de mensaje {msg_id}: {status_type} (Destinatario: {recipient})")
+                                for status_data in statuses:
+                                    msg_id = status_data.get("id")
+                                    status_type = status_data.get("status")
+                                    recipient = status_data.get("recipient_id")
+                                    print(f"[WEBHOOK] Estado: {msg_id} -> {status_type}")
 
-        # Siempre retornar 200 OK para confirmar recepción
+                                    # Actualizar MessageRecipient si existe
+                                    recipient_record = db.query(models.MessageRecipient).filter(
+                                        models.MessageRecipient.whatsapp_message_id == msg_id
+                                    ).first()
+
+                                    if recipient_record:
+                                        recipient_record.whatsapp_status = status_type
+                                        recipient_record.whatsapp_status_updated_at = datetime.utcnow()
+                                        if status_type == "failed":
+                                            recipient_record.whatsapp_sent = False
+                                            error_info = status_data.get("errors", [{}])[0]
+                                            recipient_record.whatsapp_error = error_info.get("message", "Error desconocido")
+                                        db.commit()
+
         return {"status": "ok"}
 
     except Exception as e:
         print(f"[WEBHOOK] Error procesando webhook: {str(e)}")
         import traceback
         traceback.print_exc()
-        # Aún así retornar 200 para no causar reintentos innecesarios
+        db.rollback()
         return {"status": "error", "message": str(e)}
+    finally:
+        db.close()
 
 
 # ============================================
@@ -3070,19 +3158,48 @@ async def admin_dashboard(
     total_tickets = db.query(func.count(models.Ticket.id)).scalar()
     tickets_used = db.query(func.count(models.Ticket.id)).filter(models.Ticket.is_used == True).scalar()
 
-    # Obtener eventos activos con conteo de tickets
+    # Obtener eventos activos (futuros o en curso) con conteo de tickets
+    from datetime import datetime
+    from sqlalchemy import or_
+    now = datetime.now()
+
     active_events = db.query(
         models.Event,
         func.count(models.Ticket.id).label('ticket_count')
     ).outerjoin(models.Ticket).filter(
-        models.Event.is_active == True
-    ).group_by(models.Event.id).limit(5).all()
+        models.Event.is_active == True,
+        # Evento futuro O evento de varios días aún en curso
+        or_(
+            models.Event.event_date >= now,
+            models.Event.event_end_date >= now
+        )
+    ).group_by(models.Event.id).order_by(models.Event.event_date.asc()).limit(4).all()
 
     active_events_list = []
     for event, ticket_count in active_events:
         event_dict = event.__dict__.copy()
         event_dict['ticket_count'] = ticket_count
         active_events_list.append(type('Event', (), event_dict))
+
+    # Obtener eventos pasados (últimos 4) con conteo de tickets
+    from sqlalchemy import and_
+    past_events = db.query(
+        models.Event,
+        func.count(models.Ticket.id).label('ticket_count')
+    ).outerjoin(models.Ticket).filter(
+        models.Event.event_date < now,
+        # Si tiene fecha de fin, también debe haber pasado
+        or_(
+            models.Event.event_end_date == None,
+            models.Event.event_end_date < now
+        )
+    ).group_by(models.Event.id).order_by(models.Event.event_date.desc()).limit(4).all()
+
+    past_events_list = []
+    for event, ticket_count in past_events:
+        event_dict = event.__dict__.copy()
+        event_dict['ticket_count'] = ticket_count
+        past_events_list.append(type('Event', (), event_dict))
 
     # Obtener distribución por universidad
     university_stats = db.query(
@@ -3140,6 +3257,7 @@ async def admin_dashboard(
         "request": request,
         "stats": stats,
         "active_events": active_events_list,
+        "past_events": past_events_list,
         "university_stats": university_stats_list
     })
 
@@ -3948,29 +4066,521 @@ def get_whatsapp_status(
 def restart_whatsapp(
     current_user: models.AdminUser = Depends(require_admin)
 ):
-    """Reiniciar el servicio de WhatsApp y generar nuevo QR (cierra sesión actual)"""
+    """Verificar conexion con la API de WhatsApp (Meta Cloud API no requiere reinicio)"""
     try:
         from whatsapp_client import WhatsAppClient
 
         client = WhatsAppClient()
-        # Usar logout para cerrar sesión y generar nuevo QR
-        result = client.logout()
+        result = client.restart()
 
         if result.get("success"):
             return {
                 "success": True,
-                "message": "Sesión cerrada exitosamente. Escanea el nuevo código QR con el número deseado.",
+                "message": result.get("message", "API de WhatsApp funcionando correctamente"),
                 "details": result
             }
         else:
             raise HTTPException(
                 status_code=500,
-                detail=f"Error al reiniciar: {result.get('error', 'Error desconocido')}"
+                detail=f"Error al verificar: {result.get('error', 'Error desconocido')}"
             )
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error al reiniciar WhatsApp: {str(e)}"
+            detail=f"Error al verificar WhatsApp: {str(e)}"
         )
- 
+
+
+class TestMessageRequest(BaseModel):
+    phone: str
+    message: str
+
+
+@app.post("/whatsapp/test-message")
+def send_whatsapp_test_message(
+    request: TestMessageRequest,
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Enviar mensaje de prueba por WhatsApp"""
+    try:
+        from whatsapp_client import WhatsAppClient
+
+        client = WhatsAppClient()
+
+        if not client.is_ready():
+            raise HTTPException(
+                status_code=503,
+                detail="WhatsApp API no esta configurada correctamente"
+            )
+
+        result = client.send_message(request.phone, request.message)
+
+        if result.get("success"):
+            return {
+                "success": True,
+                "message_id": result.get("messageId"),
+                "message": "Mensaje enviado exitosamente"
+            }
+        else:
+            return {
+                "success": False,
+                "error": result.get("error", "Error desconocido")
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al enviar mensaje: {str(e)}"
+        )
+
+
+# ============================================
+# WhatsApp Templates Management
+# ============================================
+
+@app.post("/whatsapp/upload-template-image")
+def upload_template_image(
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Sube una imagen para usar como ejemplo en un template de WhatsApp.
+    La imagen debe enviarse como base64 en el body.
+    Devuelve la URL pública de la imagen.
+    """
+    # Este endpoint se maneja diferente - recibe JSON con la imagen base64
+    pass  # Se implementará como endpoint separado
+
+
+class UploadImageRequest(BaseModel):
+    image_base64: str
+    filename: Optional[str] = "template_image.jpg"
+
+
+@app.post("/whatsapp/upload-image")
+def upload_whatsapp_image(
+    request: UploadImageRequest,
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Sube una imagen y devuelve su URL pública para usar en templates.
+    Meta requiere URLs HTTPS públicas para ejemplos de templates con imagen.
+    """
+    import base64
+    import uuid
+    from pathlib import Path
+
+    try:
+        # Limpiar base64
+        image_data = request.image_base64
+        if "base64," in image_data:
+            image_data = image_data.split("base64,")[1]
+
+        # Decodificar
+        image_bytes = base64.b64decode(image_data)
+
+        # Generar nombre único
+        ext = ".jpg"
+        if request.filename and request.filename.lower().endswith(".png"):
+            ext = ".png"
+        unique_filename = f"template_{uuid.uuid4().hex[:12]}{ext}"
+
+        # Guardar en static/whatsapp_images/
+        static_path = Path("static/whatsapp_images")
+        static_path.mkdir(parents=True, exist_ok=True)
+
+        file_path = static_path / unique_filename
+        with open(file_path, "wb") as f:
+            f.write(image_bytes)
+
+        # Construir URL pública
+        # Usar el dominio público configurado
+        base_url = os.getenv("PUBLIC_URL", "https://ticket.ieeetadeo.org")
+        public_url = f"{base_url}/static/whatsapp_images/{unique_filename}"
+
+        print(f"[TEMPLATE IMAGE] Guardada: {file_path} -> {public_url}")
+
+        return {
+            "success": True,
+            "url": public_url,
+            "filename": unique_filename
+        }
+
+    except Exception as e:
+        print(f"[ERROR] upload_whatsapp_image: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/whatsapp/templates")
+def get_whatsapp_templates(
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Obtener todos los templates de WhatsApp de Meta"""
+    try:
+        from whatsapp_client import WhatsAppClient
+        client = WhatsAppClient()
+        result = client.get_templates()
+
+        if result.get("success"):
+            return {
+                "success": True,
+                "templates": result.get("templates", [])
+            }
+        else:
+            return {
+                "success": False,
+                "error": result.get("error", "Error desconocido")
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class CreateTemplateRequest(BaseModel):
+    name: str
+    display_name: str
+    category: str = "UTILITY"
+    language: str = "es_MX"
+    body_text: Optional[str] = None
+    header_type: Optional[str] = None
+    header_text: Optional[str] = None
+    header_image_base64: Optional[str] = None  # Imagen en base64 para header IMAGE
+    footer_text: Optional[str] = None
+    variable_examples: Optional[List[str]] = None
+
+
+@app.post("/whatsapp/templates")
+def create_whatsapp_template(
+    request: CreateTemplateRequest,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Crear un nuevo template y enviarlo a Meta para aprobación"""
+    try:
+        from whatsapp_client import WhatsAppClient
+        import requests
+
+        client = WhatsAppClient()
+
+        # Para templates de AUTHENTICATION, usar formato especial de Meta
+        if request.category == "AUTHENTICATION":
+            payload = {
+                "name": request.name,
+                "category": "AUTHENTICATION",
+                "language": request.language,
+                "components": [
+                    {
+                        "type": "BODY",
+                        "add_security_recommendation": True
+                    },
+                    {
+                        "type": "FOOTER",
+                        "code_expiration_minutes": 60
+                    },
+                    {
+                        "type": "BUTTONS",
+                        "buttons": [
+                            {
+                                "type": "OTP",
+                                "otp_type": "COPY_CODE",
+                                "text": "Copiar código"
+                            }
+                        ]
+                    }
+                ]
+            }
+
+            response = requests.post(
+                f"https://graph.facebook.com/{client.api_version}/{client.business_account_id}/message_templates",
+                headers=client.headers,
+                json=payload,
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                result_data = response.json()
+                result = {
+                    "success": True,
+                    "template_id": result_data.get("id"),
+                    "status": result_data.get("status", "PENDING")
+                }
+            else:
+                error_data = response.json()
+                error_info = error_data.get("error", {})
+                result = {
+                    "success": False,
+                    "error": error_info.get("message", "Error desconocido"),
+                    "error_user_msg": error_info.get("error_user_msg")
+                }
+        else:
+            # Para UTILITY y MARKETING usar el método normal
+            header_image_handle = None
+
+            # Si es header de imagen, subir usando Resumable Upload API
+            # Meta requiere un header_handle obtenido de su API de upload
+            if request.header_type == "IMAGE" and request.header_image_base64:
+                print(f"[TEMPLATE] Subiendo imagen para header usando Resumable Upload API...")
+
+                # Verificar si META_APP_ID está configurado
+                app_id = os.getenv("META_APP_ID") or os.getenv("FACEBOOK_APP_ID")
+                if not app_id:
+                    return {
+                        "success": False,
+                        "error": "META_APP_ID no configurado",
+                        "error_user_msg": "Para crear templates con imagen, configura META_APP_ID en .env. "
+                                        "Obtén el App ID desde https://developers.facebook.com/apps/"
+                    }
+
+                # Usar la función de upload del cliente
+                upload_result = client.upload_media_for_template(
+                    image_base64=request.header_image_base64,
+                    filename=f"template_{request.name}.jpg"
+                )
+
+                if not upload_result.get("success"):
+                    print(f"[TEMPLATE] Error en upload: {upload_result.get('error')}")
+                    return {
+                        "success": False,
+                        "error": f"Error al subir imagen: {upload_result.get('error')}",
+                        "error_user_msg": "No se pudo subir la imagen a Meta. Verifica tu configuración."
+                    }
+
+                header_image_handle = upload_result.get("handle")
+                print(f"[TEMPLATE] Imagen subida. Handle: {header_image_handle[:50] if header_image_handle else 'None'}...")
+
+            result = client.create_template(
+                name=request.name,
+                category=request.category,
+                language=request.language,
+                body_text=request.body_text or "",
+                header_type=request.header_type,
+                header_text=request.header_text,
+                header_image_handle=header_image_handle,  # Handle de Resumable Upload API
+                footer_text=request.footer_text,
+                variable_examples=request.variable_examples
+            )
+
+        if result.get("success"):
+            # Obtener el status real de la respuesta
+            meta_status = result.get("status", "PENDING")
+
+            # Guardar en BD local
+            template = models.WhatsAppTemplate(
+                name=request.name,
+                display_name=request.display_name,
+                category=request.category,
+                language=request.language,
+                header_type=request.header_type,
+                header_text=request.header_text,
+                body_text=request.body_text or "[AUTHENTICATION TEMPLATE]",
+                footer_text=request.footer_text,
+                variables_count=(request.body_text or "").count("{{"),
+                variable_examples=json.dumps(request.variable_examples) if request.variable_examples else None,
+                meta_template_id=result.get("template_id"),
+                meta_status=meta_status,
+                submitted_at=datetime.utcnow()
+            )
+            db.add(template)
+            db.commit()
+
+            return {
+                "success": True,
+                "template_id": result.get("template_id"),
+                "status": meta_status,
+                "message": f"Template {'aprobado' if meta_status == 'APPROVED' else 'rechazado' if meta_status == 'REJECTED' else 'enviado a Meta para aprobación'}"
+            }
+        else:
+            # Log detailed error for debugging
+            print(f"[TEMPLATE ERROR] Meta API Error: {result}")
+            return {
+                "success": False,
+                "error": result.get("error", "Error desconocido"),
+                "error_user_msg": result.get("error_user_msg"),
+                "error_code": result.get("error_code"),
+                "error_subcode": result.get("error_subcode"),
+                "full_error": result.get("full_error")
+            }
+    except Exception as e:
+        print(f"[TEMPLATE ERROR] Exception: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/whatsapp/templates/{template_name}")
+def delete_whatsapp_template(
+    template_name: str,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Eliminar un template de Meta y de la BD local"""
+    try:
+        from whatsapp_client import WhatsAppClient
+        client = WhatsAppClient()
+
+        result = client.delete_template(template_name)
+
+        # Eliminar de BD local también
+        db.query(models.WhatsAppTemplate).filter(
+            models.WhatsAppTemplate.name == template_name
+        ).delete()
+        db.commit()
+
+        return result
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class SendTemplateRequest(BaseModel):
+    phone: str
+    template_name: str
+    language: str = "es"
+    variables: Optional[List[str]] = None
+
+
+@app.post("/whatsapp/send-template")
+def send_template_message(
+    request: SendTemplateRequest,
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Enviar mensaje usando un template aprobado"""
+    try:
+        from whatsapp_client import WhatsAppClient
+        client = WhatsAppClient()
+
+        result = client.send_template_message(
+            phone=request.phone,
+            template_name=request.template_name,
+            language=request.language,
+            variables=request.variables
+        )
+
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================
+# WhatsApp Messages (Inbox)
+# ============================================
+
+@app.get("/whatsapp/conversations")
+def get_whatsapp_conversations(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Obtener lista de conversaciones de WhatsApp"""
+    conversations = db.query(models.WhatsAppConversation).order_by(
+        desc(models.WhatsAppConversation.last_message_at)
+    ).offset(skip).limit(limit).all()
+
+    total = db.query(func.count(models.WhatsAppConversation.id)).scalar()
+
+    return {
+        "conversations": [
+            {
+                "id": conv.id,
+                "phone_number": conv.phone_number,
+                "contact_name": conv.contact_name,
+                "user_id": conv.user_id,
+                "is_active": conv.is_active,
+                "last_message_at": conv.last_message_at.isoformat() if conv.last_message_at else None,
+                "unread_count": conv.unread_count
+            }
+            for conv in conversations
+        ],
+        "total": total
+    }
+
+
+@app.get("/whatsapp/conversations/{phone_number}/messages")
+def get_conversation_messages(
+    phone_number: str,
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Obtener mensajes de una conversación específica"""
+    messages = db.query(models.WhatsAppMessage).filter(
+        models.WhatsAppMessage.from_number == phone_number
+    ).order_by(desc(models.WhatsAppMessage.timestamp)).offset(skip).limit(limit).all()
+
+    # Marcar conversación como leída
+    conversation = db.query(models.WhatsAppConversation).filter(
+        models.WhatsAppConversation.phone_number == phone_number
+    ).first()
+
+    if conversation:
+        conversation.unread_count = 0
+        db.commit()
+
+    return {
+        "messages": [
+            {
+                "id": msg.id,
+                "wa_message_id": msg.wa_message_id,
+                "from_number": msg.from_number,
+                "from_name": msg.from_name,
+                "message_type": msg.message_type,
+                "text_body": msg.text_body,
+                "media_id": msg.media_id,
+                "caption": msg.caption,
+                "timestamp": msg.timestamp.isoformat() if msg.timestamp else None,
+                "is_read": msg.is_read,
+                "replied": msg.replied
+            }
+            for msg in messages
+        ]
+    }
+
+
+@app.post("/whatsapp/conversations/{phone_number}/reply")
+def reply_to_conversation(
+    phone_number: str,
+    request: TestMessageRequest,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Responder a una conversación"""
+    try:
+        from whatsapp_client import WhatsAppClient
+        client = WhatsAppClient()
+
+        result = client.send_message(phone_number, request.message)
+
+        if result.get("success"):
+            # Actualizar conversación
+            conversation = db.query(models.WhatsAppConversation).filter(
+                models.WhatsAppConversation.phone_number == phone_number
+            ).first()
+
+            if conversation:
+                conversation.last_message_at = datetime.utcnow()
+                db.commit()
+
+            return {
+                "success": True,
+                "message_id": result.get("messageId"),
+                "message": "Respuesta enviada exitosamente"
+            }
+        else:
+            return {
+                "success": False,
+                "error": result.get("error", "Error desconocido")
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/whatsapp/unread-count")
+def get_unread_messages_count(
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Obtener cantidad de mensajes no leídos"""
+    total_unread = db.query(func.sum(models.WhatsAppConversation.unread_count)).scalar() or 0
+    return {"unread_count": total_unread}
+
 
