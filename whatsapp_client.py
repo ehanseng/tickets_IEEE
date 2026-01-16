@@ -618,7 +618,9 @@ class WhatsAppClient:
         template_name: str,
         language: str = "es",
         variables: Optional[List[str]] = None,
-        country_code: Optional[str] = None
+        country_code: Optional[str] = None,
+        header_image_id: Optional[str] = None,
+        header_image_link: Optional[str] = None
     ) -> Dict:
         """
         Envía un mensaje usando un template aprobado
@@ -629,6 +631,8 @@ class WhatsAppClient:
             language: Código de idioma
             variables: Lista de valores para las variables del template
             country_code: Código de país opcional
+            header_image_id: ID de media de WhatsApp para el header (si el template tiene header IMAGE)
+            header_image_link: URL pública de la imagen para el header (alternativa a header_image_id)
 
         Returns:
             Dict con el resultado
@@ -650,24 +654,52 @@ class WhatsAppClient:
             }
         }
 
-        # Agregar variables si existen
+        # Construir componentes
+        components = []
+
+        # Agregar header de imagen si se proporciona
+        if header_image_id or header_image_link:
+            header_component = {
+                "type": "header",
+                "parameters": []
+            }
+            if header_image_id:
+                header_component["parameters"].append({
+                    "type": "image",
+                    "image": {"id": header_image_id}
+                })
+            elif header_image_link:
+                header_component["parameters"].append({
+                    "type": "image",
+                    "image": {"link": header_image_link}
+                })
+            components.append(header_component)
+
+        # Agregar variables del body si existen
         if variables:
-            payload["template"]["components"] = [
-                {
-                    "type": "body",
-                    "parameters": [
-                        {"type": "text", "text": var} for var in variables
-                    ]
-                }
-            ]
+            components.append({
+                "type": "body",
+                "parameters": [
+                    {"type": "text", "text": var} for var in variables
+                ]
+            })
+
+        if components:
+            payload["template"]["components"] = components
 
         try:
+            import json
+            print(f"[TEMPLATE MSG] Enviando template '{template_name}' a {full_phone}")
+            print(f"[TEMPLATE MSG] Payload: {json.dumps(payload, indent=2, ensure_ascii=False)}")
+
             response = requests.post(
                 f"{self.base_url}/messages",
                 headers=self.headers,
                 json=payload,
                 timeout=30
             )
+
+            print(f"[TEMPLATE MSG] Response: {response.status_code} - {response.text[:500]}")
 
             if response.status_code == 200:
                 result = response.json()
@@ -681,7 +713,8 @@ class WhatsAppClient:
                 return {
                     "success": False,
                     "error": error_data.get("error", {}).get("message", "Error desconocido"),
-                    "error_code": error_data.get("error", {}).get("code")
+                    "error_code": error_data.get("error", {}).get("code"),
+                    "full_error": error_data
                 }
 
         except requests.exceptions.RequestException as e:
@@ -938,6 +971,123 @@ def send_ticket_whatsapp(
             # No retornamos False porque el mensaje principal ya se envió
 
     return True
+
+
+def send_ticket_with_template(
+    phone: str,
+    country_code: str,
+    user_name: str,
+    event_name: str,
+    event_location: str,
+    event_date: str,
+    ticket_code: str,
+    ticket_url: str,
+    access_pin: str,
+    companions: int = 0,
+    template_name: str = "ticket_evento",
+    qr_image_base64: Optional[str] = None
+) -> Dict:
+    """
+    Envía un ticket usando un template de WhatsApp aprobado.
+
+    Esta función usa templates pre-aprobados por Meta en lugar de mensajes de texto libre.
+    Los templates permiten enviar mensajes fuera de la ventana de 24 horas.
+
+    Args:
+        phone: Número de teléfono
+        country_code: Código de país
+        user_name: Nombre del usuario
+        event_name: Nombre del evento
+        event_location: Ubicación del evento
+        event_date: Fecha y hora del evento (formateada)
+        ticket_code: Código del ticket
+        ticket_url: URL del ticket
+        access_pin: PIN de acceso al ticket
+        companions: Número de acompañantes (default 0)
+        template_name: Nombre del template a usar (default "ticket_evento")
+        qr_image_base64: Imagen QR en base64 (opcional, para templates con header IMAGE)
+
+    Returns:
+        Dict con success, messageId o error
+    """
+    client = WhatsAppClient()
+
+    if not client.is_ready():
+        print("[ERROR] WhatsApp no está listo")
+        return {"success": False, "error": "WhatsApp no está disponible"}
+
+    # Determinar qué template usar según si hay acompañantes
+    if companions > 0 and template_name == "ticket_evento":
+        template_name = "ticket_evento_acompanantes"
+
+    # Construir variables según el template
+    # ticket_evento: {{1}}=nombre, {{2}}=evento, {{3}}=fecha, {{4}}=lugar, {{5}}=codigo, {{6}}=pin, {{7}}=url
+    # ticket_evento_acompanantes: {{1}}=nombre, {{2}}=evento, {{3}}=fecha, {{4}}=lugar, {{5}}=codigo, {{6}}=pin, {{7}}=acompañantes, {{8}}=url
+
+    if template_name == "ticket_evento_acompanantes":
+        variables = [
+            user_name,
+            event_name,
+            event_date,
+            event_location,
+            ticket_code,
+            access_pin,
+            str(companions),
+            ticket_url
+        ]
+    else:
+        # ticket_evento u otro template genérico
+        variables = [
+            user_name,
+            event_name,
+            event_date,
+            event_location,
+            ticket_code,
+            access_pin,
+            ticket_url
+        ]
+
+    # Preparar header de imagen si se proporciona QR
+    header_image_id = None
+    if qr_image_base64:
+        # Subir la imagen QR a WhatsApp primero
+        print(f"[TEMPLATE] Subiendo imagen QR para header...")
+        media_id = client._upload_media(qr_image_base64, "ticket_qr.png")
+        if media_id:
+            header_image_id = media_id
+            print(f"[TEMPLATE] Imagen QR subida con ID: {media_id}")
+        else:
+            print(f"[WARNING] No se pudo subir el QR, enviando template sin imagen")
+
+    # Enviar usando template
+    print(f"[TEMPLATE] Enviando template '{template_name}' a {country_code}{phone}")
+    print(f"[TEMPLATE] Variables: {variables}")
+
+    result = client.send_template_message(
+        phone=phone,
+        template_name=template_name,
+        language="es_MX",
+        variables=variables,
+        country_code=country_code,
+        header_image_id=header_image_id
+    )
+
+    if result.get("success"):
+        print(f"[OK] Template '{template_name}' enviado exitosamente a {user_name}")
+        return {
+            "success": True,
+            "messageId": result.get("messageId"),
+            "template_used": template_name
+        }
+    else:
+        error_msg = result.get("error", "Error desconocido")
+        print(f"[ERROR] No se pudo enviar template: {error_msg}")
+        return {
+            "success": False,
+            "error": error_msg,
+            "error_code": result.get("error_code"),
+            "template_attempted": template_name
+        }
 
 
 def send_bulk_whatsapp(

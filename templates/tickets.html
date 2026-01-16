@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Tickets - Sistema de Tickets{% endblock %}
+{% block title %}Tickets - IEEE Tadeo Control System{% endblock %}
 
 {% block content %}
 <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
@@ -449,6 +449,53 @@
                     <p class="text-xs text-muted-foreground">Selecciona el evento cuyos tickets deseas enviar</p>
                 </div>
 
+                <!-- Opción de método de envío -->
+                <div class="space-y-2">
+                    <label class="text-sm font-medium leading-none">Metodo de envio *</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none hover:border-green-400 transition-colors" id="methodFreeTextLabel">
+                            <input type="radio" name="send_method" value="free_text" class="sr-only" checked onchange="updateSendMethodUI()">
+                            <span class="flex flex-1 flex-col">
+                                <span class="flex items-center gap-2 text-sm font-medium text-gray-900">
+                                    <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                                    </svg>
+                                    Mensaje Libre
+                                </span>
+                                <span class="mt-1 text-xs text-gray-500">Mensaje personalizado con formato completo. Solo funciona si el usuario ha interactuado en las ultimas 24h.</span>
+                            </span>
+                            <svg class="h-5 w-5 text-green-600 hidden" id="checkFreeText" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                        </label>
+                        <label class="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none hover:border-green-400 transition-colors" id="methodTemplateLabel">
+                            <input type="radio" name="send_method" value="template" class="sr-only" onchange="updateSendMethodUI()">
+                            <span class="flex flex-1 flex-col">
+                                <span class="flex items-center gap-2 text-sm font-medium text-gray-900">
+                                    <svg class="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Template Meta
+                                </span>
+                                <span class="mt-1 text-xs text-gray-500">Usa template pre-aprobado por Meta. Funciona siempre, incluso fuera de ventana de 24h.</span>
+                            </span>
+                            <svg class="h-5 w-5 text-green-600 hidden" id="checkTemplate" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Selector de template (visible solo cuando se selecciona Template Meta) -->
+                <div id="templateSelectorSection" class="hidden space-y-2">
+                    <label for="whatsapp_template_name" class="text-sm font-medium leading-none">Template a usar *</label>
+                    <select id="whatsapp_template_name" name="whatsapp_template_name" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                        <option value="ticket_evento">ticket_evento (7 variables)</option>
+                        <option value="ticket_evento_acompanantes">ticket_evento_acompanantes (8 variables, con acompanantes)</option>
+                    </select>
+                    <p class="text-xs text-muted-foreground">El sistema selecciona automaticamente el template correcto segun si el ticket tiene acompanantes</p>
+                </div>
+
                 <!-- Preview del template que se usará -->
                 <div id="templatePreviewSection" class="hidden space-y-2">
                     <label class="text-sm font-medium">Preview del Mensaje</label>
@@ -552,6 +599,22 @@
                     <div class="mt-2 border rounded-lg p-4 bg-white max-h-96 overflow-y-auto whitespace-pre-wrap text-sm font-mono">
                         <div id="previewMessageContent"></div>
                     </div>
+                </div>
+
+                <!-- Opción de método de envío para individual -->
+                <div class="border-t pt-4 mt-4">
+                    <label class="text-sm font-medium mb-2 block">Metodo de envio:</label>
+                    <div class="flex gap-2 mb-3">
+                        <label class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 flex-1 text-sm" id="singleMethodFreeTextLabel">
+                            <input type="radio" name="single_send_method" value="free_text" checked onchange="updateSingleSendMethodUI()">
+                            <span>Mensaje Libre</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 flex-1 text-sm" id="singleMethodTemplateLabel">
+                            <input type="radio" name="single_send_method" value="template" onchange="updateSingleSendMethodUI()">
+                            <span>Template Meta</span>
+                        </label>
+                    </div>
+                    <p id="singleMethodHint" class="text-xs text-muted-foreground mb-3">Mensaje libre solo funciona si el usuario ha interactuado en las ultimas 24h</p>
                 </div>
 
                 <!-- Botones de acción -->
@@ -1073,12 +1136,42 @@
         }
     }
 
+    // Función para actualizar UI del método de envío individual
+    function updateSingleSendMethodUI() {
+        const freeTextRadio = document.querySelector('input[name="single_send_method"][value="free_text"]');
+        const templateRadio = document.querySelector('input[name="single_send_method"][value="template"]');
+        const freeTextLabel = document.getElementById('singleMethodFreeTextLabel');
+        const templateLabel = document.getElementById('singleMethodTemplateLabel');
+        const hint = document.getElementById('singleMethodHint');
+
+        if (freeTextRadio && freeTextRadio.checked) {
+            freeTextLabel.classList.add('border-green-500', 'bg-green-50');
+            templateLabel.classList.remove('border-green-500', 'bg-green-50');
+            hint.textContent = 'Mensaje libre solo funciona si el usuario ha interactuado en las ultimas 24h';
+        } else if (templateRadio && templateRadio.checked) {
+            templateLabel.classList.add('border-green-500', 'bg-green-50');
+            freeTextLabel.classList.remove('border-green-500', 'bg-green-50');
+            hint.textContent = 'Template Meta funciona siempre, incluso fuera de ventana de 24h';
+        }
+    }
+
     async function confirmSendWhatsApp() {
         if (!currentPreviewTicketId) return;
 
+        // Obtener método de envío seleccionado
+        const sendMethod = document.querySelector('input[name="single_send_method"]:checked')?.value || 'free_text';
+        const useTemplate = sendMethod === 'template';
+
         try {
             const token = localStorage.getItem('access_token');
-            const response = await fetch(`/tickets/${currentPreviewTicketId}/send-whatsapp`, {
+
+            // Construir URL con parámetros
+            let url = `/tickets/${currentPreviewTicketId}/send-whatsapp`;
+            if (useTemplate) {
+                url += `?use_template=true&template_name=ticket_evento`;
+            }
+
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -1089,7 +1182,8 @@
 
             if (response.ok) {
                 closeWhatsAppPreviewModal();
-                alert(`✓ Ticket enviado por WhatsApp exitosamente a ${data.phone}\n\nUsuario: ${data.user_name}`);
+                const methodInfo = useTemplate ? ' (via Template)' : ' (Mensaje libre)';
+                alert(`✓ Ticket enviado por WhatsApp exitosamente${methodInfo}\n\nTelefono: ${data.phone}\nUsuario: ${data.user_name}`);
             } else {
                 alert(`Error: ${data.detail || 'No se pudo enviar el ticket por WhatsApp'}`);
             }
@@ -1102,6 +1196,10 @@
     function closeWhatsAppPreviewModal() {
         document.getElementById('whatsappPreviewModal').classList.add('hidden');
         currentPreviewTicketId = null;
+        // Reset radio buttons
+        const freeTextRadio = document.querySelector('input[name="single_send_method"][value="free_text"]');
+        if (freeTextRadio) freeTextRadio.checked = true;
+        updateSingleSendMethodUI();
     }
 
     async function deleteTicket(ticketId) {
@@ -1464,7 +1562,39 @@
         document.getElementById('whatsappMessage').innerHTML = '';
         document.getElementById('ticketPreview').classList.add('hidden');
         document.getElementById('templatePreviewSection').classList.add('hidden');
+        document.getElementById('templateSelectorSection').classList.add('hidden');
+        updateSendMethodUI();
     }
+
+    // Función para actualizar la UI según el método de envío seleccionado
+    function updateSendMethodUI() {
+        const freeTextRadio = document.querySelector('input[name="send_method"][value="free_text"]');
+        const templateRadio = document.querySelector('input[name="send_method"][value="template"]');
+        const templateSelector = document.getElementById('templateSelectorSection');
+        const freeTextLabel = document.getElementById('methodFreeTextLabel');
+        const templateLabel = document.getElementById('methodTemplateLabel');
+        const checkFreeText = document.getElementById('checkFreeText');
+        const checkTemplate = document.getElementById('checkTemplate');
+
+        if (freeTextRadio && freeTextRadio.checked) {
+            templateSelector.classList.add('hidden');
+            freeTextLabel.classList.add('border-green-500', 'bg-green-50');
+            templateLabel.classList.remove('border-green-500', 'bg-green-50');
+            checkFreeText.classList.remove('hidden');
+            checkTemplate.classList.add('hidden');
+        } else if (templateRadio && templateRadio.checked) {
+            templateSelector.classList.remove('hidden');
+            templateLabel.classList.add('border-green-500', 'bg-green-50');
+            freeTextLabel.classList.remove('border-green-500', 'bg-green-50');
+            checkTemplate.classList.remove('hidden');
+            checkFreeText.classList.add('hidden');
+        }
+    }
+
+    // Inicializar UI al cargar
+    document.addEventListener('DOMContentLoaded', function() {
+        updateSendMethodUI();
+    });
 
     document.getElementById('whatsappForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1473,12 +1603,19 @@
         const submitBtn = document.getElementById('whatsappSubmitBtn');
         const messageDiv = document.getElementById('whatsappMessage');
 
+        // Obtener método de envío seleccionado
+        const sendMethod = document.querySelector('input[name="send_method"]:checked')?.value || 'free_text';
+        const useTemplate = sendMethod === 'template';
+        const templateName = document.getElementById('whatsapp_template_name')?.value || 'ticket_evento';
+
         if (!eventId) {
             messageDiv.innerHTML = '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Por favor seleccione un evento</div>';
             return;
         }
 
         submitBtn.disabled = true;
+
+        const methodLabel = useTemplate ? `Template: ${templateName}` : 'Mensaje libre';
 
         // Crear contenedor para progreso en tiempo real
         messageDiv.innerHTML = `
@@ -1487,6 +1624,7 @@
                     <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700"></div>
                     <span class="font-semibold">Enviando tickets por WhatsApp...</span>
                 </div>
+                <p class="text-xs text-blue-600">Metodo: <strong>${methodLabel}</strong></p>
 
                 <!-- Barra de progreso -->
                 <div class="w-full bg-blue-100 rounded-full h-2">
@@ -1518,7 +1656,11 @@
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ event_id: eventId })
+                body: JSON.stringify({
+                    event_id: eventId,
+                    use_template: useTemplate,
+                    template_name: templateName
+                })
             });
 
             const reader = response.body.getReader();

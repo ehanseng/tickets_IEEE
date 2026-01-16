@@ -1889,10 +1889,19 @@ async def whatsapp_webhook_handler(request: Request):
 @app.post("/tickets/{ticket_id}/send-whatsapp")
 def send_ticket_whatsapp_endpoint(
     ticket_id: int,
+    use_template: bool = False,
+    template_name: str = "ticket_evento",
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(require_admin)
 ):
-    """Enviar ticket por WhatsApp al usuario con toda la información"""
+    """
+    Enviar ticket por WhatsApp al usuario.
+
+    Args:
+        ticket_id: ID del ticket a enviar
+        use_template: Si es True, usa template de Meta (funciona fuera de 24h). Si es False, mensaje libre.
+        template_name: Nombre del template a usar (solo si use_template=True)
+    """
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket no encontrado")
@@ -1921,7 +1930,7 @@ def send_ticket_whatsapp_endpoint(
     event_date_formatted = event.event_date.strftime('%d/%m/%Y a las %H:%M')
 
     # Enviar por WhatsApp
-    from whatsapp_client import send_ticket_whatsapp, WhatsAppClient
+    from whatsapp_client import send_ticket_whatsapp, send_ticket_with_template, WhatsAppClient
 
     # Verificar que WhatsApp esté disponible
     whatsapp_client = WhatsAppClient()
@@ -1932,29 +1941,78 @@ def send_ticket_whatsapp_endpoint(
         )
 
     try:
-        success = send_ticket_whatsapp(
-            phone=user.phone,
-            country_code=user.country_code,
-            user_name=user.name,
-            event_name=event.name,
-            event_location=event.location,
-            event_date=event_date_formatted,
-            ticket_code=ticket.ticket_code,
-            ticket_url=ticket_url,
-            access_pin=ticket.access_pin,
-            companions=ticket.companions or 0,
-            organization=organization,
-            event=event
-        )
+        if use_template:
+            # Usar template de Meta (funciona fuera de ventana de 24h)
+            # Generar QR si está habilitado para el evento
+            qr_base64 = None
+            if event and hasattr(event, 'send_qr_with_whatsapp') and event.send_qr_with_whatsapp:
+                try:
+                    from ticket_service import ticket_service
+                    qr_base64 = ticket_service.generate_qr_base64(
+                        ticket_code=ticket.ticket_code,
+                        user_name=user.name,
+                        event_name=event.name,
+                        event_date=event_date_formatted
+                    )
+                except Exception as e:
+                    print(f"[WARNING] No se pudo generar QR para template: {e}")
 
-        if success:
-            return {
-                "message": "Ticket enviado por WhatsApp exitosamente",
-                "phone": f"{user.country_code}{user.phone}",
-                "user_name": user.name
-            }
+            result = send_ticket_with_template(
+                phone=user.phone,
+                country_code=user.country_code,
+                user_name=user.name,
+                event_name=event.name,
+                event_location=event.location,
+                event_date=event_date_formatted,
+                ticket_code=ticket.ticket_code,
+                ticket_url=ticket_url,
+                access_pin=ticket.access_pin,
+                companions=ticket.companions or 0,
+                template_name=template_name,
+                qr_image_base64=qr_base64
+            )
+
+            if result.get("success"):
+                return {
+                    "message": "Ticket enviado por WhatsApp exitosamente (template)",
+                    "phone": f"{user.country_code}{user.phone}",
+                    "user_name": user.name,
+                    "method": "template",
+                    "template_used": result.get("template_used")
+                }
+            else:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Error al enviar template: {result.get('error')}"
+                )
         else:
-            raise HTTPException(status_code=500, detail="Error al enviar el ticket por WhatsApp")
+            # Mensaje libre (solo funciona dentro de ventana de 24h)
+            success = send_ticket_whatsapp(
+                phone=user.phone,
+                country_code=user.country_code,
+                user_name=user.name,
+                event_name=event.name,
+                event_location=event.location,
+                event_date=event_date_formatted,
+                ticket_code=ticket.ticket_code,
+                ticket_url=ticket_url,
+                access_pin=ticket.access_pin,
+                companions=ticket.companions or 0,
+                organization=organization,
+                event=event
+            )
+
+            if success:
+                return {
+                    "message": "Ticket enviado por WhatsApp exitosamente",
+                    "phone": f"{user.country_code}{user.phone}",
+                    "user_name": user.name,
+                    "method": "free_text"
+                }
+            else:
+                raise HTTPException(status_code=500, detail="Error al enviar el ticket por WhatsApp")
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
         error_detail = f"Error al enviar WhatsApp: {str(e)}"
@@ -2457,12 +2515,16 @@ async def send_tickets_whatsapp_by_event_stream(
 
     Body:
     - event_id: ID del evento
+    - use_template: (opcional) Si es True, usa template de Meta. Default: False
+    - template_name: (opcional) Nombre del template a usar. Default: "ticket_evento"
 
     Retorna un stream de eventos con el formato:
     - event: progress -> Progreso de envío individual
     - event: complete -> Resumen final
     """
     event_id = data.get('event_id')
+    use_template = data.get('use_template', False)
+    template_name = data.get('template_name', 'ticket_evento')
 
     if not event_id:
         raise HTTPException(status_code=400, detail="event_id es requerido")
@@ -2484,7 +2546,7 @@ async def send_tickets_whatsapp_by_event_stream(
                 ).first()
 
             # Verificar que WhatsApp esté disponible
-            from whatsapp_client import send_ticket_whatsapp, WhatsAppClient
+            from whatsapp_client import send_ticket_whatsapp, send_ticket_with_template, WhatsAppClient
 
             whatsapp_client = WhatsAppClient()
             if not whatsapp_client.is_ready():
@@ -2539,31 +2601,67 @@ async def send_tickets_whatsapp_by_event_stream(
                     ticket_url = f"{BASE_URL}/ticket/{ticket.unique_url}"
 
                     # Enviar por WhatsApp
-                    success = send_ticket_whatsapp(
-                        phone=user.phone,
-                        country_code=user.country_code,
-                        user_name=user.name,
-                        event_name=event.name,
-                        event_location=event.location,
-                        event_date=event_date_formatted,
-                        ticket_code=ticket.ticket_code,
-                        ticket_url=ticket_url,
-                        access_pin=ticket.access_pin,
-                        companions=ticket.companions or 0,
-                        organization=organization,
-                        event=event
-                    )
+                    if use_template:
+                        # Usar template de Meta
+                        # Generar QR si está habilitado para el evento
+                        qr_base64 = None
+                        if event and hasattr(event, 'send_qr_with_whatsapp') and event.send_qr_with_whatsapp:
+                            try:
+                                from ticket_service import ticket_service
+                                qr_base64 = ticket_service.generate_qr_base64(
+                                    ticket_code=ticket.ticket_code,
+                                    user_name=user.name,
+                                    event_name=event.name,
+                                    event_date=event_date_formatted
+                                )
+                            except Exception as qr_err:
+                                print(f"[WARNING] No se pudo generar QR para template: {qr_err}")
+
+                        result = send_ticket_with_template(
+                            phone=user.phone,
+                            country_code=user.country_code,
+                            user_name=user.name,
+                            event_name=event.name,
+                            event_location=event.location,
+                            event_date=event_date_formatted,
+                            ticket_code=ticket.ticket_code,
+                            ticket_url=ticket_url,
+                            access_pin=ticket.access_pin,
+                            companions=ticket.companions or 0,
+                            template_name=template_name,
+                            qr_image_base64=qr_base64
+                        )
+                        success = result.get("success", False)
+                        error_reason = result.get("error", "Error al enviar template")
+                    else:
+                        # Mensaje libre
+                        success = send_ticket_whatsapp(
+                            phone=user.phone,
+                            country_code=user.country_code,
+                            user_name=user.name,
+                            event_name=event.name,
+                            event_location=event.location,
+                            event_date=event_date_formatted,
+                            ticket_code=ticket.ticket_code,
+                            ticket_url=ticket_url,
+                            access_pin=ticket.access_pin,
+                            companions=ticket.companions or 0,
+                            organization=organization,
+                            event=event
+                        )
+                        error_reason = "Error al enviar mensaje"
 
                     if success:
                         sent_count += 1
                         # Enviar evento de éxito
-                        yield f"data: {json.dumps({'event': 'success', 'index': idx + 1, 'total': len(tickets), 'user': user.name, 'phone': f'{user.country_code}{user.phone}'})}\n\n"
+                        method_info = f" (template: {template_name})" if use_template else ""
+                        yield f"data: {json.dumps({'event': 'success', 'index': idx + 1, 'total': len(tickets), 'user': user.name, 'phone': f'{user.country_code}{user.phone}', 'method': 'template' if use_template else 'free_text'})}\n\n"
                     else:
                         skipped_count += 1
-                        error_msg = f"{user.name}: Error al enviar mensaje"
+                        error_msg = f"{user.name}: {error_reason}"
                         errors.append(error_msg)
                         # Enviar evento de error
-                        yield f"data: {json.dumps({'event': 'error', 'index': idx + 1, 'total': len(tickets), 'user': user.name, 'reason': 'Error al enviar'})}\n\n"
+                        yield f"data: {json.dumps({'event': 'error', 'index': idx + 1, 'total': len(tickets), 'user': user.name, 'reason': error_reason})}\n\n"
 
                     # Delay progresivo entre mensajes para evitar colapso
                     # 2 segundos base + 0.5s extra cada 10 mensajes
