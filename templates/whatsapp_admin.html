@@ -1,18 +1,55 @@
 {% extends "base.html" %}
 
-{% block title %}Gestión de WhatsApp - Admin{% endblock %}
+{% block title %}Gestion de WhatsApp - IEEE Tadeo Control System{% endblock %}
 
 {% block extra_css %}
 <style>
     .whatsapp-container {
-        max-width: 900px;
+        max-width: 1200px;
         margin: 0 auto;
+    }
+
+    .tabs {
+        display: flex;
+        gap: 5px;
+        border-bottom: 2px solid #e5e7eb;
+        margin-bottom: 20px;
+    }
+
+    .tab {
+        padding: 12px 24px;
+        cursor: pointer;
+        border: none;
+        background: none;
+        font-size: 14px;
+        font-weight: 500;
+        color: #6b7280;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        transition: all 0.2s;
+    }
+
+    .tab:hover {
+        color: #25D366;
+    }
+
+    .tab.active {
+        color: #25D366;
+        border-bottom-color: #25D366;
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
     }
 
     .status-card {
         background: white;
         border-radius: 10px;
-        padding: 30px;
+        padding: 20px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         margin-bottom: 20px;
     }
@@ -21,174 +58,558 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 20px;
+        margin-bottom: 15px;
     }
 
     .status-indicator {
         display: flex;
         align-items: center;
         gap: 10px;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: bold;
     }
 
     .status-dot {
-        width: 16px;
-        height: 16px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
         animation: pulse 2s infinite;
     }
 
-    .status-dot.ready {
-        background: #25D366;
-    }
-
-    .status-dot.waiting {
-        background: #FFA500;
-    }
-
-    .status-dot.error {
-        background: #dc3545;
-    }
+    .status-dot.ready { background: #25D366; }
+    .status-dot.error { background: #dc3545; }
 
     @keyframes pulse {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.5; }
     }
 
-    .qr-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 30px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 10px;
-        margin: 20px 0;
+    .api-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
     }
 
-    .qr-box {
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        min-height: 320px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    #qrcode canvas {
-        border-radius: 5px;
-    }
-
-    .instructions-box {
+    .api-info-item {
         background: #f8f9fa;
-        border-left: 4px solid #25D366;
+        padding: 12px;
+        border-radius: 8px;
+    }
+
+    .api-info-label {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 4px;
+    }
+
+    .api-info-value {
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .quality-badge {
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: bold;
+    }
+
+    .quality-badge.green { background: #d4edda; color: #155724; }
+    .quality-badge.yellow { background: #fff3cd; color: #856404; }
+    .quality-badge.red { background: #f8d7da; color: #721c24; }
+
+    .meta-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #0668E1 0%, #1877F2 100%);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-weight: 600;
+        font-size: 12px;
+    }
+
+    /* Templates Section */
+    .templates-grid {
+        display: grid;
+        gap: 15px;
+    }
+
+    .template-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
         padding: 20px;
-        border-radius: 5px;
-        margin: 20px 0;
     }
 
-    .instructions-box h4 {
-        color: #25D366;
-        margin-top: 0;
-        margin-bottom: 15px;
+    .template-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
     }
 
-    .instructions-box ol {
-        margin: 0;
-        padding-left: 20px;
+    .template-name {
+        font-weight: 600;
+        font-size: 16px;
+        color: #1f2937;
     }
 
-    .instructions-box li {
-        margin: 10px 0;
-        color: #333;
+    .template-status {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
     }
 
-    .action-buttons {
+    .template-status.approved { background: #d4edda; color: #155724; }
+    .template-status.pending { background: #fff3cd; color: #856404; }
+    .template-status.rejected { background: #f8d7da; color: #721c24; }
+
+    .template-body {
+        background: #f8f9fa;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        color: #4b5563;
+        white-space: pre-wrap;
+        margin-bottom: 12px;
+    }
+
+    .template-meta {
         display: flex;
         gap: 15px;
-        margin-top: 20px;
+        font-size: 12px;
+        color: #6b7280;
     }
 
-    .btn-restart {
-        background: #25D366;
-        color: white;
-        border: none;
-        padding: 12px 30px;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.3s;
+    /* Template Details Styles */
+    .template-components {
+        border-top: 1px solid #e5e7eb;
+        margin-top: 12px;
+        padding-top: 12px;
+    }
+
+    .template-component {
+        margin-bottom: 10px;
+    }
+
+    .template-component-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .template-component-content {
+        background: #f8f9fa;
+        padding: 10px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        color: #374151;
+        white-space: pre-wrap;
+    }
+
+    .template-header-image {
+        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+        padding: 10px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        color: #4338ca;
         display: flex;
         align-items: center;
         gap: 8px;
     }
 
-    .btn-restart:hover {
-        background: #1da851;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+    .template-variables {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
     }
 
-    .btn-restart:disabled {
-        background: #ccc;
-        cursor: not-allowed;
-        transform: none;
+    .template-variable-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #dbeafe;
+        color: #1e40af;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    .template-variable-badge code {
+        background: #bfdbfe;
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-family: monospace;
+    }
+
+    .template-preview-toggle {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: none;
+        border: 1px solid #e5e7eb;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 10px;
+    }
+
+    .template-preview-toggle:hover {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .template-preview-section {
+        display: none;
+        margin-top: 12px;
+        border: 2px dashed #e5e7eb;
+        border-radius: 8px;
+        padding: 15px;
+        background: #fafafa;
+    }
+
+    .template-preview-section.show {
+        display: block;
+    }
+
+    .template-preview-phone {
+        max-width: 320px;
+        margin: 0 auto;
+        background: #e5ddd5;
+        border-radius: 10px;
+        padding: 15px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .template-preview-bubble {
+        background: white;
+        border-radius: 8px;
+        padding: 10px 12px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    .template-preview-bubble .header {
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: #1f2937;
+    }
+
+    .template-preview-bubble .body {
+        color: #374151;
+        white-space: pre-wrap;
+    }
+
+    .template-preview-bubble .footer {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #9ca3af;
+    }
+
+    .template-preview-bubble .buttons {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .template-preview-bubble .buttons button {
+        width: 100%;
+        background: none;
+        border: none;
+        color: #25D366;
+        font-weight: 500;
+        padding: 8px;
+        cursor: default;
+    }
+
+    /* Conversations/Inbox */
+    .inbox-container {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 20px;
+        height: 600px;
+    }
+
+    .conversations-list {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .conversations-header {
+        padding: 15px;
+        border-bottom: 1px solid #e5e7eb;
+        font-weight: 600;
+    }
+
+    .conversations-scroll {
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .conversation-item {
+        padding: 15px;
+        border-bottom: 1px solid #f3f4f6;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .conversation-item:hover {
+        background: #f9fafb;
+    }
+
+    .conversation-item.active {
+        background: #ecfdf5;
+        border-left: 3px solid #25D366;
+    }
+
+    .conversation-name {
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 4px;
+    }
+
+    .conversation-preview {
+        font-size: 13px;
+        color: #6b7280;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .conversation-time {
+        font-size: 11px;
+        color: #9ca3af;
+    }
+
+    .unread-badge {
+        background: #25D366;
+        color: white;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+
+    .chat-container {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .chat-header {
+        padding: 15px;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        background: #f0f2f5;
+    }
+
+    .message-bubble {
+        max-width: 70%;
+        padding: 10px 14px;
+        border-radius: 12px;
+        margin-bottom: 10px;
+        font-size: 14px;
+    }
+
+    .message-bubble.received {
+        background: white;
+        margin-right: auto;
+        border-bottom-left-radius: 4px;
+    }
+
+    .message-bubble.sent {
+        background: #dcf8c6;
+        margin-left: auto;
+        border-bottom-right-radius: 4px;
+    }
+
+    .message-time {
+        font-size: 11px;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+
+    .chat-input-container {
+        padding: 15px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        gap: 10px;
+    }
+
+    .chat-input {
+        flex: 1;
+        padding: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 24px;
+        font-size: 14px;
+        outline: none;
+    }
+
+    .chat-input:focus {
+        border-color: #25D366;
+    }
+
+    /* Buttons */
+    .btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-primary {
+        background: #25D366;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1da851;
     }
 
     .btn-secondary {
-        background: #6c757d;
+        background: #6b7280;
         color: white;
-        border: none;
-        padding: 12px 30px;
-        border-radius: 8px;
-        font-size: 16px;
-        cursor: pointer;
-        transition: all 0.3s;
     }
 
     .btn-secondary:hover {
-        background: #5a6268;
+        background: #4b5563;
     }
 
-    .info-card {
-        background: #e7f3ff;
-        border: 1px solid #b3d9ff;
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-sm {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
+    /* Forms */
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 6px;
+        color: #374151;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
         border-radius: 8px;
-        padding: 15px;
-        margin-top: 20px;
+        font-size: 14px;
     }
 
-    .info-card h5 {
-        color: #004085;
-        margin-top: 0;
-        margin-bottom: 10px;
+    .form-control:focus {
+        outline: none;
+        border-color: #25D366;
+        box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.1);
     }
 
-    .info-card p {
-        color: #004085;
-        margin: 5px 0;
-    }
-
-    .loading-spinner {
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #25D366;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    .alert {
-        padding: 15px;
+    .form-select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #e5e7eb;
         border-radius: 8px;
+        font-size: 14px;
+        background: white;
+    }
+
+    /* Modal */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal.show {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        width: 100%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         margin-bottom: 20px;
+    }
+
+    .modal-title {
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #6b7280;
+    }
+
+    /* Alert */
+    .alert {
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        font-size: 14px;
     }
 
     .alert-success {
@@ -208,263 +629,991 @@
         color: #856404;
         border: 1px solid #ffeaa7;
     }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #6b7280;
+    }
+
+    .empty-state i {
+        font-size: 48px;
+        margin-bottom: 15px;
+        opacity: 0.5;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="whatsapp-container">
-    <h1 style="margin-bottom: 30px;">
-        <i class="fab fa-whatsapp"></i> Gestión de WhatsApp
-    </h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0;">
+            <i class="fab fa-whatsapp" style="color: #25D366;"></i> Gestion de WhatsApp
+        </h1>
+        <span class="meta-badge">
+            <i class="fab fa-meta"></i> Meta Cloud API
+        </span>
+    </div>
 
-    <!-- Alerts -->
+    <!-- Alert Container -->
     <div id="alertContainer"></div>
 
-    <!-- Status Card -->
-    <div class="status-card">
-        <div class="status-header">
-            <div class="status-indicator">
-                <span class="status-dot waiting" id="statusDot"></span>
-                <span id="statusText">Cargando estado...</span>
-            </div>
-            <div class="action-buttons">
-                <button class="btn-restart" id="restartBtn" onclick="restartWhatsApp()">
-                    <i class="fas fa-sync-alt"></i> Reiniciar WhatsApp
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" data-tab="status">Estado</button>
+        <button class="tab" data-tab="inbox">
+            Bandeja de Entrada
+            <span class="unread-badge" id="totalUnread" style="display: none;">0</span>
+        </button>
+        <button class="tab" data-tab="templates">Templates</button>
+        <button class="tab" data-tab="test">Probar</button>
+    </div>
+
+    <!-- Status Tab -->
+    <div class="tab-content active" id="tab-status">
+        <div class="status-card">
+            <div class="status-header">
+                <div class="status-indicator">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText">Verificando conexion...</span>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="refreshStatus()">
+                    <i class="fas fa-sync-alt"></i> Actualizar
                 </button>
-                <button class="btn-secondary" onclick="refreshStatus()">
-                    <i class="fas fa-refresh"></i> Actualizar
-                </button>
+            </div>
+
+            <div class="api-info-grid" id="apiInfoGrid" style="display: none;">
+                <div class="api-info-item">
+                    <div class="api-info-label">Numero</div>
+                    <div class="api-info-value" id="phoneNumber">-</div>
+                </div>
+                <div class="api-info-item">
+                    <div class="api-info-label">Nombre Verificado</div>
+                    <div class="api-info-value" id="verifiedName">-</div>
+                </div>
+                <div class="api-info-item">
+                    <div class="api-info-label">Calidad</div>
+                    <div class="api-info-value">
+                        <span class="quality-badge green" id="qualityRating">-</span>
+                    </div>
+                </div>
+                <div class="api-info-item">
+                    <div class="api-info-label">Plataforma</div>
+                    <div class="api-info-value" id="platformType">CLOUD_API</div>
+                </div>
+            </div>
+
+            <div id="errorInfo" style="display: none; color: #dc3545; margin-top: 10px;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span id="errorMessage"></span>
             </div>
         </div>
 
-        <!-- QR Code Section -->
-        <div class="qr-container" id="qrSection" style="display: none;">
-            <div class="qr-box" id="qrcode">
-                <div class="loading-spinner"></div>
-            </div>
-            <p style="color: white; margin-top: 15px; font-size: 14px;">
-                El código QR se actualiza automáticamente cada 30 segundos
-            </p>
-        </div>
-
-        <!-- Connected Section -->
-        <div id="connectedSection" style="display: none; text-align: center; padding: 30px;">
-            <i class="fas fa-check-circle" style="font-size: 80px; color: #25D366;"></i>
-            <h3 style="color: #25D366; margin-top: 20px;">WhatsApp Conectado</h3>
-            <p style="color: #666;">El servicio está activo y listo para enviar mensajes</p>
-        </div>
-
-        <!-- Instructions -->
-        <div class="instructions-box">
-            <h4><i class="fas fa-info-circle"></i> Instrucciones para Cambiar de Número</h4>
-            <ol>
-                <li>Haz clic en <strong>"Reiniciar WhatsApp"</strong> para generar un nuevo código QR</li>
-                <li>Abre WhatsApp en el teléfono que deseas conectar</li>
-                <li>Ve a <strong>Menú (⋮)</strong> → <strong>Dispositivos vinculados</strong></li>
-                <li>Toca <strong>Vincular un dispositivo</strong></li>
-                <li>Escanea el código QR que aparece arriba</li>
-                <li>Espera a que la conexión se establezca (verás el indicador verde)</li>
-            </ol>
-        </div>
-
-        <!-- Info Card -->
-        <div class="info-card">
-            <h5><i class="fas fa-lightbulb"></i> Información Importante</h5>
-            <p><strong>Números disponibles:</strong></p>
-            <ul>
-                <li><strong>+57 320 345 3099</strong> - Número temporal (actual)</li>
-                <li><strong>+57 305 449 7235</strong> - Número definitivo IEEE Tadeo</li>
+        <div class="status-card">
+            <h3 style="margin-top: 0;">Informacion sobre Meta Cloud API</h3>
+            <ul style="color: #4b5563; line-height: 1.8;">
+                <li>Esta integracion usa la <strong>API oficial de WhatsApp Business</strong> de Meta</li>
+                <li>No requiere mantener un telefono conectado ni escanear codigos QR</li>
+                <li>Para enviar mensajes a usuarios nuevos, debes usar <strong>Message Templates</strong> aprobados</li>
+                <li>Los mensajes de texto libre solo funcionan si el usuario escribio en las ultimas 24 horas</li>
             </ul>
-            <p style="margin-top: 10px;">
-                <strong>Nota:</strong> Al reiniciar el servicio, la sesión actual se cerrará y deberás escanear
-                el código QR con el teléfono que deseas conectar.
-            </p>
+        </div>
+    </div>
+
+    <!-- Inbox Tab -->
+    <div class="tab-content" id="tab-inbox">
+        <div class="inbox-container">
+            <div class="conversations-list">
+                <div class="conversations-header">
+                    <i class="fas fa-inbox"></i> Conversaciones
+                </div>
+                <div class="conversations-scroll" id="conversationsList">
+                    <div class="empty-state">
+                        <i class="fas fa-comments"></i>
+                        <p>No hay conversaciones</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-container">
+                <div class="chat-header" id="chatHeader">
+                    <div>
+                        <div style="font-weight: 600;" id="chatContactName">Selecciona una conversacion</div>
+                        <div style="font-size: 12px; color: #6b7280;" id="chatContactPhone"></div>
+                    </div>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="empty-state">
+                        <i class="fab fa-whatsapp"></i>
+                        <p>Selecciona una conversacion para ver los mensajes</p>
+                    </div>
+                </div>
+                <div class="chat-input-container">
+                    <input type="text" class="chat-input" id="replyInput" placeholder="Escribe un mensaje..." disabled>
+                    <button class="btn btn-primary" onclick="sendReply()" id="sendBtn" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates Tab -->
+    <div class="tab-content" id="tab-templates">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin: 0;">Message Templates</h3>
+            <button class="btn btn-primary" onclick="openCreateTemplateModal()">
+                <i class="fas fa-plus"></i> Crear Template
+            </button>
+        </div>
+
+        <div class="alert alert-warning">
+            <i class="fas fa-info-circle"></i>
+            Los templates nuevos deben ser aprobados por Meta antes de poder usarlos (24-48 horas).
+        </div>
+
+        <div class="templates-grid" id="templatesList">
+            <div class="empty-state">
+                <i class="fas fa-file-alt"></i>
+                <p>Cargando templates...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Tab -->
+    <div class="tab-content" id="tab-test">
+        <div class="status-card">
+            <h3 style="margin-top: 0;"><i class="fas fa-paper-plane"></i> Enviar Mensaje de Prueba</h3>
+
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Importante:</strong> Los mensajes de texto libre solo llegaran si el destinatario ha escrito
+                al numero +57 305 4497235 en las ultimas 24 horas. De lo contrario, usa un Template.
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Tipo de mensaje</label>
+                <select class="form-select" id="testMessageType" onchange="toggleTestForm()">
+                    <option value="template">Usar Template (recomendado)</option>
+                    <option value="text">Texto libre (solo ventana 24h)</option>
+                </select>
+            </div>
+
+            <div id="templateTestForm">
+                <div class="form-group">
+                    <label class="form-label">Template</label>
+                    <select class="form-select" id="testTemplate">
+                        <option value="">Cargando templates...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="textTestForm" style="display: none;">
+                <div class="form-group">
+                    <label class="form-label">Mensaje</label>
+                    <textarea class="form-control" id="testMessage" rows="4" placeholder="Escribe tu mensaje...">Hola! Este es un mensaje de prueba desde IEEE Tadeo Control System.</textarea>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Numero de telefono (con codigo de pais)</label>
+                <input type="text" class="form-control" id="testPhone" placeholder="573001234567">
+            </div>
+
+            <button class="btn btn-primary" onclick="sendTestMessage()">
+                <i class="fas fa-paper-plane"></i> Enviar Mensaje
+            </button>
         </div>
     </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- Create Template Modal -->
+<div class="modal" id="createTemplateModal">
+    <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Crear Template de WhatsApp</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+
+        <form id="createTemplateForm" onsubmit="createTemplate(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label class="form-label">Nombre del template *</label>
+                    <input type="text" class="form-control" id="templateName" required
+                           pattern="[a-z0-9_]+" title="Solo minusculas, numeros y guion bajo"
+                           placeholder="mi_template_ejemplo">
+                    <small style="color: #6b7280;">Solo minúsculas, números y guion bajo (_)</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Nombre para mostrar *</label>
+                    <input type="text" class="form-control" id="templateDisplayName" required
+                           placeholder="Mi Template de Ejemplo">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label class="form-label">Categoría *</label>
+                    <select class="form-select" id="templateCategory" required onchange="onCategoryChange()">
+                        <option value="UTILITY">Utilidad (confirmaciones, notificaciones)</option>
+                        <option value="MARKETING">Marketing (promociones, ofertas)</option>
+                        <option value="AUTHENTICATION">Autenticación (códigos OTP)</option>
+                    </select>
+                    <small id="categoryHelp" style="color: #6b7280;">Para confirmaciones de eventos, recordatorios</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Idioma *</label>
+                    <select class="form-select" id="templateLanguage" required>
+                        <option value="es_MX">Español (México/Latinoamérica)</option>
+                        <option value="es">Español (España)</option>
+                        <option value="en_US">Inglés (US)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Header Section -->
+            <div class="form-group" id="headerSection">
+                <label class="form-label">Encabezado (Header)</label>
+                <select class="form-select" id="templateHeaderType" onchange="onHeaderTypeChange()">
+                    <option value="NONE">Sin encabezado</option>
+                    <option value="TEXT">Texto</option>
+                    <option value="IMAGE">Imagen (para QR o banners)</option>
+                </select>
+
+                <div id="headerTextInput" style="display: none; margin-top: 10px;">
+                    <input type="text" class="form-control" id="templateHeaderText"
+                           placeholder="Registro Confirmado">
+                    <small style="color: #dc3545;">⚠️ Sin emojis, asteriscos ni saltos de línea en el encabezado</small>
+                </div>
+
+                <div id="headerImageInput" style="display: none; margin-top: 10px;">
+                    <div style="background: #f0f9ff; border: 2px dashed #3b82f6; border-radius: 8px; padding: 20px; text-align: center;">
+                        <i class="fas fa-image" style="font-size: 32px; color: #3b82f6; margin-bottom: 10px;"></i>
+                        <p style="margin: 0; color: #1e40af;">La imagen se enviará dinámicamente al usar el template</p>
+                        <small style="color: #6b7280;">Ideal para códigos QR de tickets</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Body Section -->
+            <div class="form-group">
+                <label class="form-label">Cuerpo del mensaje *</label>
+                <textarea class="form-control" id="templateBody" rows="5" required
+                          oninput="updateVariablesList(); updatePreview();"
+                          placeholder="🎫 ¡Hola {{1}}! Tu registro para {{2}} ha sido confirmado.
+
+📅 Fecha: {{3}}
+📍 Lugar: {{4}}
+
+¡Te esperamos!"></textarea>
+                <small style="color: #6b7280;">
+                    Usa <code>&#123;&#123;1&#125;&#125;</code>, <code>&#123;&#123;2&#125;&#125;</code>, etc. para variables.
+                    Puedes usar emojis en el cuerpo ✅
+                </small>
+            </div>
+
+            <!-- Variables Section -->
+            <div class="form-group" id="variablesSection" style="display: none;">
+                <label class="form-label">
+                    <i class="fas fa-code"></i> Variables detectadas
+                    <small style="font-weight: normal; color: #6b7280;">(proporciona ejemplos para Meta)</small>
+                </label>
+                <div id="variablesList" style="background: #f8f9fa; border-radius: 8px; padding: 15px;">
+                    <!-- Variables will be listed here -->
+                </div>
+            </div>
+
+            <!-- Footer Section -->
+            <div class="form-group">
+                <label class="form-label">Footer (opcional)</label>
+                <input type="text" class="form-control" id="templateFooter"
+                       placeholder="IEEE Tadeo Student Branch" value="IEEE Tadeo Student Branch"
+                       oninput="updatePreview()">
+            </div>
+
+            <!-- Preview Section -->
+            <div class="form-group">
+                <label class="form-label"><i class="fab fa-whatsapp"></i> Vista previa</label>
+                <div style="background: #e5ddd5; border-radius: 8px; padding: 20px;">
+                    <div style="background: white; border-radius: 8px; padding: 12px; max-width: 300px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                        <div id="previewHeader" style="font-weight: bold; margin-bottom: 8px; display: none;"></div>
+                        <div id="previewBody" style="white-space: pre-wrap; font-size: 14px; color: #303030;">
+                            Tu mensaje aparecerá aquí...
+                        </div>
+                        <div id="previewFooter" style="font-size: 12px; color: #8696a0; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e9edef;">
+                            IEEE Tadeo Student Branch
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Authentication Warning -->
+            <div id="authWarning" style="display: none;" class="alert alert-warning">
+                <i class="fas fa-key"></i>
+                <strong>Templates de Autenticación:</strong> Tienen formato fijo de Meta con botón "Copiar código".
+                El mensaje será: "Tu código de verificación es [código]"
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i> Crear y Enviar a Meta
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
-let qrCodeInstance = null;
-let autoRefreshInterval = null;
-let lastQrCode = null;
+let currentConversation = null;
+let templates = [];
 
-// Show alert message
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+        tab.classList.add('active');
+        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+
+        // Load data when switching tabs
+        if (tab.dataset.tab === 'inbox') loadConversations();
+        if (tab.dataset.tab === 'templates') loadTemplates();
+    });
+});
+
+// Show alert
 function showAlert(message, type = 'success') {
-    const alertContainer = document.getElementById('alertContainer');
-    const alertClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-error' : 'alert-warning';
-
+    const container = document.getElementById('alertContainer');
     const alert = document.createElement('div');
-    alert.className = `alert ${alertClass}`;
-    alert.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'exclamation-triangle'}"></i>
-        ${message}
-    `;
-
-    alertContainer.innerHTML = '';
-    alertContainer.appendChild(alert);
-
-    // Auto-dismiss after 5 seconds
-    setTimeout(() => {
-        alert.style.transition = 'opacity 0.5s';
-        alert.style.opacity = '0';
-        setTimeout(() => alert.remove(), 500);
-    }, 5000);
+    alert.className = `alert alert-${type}`;
+    alert.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}`;
+    container.innerHTML = '';
+    container.appendChild(alert);
+    setTimeout(() => alert.remove(), 5000);
 }
 
-// Fetch WhatsApp status
+// Status functions
 async function refreshStatus() {
     try {
         const response = await fetch('/whatsapp/status');
         const data = await response.json();
 
-        updateStatusUI(data);
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const apiInfoGrid = document.getElementById('apiInfoGrid');
+        const errorInfo = document.getElementById('errorInfo');
+
+        if (data.ready) {
+            statusDot.className = 'status-dot ready';
+            statusText.textContent = 'API Conectada';
+            apiInfoGrid.style.display = 'grid';
+            errorInfo.style.display = 'none';
+
+            document.getElementById('phoneNumber').textContent = data.phone_number || '-';
+            document.getElementById('verifiedName').textContent = data.verified_name || '-';
+            document.getElementById('platformType').textContent = data.platform_type || 'CLOUD_API';
+
+            const qualityBadge = document.getElementById('qualityRating');
+            const quality = data.quality_rating || 'N/A';
+            qualityBadge.textContent = quality;
+            qualityBadge.className = 'quality-badge ' + (quality === 'GREEN' ? 'green' : quality === 'YELLOW' ? 'yellow' : 'green');
+        } else {
+            statusDot.className = 'status-dot error';
+            statusText.textContent = 'Error de Conexion';
+            apiInfoGrid.style.display = 'none';
+            errorInfo.style.display = 'block';
+            document.getElementById('errorMessage').textContent = data.error || 'Error desconocido';
+        }
     } catch (error) {
-        console.error('Error fetching status:', error);
-        updateStatusUI({
-            ready: false,
-            error: error.message,
-            message: 'Error al conectar con el servicio'
-        });
+        console.error('Error:', error);
     }
 }
 
-// Update UI based on status
-function updateStatusUI(data) {
-    const statusDot = document.getElementById('statusDot');
-    const statusText = document.getElementById('statusText');
-    const qrSection = document.getElementById('qrSection');
-    const connectedSection = document.getElementById('connectedSection');
-    const qrDiv = document.getElementById('qrcode');
+// Conversations/Inbox functions
+async function loadConversations() {
+    try {
+        const response = await fetch('/whatsapp/conversations');
+        const data = await response.json();
 
-    if (data.ready) {
-        // Connected
-        statusDot.className = 'status-dot ready';
-        statusText.textContent = '✓ WhatsApp Conectado';
-        qrSection.style.display = 'none';
-        connectedSection.style.display = 'block';
-    } else if (data.qr) {
-        // QR Available
-        statusDot.className = 'status-dot waiting';
-        statusText.textContent = '⏳ Esperando escaneo del código QR';
-        qrSection.style.display = 'block';
-        connectedSection.style.display = 'none';
+        const container = document.getElementById('conversationsList');
 
-        // Solo regenerar el QR si cambió
-        if (lastQrCode !== data.qr) {
-            qrDiv.innerHTML = '';
-            qrCodeInstance = new QRCode(qrDiv, {
-                text: data.qr,
-                width: 300,
-                height: 300,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.L
-            });
-            lastQrCode = data.qr;
+        if (data.conversations.length === 0) {
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-comments"></i><p>No hay conversaciones</p></div>';
+            return;
         }
-    } else {
-        // Initializing or Error - no ocultar el QR si ya existe
-        statusDot.className = 'status-dot ' + (data.error ? 'error' : 'waiting');
-        statusText.textContent = data.message || 'Inicializando...';
 
-        // Solo ocultar si no hay QR previo
-        if (!lastQrCode) {
-            qrSection.style.display = 'none';
-        }
-        connectedSection.style.display = 'none';
+        container.innerHTML = data.conversations.map(conv => `
+            <div class="conversation-item ${currentConversation === conv.phone_number ? 'active' : ''}"
+                 onclick="selectConversation('${conv.phone_number}', '${conv.contact_name || conv.phone_number}')">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="conversation-name">${conv.contact_name || conv.phone_number}</div>
+                    ${conv.unread_count > 0 ? `<span class="unread-badge">${conv.unread_count}</span>` : ''}
+                </div>
+                <div class="conversation-time">${conv.last_message_at ? new Date(conv.last_message_at).toLocaleString() : ''}</div>
+            </div>
+        `).join('');
 
-        // Solo mostrar error si no es un timeout y no hay QR previo
-        if (data.error && !data.error.includes('timeout') && !lastQrCode) {
-            showAlert(`Error: ${data.error}`, 'error');
+        // Update total unread
+        const totalUnread = data.conversations.reduce((sum, c) => sum + c.unread_count, 0);
+        const badge = document.getElementById('totalUnread');
+        if (totalUnread > 0) {
+            badge.textContent = totalUnread;
+            badge.style.display = 'inline';
+        } else {
+            badge.style.display = 'none';
         }
+    } catch (error) {
+        console.error('Error loading conversations:', error);
     }
 }
 
-// Restart WhatsApp service
-async function restartWhatsApp() {
-    const btn = document.getElementById('restartBtn');
+async function selectConversation(phone, name) {
+    currentConversation = phone;
+    document.getElementById('chatContactName').textContent = name;
+    document.getElementById('chatContactPhone').textContent = phone;
+    document.getElementById('replyInput').disabled = false;
+    document.getElementById('sendBtn').disabled = false;
 
-    if (!confirm('¿Estás seguro de que deseas reiniciar WhatsApp?\n\nEsto cerrará la sesión actual y generará un nuevo código QR.')) {
-        return;
+    // Update active state
+    document.querySelectorAll('.conversation-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.onclick.toString().includes(phone)) {
+            item.classList.add('active');
+        }
+    });
+
+    // Load messages
+    try {
+        const response = await fetch(`/whatsapp/conversations/${phone}/messages`);
+        const data = await response.json();
+
+        const container = document.getElementById('chatMessages');
+
+        if (data.messages.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>No hay mensajes</p></div>';
+            return;
+        }
+
+        // Reverse to show oldest first
+        const messages = data.messages.reverse();
+
+        container.innerHTML = messages.map(msg => `
+            <div class="message-bubble received">
+                <div>${msg.text_body || msg.caption || `[${msg.message_type}]`}</div>
+                <div class="message-time">${new Date(msg.timestamp).toLocaleString()}</div>
+            </div>
+        `).join('');
+
+        container.scrollTop = container.scrollHeight;
+
+        // Reload conversations to update unread count
+        loadConversations();
+    } catch (error) {
+        console.error('Error loading messages:', error);
     }
+}
 
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reiniciando...';
+async function sendReply() {
+    if (!currentConversation) return;
+
+    const input = document.getElementById('replyInput');
+    const message = input.value.trim();
+    if (!message) return;
 
     try {
-        const response = await fetch('/whatsapp/restart', {
+        const response = await fetch(`/whatsapp/conversations/${currentConversation}/reply`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: currentConversation, message })
         });
 
         const data = await response.json();
 
-        if (response.ok && data.success) {
-            showAlert('WhatsApp reiniciado exitosamente. Escanea el nuevo código QR.', 'success');
-
-            // Wait 2 seconds before refreshing status
-            setTimeout(() => {
-                refreshStatus();
-            }, 2000);
+        if (data.success) {
+            // Add message to chat
+            const container = document.getElementById('chatMessages');
+            container.innerHTML += `
+                <div class="message-bubble sent">
+                    <div>${message}</div>
+                    <div class="message-time">${new Date().toLocaleString()}</div>
+                </div>
+            `;
+            container.scrollTop = container.scrollHeight;
+            input.value = '';
         } else {
-            showAlert(data.detail || 'Error al reiniciar WhatsApp', 'error');
+            showAlert(data.error || 'Error al enviar mensaje', 'error');
         }
     } catch (error) {
-        console.error('Error restarting WhatsApp:', error);
-        showAlert('Error al reiniciar WhatsApp: ' + error.message, 'error');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Reiniciar WhatsApp';
+        showAlert('Error de conexion', 'error');
+    }
+}
+
+// Enter key to send
+document.getElementById('replyInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendReply();
+});
+
+// Templates functions
+function toggleTemplatePreview(index) {
+    const preview = document.getElementById(`templatePreview${index}`);
+    const btn = preview.previousElementSibling;
+
+    if (preview.classList.contains('show')) {
+        preview.classList.remove('show');
+        btn.innerHTML = '<i class="fas fa-mobile-alt"></i> Ver preview';
+    } else {
+        preview.classList.add('show');
+        btn.innerHTML = '<i class="fas fa-times"></i> Ocultar preview';
+    }
+}
+
+async function loadTemplates() {
+    try {
+        const response = await fetch('/whatsapp/templates');
+        const data = await response.json();
+
+        templates = data.templates || [];
+
+        const container = document.getElementById('templatesList');
+        const testSelect = document.getElementById('testTemplate');
+
+        if (templates.length === 0) {
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-file-alt"></i><p>No hay templates</p></div>';
+            testSelect.innerHTML = '<option value="">No hay templates disponibles</option>';
+            return;
+        }
+
+        container.innerHTML = templates.map((t, index) => {
+            const header = t.components.find(c => c.type === 'HEADER');
+            const body = t.components.find(c => c.type === 'BODY');
+            const footer = t.components.find(c => c.type === 'FOOTER');
+            const buttons = t.components.find(c => c.type === 'BUTTONS');
+
+            // Extract variables from body
+            const bodyText = body?.text || '';
+            const variableMatches = bodyText.match(/\{\{(\d+)\}\}/g) || [];
+            const uniqueVars = [...new Set(variableMatches)].sort((a, b) =>
+                parseInt(a.match(/\d+/)[0]) - parseInt(b.match(/\d+/)[0])
+            );
+
+            // Get example values if available
+            const examples = body?.example?.body_text?.[0] || [];
+
+            // Variable suggestions
+            const varSuggestions = {
+                '{{1}}': 'Nombre del usuario',
+                '{{2}}': 'Nombre del evento',
+                '{{3}}': 'Fecha/hora',
+                '{{4}}': 'Ubicación',
+                '{{5}}': 'Código',
+                '{{6}}': 'PIN'
+            };
+
+            // Build header HTML
+            let headerHtml = '';
+            if (header) {
+                if (header.format === 'IMAGE') {
+                    headerHtml = `
+                        <div class="template-component">
+                            <div class="template-component-label"><i class="fas fa-image"></i> HEADER (Imagen)</div>
+                            <div class="template-header-image">
+                                <i class="fas fa-photo-video"></i>
+                                Se requiere enviar imagen al usar este template
+                            </div>
+                        </div>`;
+                } else if (header.text) {
+                    headerHtml = `
+                        <div class="template-component">
+                            <div class="template-component-label"><i class="fas fa-heading"></i> HEADER</div>
+                            <div class="template-component-content">${header.text}</div>
+                        </div>`;
+                }
+            }
+
+            // Build variables HTML
+            let variablesHtml = '';
+            if (uniqueVars.length > 0) {
+                variablesHtml = `
+                    <div class="template-variables">
+                        ${uniqueVars.map((v, i) => {
+                            const varNum = parseInt(v.match(/\d+/)[0]);
+                            const example = examples[varNum - 1] || '';
+                            const suggestion = varSuggestions[v] || `Variable ${varNum}`;
+                            return `<span class="template-variable-badge">
+                                <code>${v}</code> ${suggestion}${example ? ` → "${example}"` : ''}
+                            </span>`;
+                        }).join('')}
+                    </div>`;
+            }
+
+            // Build footer HTML
+            let footerHtml = '';
+            if (footer?.text) {
+                footerHtml = `
+                    <div class="template-component">
+                        <div class="template-component-label"><i class="fas fa-shoe-prints"></i> FOOTER</div>
+                        <div class="template-component-content" style="font-size: 12px; color: #6b7280;">${footer.text}</div>
+                    </div>`;
+            }
+
+            // Build buttons HTML for preview
+            let buttonsHtml = '';
+            if (buttons?.buttons) {
+                buttonsHtml = `
+                    <div class="buttons">
+                        ${buttons.buttons.map(b => `<button>${b.text || b.otp_type || 'Botón'}</button>`).join('')}
+                    </div>`;
+            }
+
+            // Category icon
+            const categoryIcon = {
+                'UTILITY': 'fa-tools',
+                'MARKETING': 'fa-bullhorn',
+                'AUTHENTICATION': 'fa-key'
+            }[t.category] || 'fa-file';
+
+            return `
+            <div class="template-card">
+                <div class="template-header">
+                    <div>
+                        <div class="template-name">${t.name}</div>
+                        <div style="font-size: 12px; color: #6b7280;">
+                            <i class="fas ${categoryIcon}" style="margin-right: 4px;"></i>
+                            ${t.category} - ${t.language}
+                        </div>
+                    </div>
+                    <span class="template-status ${t.status.toLowerCase()}">${t.status}</span>
+                </div>
+
+                <div class="template-components">
+                    ${headerHtml}
+
+                    <div class="template-component">
+                        <div class="template-component-label"><i class="fas fa-align-left"></i> BODY</div>
+                        <div class="template-component-content">${bodyText || '(Template de autenticación - formato fijo de Meta)'}</div>
+                    </div>
+
+                    ${footerHtml}
+                </div>
+
+                ${variablesHtml}
+
+                <button class="template-preview-toggle" onclick="toggleTemplatePreview(${index})">
+                    <i class="fas fa-mobile-alt"></i> Ver preview
+                </button>
+
+                <div class="template-preview-section" id="templatePreview${index}">
+                    <div class="template-preview-phone">
+                        <div class="template-preview-bubble">
+                            ${header?.text ? `<div class="header">${header.text}</div>` : ''}
+                            ${header?.format === 'IMAGE' ? '<div style="background: #ddd; height: 150px; border-radius: 6px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; color: #666;"><i class="fas fa-image fa-2x"></i></div>' : ''}
+                            <div class="body">${bodyText || 'Tu código de verificación es {{1}}'}</div>
+                            ${footer?.text ? `<div class="footer">${footer.text}</div>` : ''}
+                            ${buttonsHtml}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="template-meta" style="margin-top: 12px;">
+                    <span><i class="fas fa-language"></i> ${t.language}</span>
+                    <span><i class="fas fa-hashtag"></i> ${uniqueVars.length} variable${uniqueVars.length !== 1 ? 's' : ''}</span>
+                    ${header ? `<span><i class="fas fa-${header.format === 'IMAGE' ? 'image' : 'heading'}"></i> Con header</span>` : ''}
+                </div>
+            </div>
+        `}).join('');
+
+        // Update test select
+        const approvedTemplates = templates.filter(t => t.status === 'APPROVED');
+        testSelect.innerHTML = approvedTemplates.length > 0
+            ? approvedTemplates.map(t => `<option value="${t.name}">${t.name} (${t.language})</option>`).join('')
+            : '<option value="">No hay templates aprobados</option>';
+
+    } catch (error) {
+        console.error('Error loading templates:', error);
+    }
+}
+
+function openCreateTemplateModal() {
+    document.getElementById('createTemplateModal').classList.add('show');
+    updatePreview();
+}
+
+function closeModal() {
+    document.getElementById('createTemplateModal').classList.remove('show');
+    document.getElementById('createTemplateForm').reset();
+    document.getElementById('variablesSection').style.display = 'none';
+    document.getElementById('headerTextInput').style.display = 'none';
+    document.getElementById('headerImageInput').style.display = 'none';
+}
+
+function onCategoryChange() {
+    const category = document.getElementById('templateCategory').value;
+    const helpText = document.getElementById('categoryHelp');
+    const authWarning = document.getElementById('authWarning');
+    const bodySection = document.getElementById('templateBody').parentElement;
+    const headerSection = document.getElementById('headerSection');
+
+    authWarning.style.display = 'none';
+    bodySection.style.display = 'block';
+    headerSection.style.display = 'block';
+
+    switch(category) {
+        case 'UTILITY':
+            helpText.textContent = 'Para confirmaciones de eventos, recordatorios, notificaciones';
+            break;
+        case 'MARKETING':
+            helpText.textContent = 'Para promociones, ofertas, campañas. Puede incluir imágenes.';
+            break;
+        case 'AUTHENTICATION':
+            helpText.textContent = 'Para códigos OTP/verificación. Formato fijo de Meta.';
+            authWarning.style.display = 'block';
+            bodySection.style.display = 'none';
+            headerSection.style.display = 'none';
+            break;
+    }
+}
+
+function onHeaderTypeChange() {
+    const headerType = document.getElementById('templateHeaderType').value;
+    document.getElementById('headerTextInput').style.display = headerType === 'TEXT' ? 'block' : 'none';
+    document.getElementById('headerImageInput').style.display = headerType === 'IMAGE' ? 'block' : 'none';
+    updatePreview();
+}
+
+function updateVariablesList() {
+    const body = document.getElementById('templateBody').value;
+    const matches = body.match(/\{\{(\d+)\}\}/g) || [];
+    const uniqueVars = [...new Set(matches)].sort((a, b) => {
+        return parseInt(a.match(/\d+/)[0]) - parseInt(b.match(/\d+/)[0]);
+    });
+
+    const section = document.getElementById('variablesSection');
+    const list = document.getElementById('variablesList');
+
+    if (uniqueVars.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = 'block';
+
+    // Common variable suggestions
+    const suggestions = {
+        '{{1}}': 'Nombre del usuario',
+        '{{2}}': 'Nombre del evento',
+        '{{3}}': 'Fecha del evento',
+        '{{4}}': 'Lugar del evento',
+        '{{5}}': 'Código del ticket',
+        '{{6}}': 'PIN de acceso'
+    };
+
+    const exampleValues = {
+        '{{1}}': 'María García',
+        '{{2}}': 'Workshop de Python',
+        '{{3}}': '15 de Enero 2025 - 10:00 AM',
+        '{{4}}': 'Auditorio UTadeo',
+        '{{5}}': 'TKT-12345',
+        '{{6}}': '1234'
+    };
+
+    list.innerHTML = uniqueVars.map(v => `
+        <div style="display: grid; grid-template-columns: 80px 1fr 1fr; gap: 10px; align-items: center; margin-bottom: 10px;">
+            <code style="background: #e5e7eb; padding: 4px 8px; border-radius: 4px; font-weight: bold;">${v}</code>
+            <input type="text" class="form-control" style="font-size: 13px;"
+                   id="varDesc${v.match(/\d+/)[0]}"
+                   placeholder="Descripción"
+                   value="${suggestions[v] || ''}">
+            <input type="text" class="form-control" style="font-size: 13px;"
+                   id="varExample${v.match(/\d+/)[0]}"
+                   placeholder="Ejemplo"
+                   value="${exampleValues[v] || ''}"
+                   oninput="updatePreview()">
+        </div>
+    `).join('');
+}
+
+function updatePreview() {
+    const headerType = document.getElementById('templateHeaderType').value;
+    const headerText = document.getElementById('templateHeaderText').value;
+    const body = document.getElementById('templateBody').value;
+    const footer = document.getElementById('templateFooter').value;
+
+    // Header preview
+    const previewHeader = document.getElementById('previewHeader');
+    if (headerType === 'TEXT' && headerText) {
+        previewHeader.style.display = 'block';
+        previewHeader.textContent = headerText;
+    } else if (headerType === 'IMAGE') {
+        previewHeader.style.display = 'block';
+        previewHeader.innerHTML = '<div style="background: #f0f0f0; height: 120px; border-radius: 4px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;"><i class="fas fa-image" style="font-size: 32px; color: #9ca3af;"></i></div>';
+    } else {
+        previewHeader.style.display = 'none';
+    }
+
+    // Body preview with variable replacement
+    let previewBody = body || 'Tu mensaje aparecerá aquí...';
+    const matches = body.match(/\{\{(\d+)\}\}/g) || [];
+    matches.forEach(v => {
+        const num = v.match(/\d+/)[0];
+        const exampleInput = document.getElementById(`varExample${num}`);
+        const example = exampleInput ? exampleInput.value : `[Variable ${num}]`;
+        previewBody = previewBody.replace(v, `<span style="background: #dcfce7; padding: 0 2px; border-radius: 2px;">${example || `[${num}]`}</span>`);
+    });
+    document.getElementById('previewBody').innerHTML = previewBody.replace(/\n/g, '<br>');
+
+    // Footer preview
+    const previewFooter = document.getElementById('previewFooter');
+    if (footer) {
+        previewFooter.style.display = 'block';
+        previewFooter.textContent = footer;
+    } else {
+        previewFooter.style.display = 'none';
+    }
+}
+
+async function createTemplate(e) {
+    e.preventDefault();
+
+    const category = document.getElementById('templateCategory').value;
+    const headerType = document.getElementById('templateHeaderType').value;
+    const body = document.getElementById('templateBody').value;
+
+    // Collect variable examples
+    const matches = body.match(/\{\{(\d+)\}\}/g) || [];
+    const uniqueVars = [...new Set(matches)].sort((a, b) => {
+        return parseInt(a.match(/\d+/)[0]) - parseInt(b.match(/\d+/)[0]);
+    });
+
+    const variableExamples = uniqueVars.map(v => {
+        const num = v.match(/\d+/)[0];
+        const exampleInput = document.getElementById(`varExample${num}`);
+        return exampleInput ? exampleInput.value : `Ejemplo ${num}`;
+    });
+
+    const data = {
+        name: document.getElementById('templateName').value,
+        display_name: document.getElementById('templateDisplayName').value,
+        category: category,
+        language: document.getElementById('templateLanguage').value,
+        body_text: category === 'AUTHENTICATION' ? null : body,
+        footer_text: document.getElementById('templateFooter').value || null,
+        header_type: headerType !== 'NONE' ? headerType : null,
+        header_text: headerType === 'TEXT' ? document.getElementById('templateHeaderText').value : null,
+        variable_examples: variableExamples.length > 0 ? variableExamples : null
+    };
+
+    try {
+        const response = await fetch('/whatsapp/templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            const statusMsg = result.status === 'APPROVED'
+                ? '¡Template aprobado automáticamente!'
+                : result.status === 'REJECTED'
+                ? 'Template rechazado por Meta. Revisa el contenido.'
+                : 'Template enviado a Meta para aprobación (24-48h)';
+
+            showAlert(statusMsg, result.status === 'REJECTED' ? 'error' : 'success');
+            closeModal();
+            loadTemplates();
+        } else {
+            // Show detailed error
+            let errorMsg = result.error || 'Error al crear template';
+            if (result.error_user_msg) {
+                errorMsg += ': ' + result.error_user_msg;
+            }
+            showAlert(errorMsg, 'error');
+        }
+    } catch (error) {
+        showAlert('Error de conexión', 'error');
+    }
+}
+
+// Test functions
+function toggleTestForm() {
+    const type = document.getElementById('testMessageType').value;
+    document.getElementById('templateTestForm').style.display = type === 'template' ? 'block' : 'none';
+    document.getElementById('textTestForm').style.display = type === 'text' ? 'block' : 'none';
+}
+
+async function sendTestMessage() {
+    const phone = document.getElementById('testPhone').value.trim();
+    if (!phone) {
+        showAlert('Ingresa un numero de telefono', 'error');
+        return;
+    }
+
+    const type = document.getElementById('testMessageType').value;
+
+    try {
+        let response;
+
+        if (type === 'template') {
+            const templateName = document.getElementById('testTemplate').value;
+            if (!templateName) {
+                showAlert('Selecciona un template', 'error');
+                return;
+            }
+
+            response = await fetch('/whatsapp/send-template', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    phone,
+                    template_name: templateName,
+                    language: 'es'
+                })
+            });
+        } else {
+            const message = document.getElementById('testMessage').value.trim();
+            if (!message) {
+                showAlert('Escribe un mensaje', 'error');
+                return;
+            }
+
+            response = await fetch('/whatsapp/test-message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, message })
+            });
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            showAlert('Mensaje enviado exitosamente! ID: ' + data.message_id);
+        } else {
+            showAlert(data.error || 'Error al enviar mensaje', 'error');
+        }
+    } catch (error) {
+        showAlert('Error de conexion', 'error');
     }
 }
 
 // Initialize
-document.addEventListener('DOMContentLoaded', function() {
-    // Initial status check
+document.addEventListener('DOMContentLoaded', () => {
     refreshStatus();
+    loadTemplates();
 
-    // Auto-refresh más frecuente (cada 5 segundos) cuando no está conectado
-    // y cada 30 segundos cuando ya está conectado
-    function startAutoRefresh() {
-        if (autoRefreshInterval) {
-            clearInterval(autoRefreshInterval);
-        }
-
-        // Primero verificar el estado actual
-        fetch('/whatsapp/status')
-            .then(res => res.json())
-            .then(data => {
-                const interval = data.ready ? 30000 : 5000; // 30s si está listo, 5s si no
-                autoRefreshInterval = setInterval(refreshStatus, interval);
-            })
-            .catch(() => {
-                autoRefreshInterval = setInterval(refreshStatus, 5000);
-            });
-    }
-
-    startAutoRefresh();
-
-    // Re-evaluar intervalo cada vez que se actualiza el estado
-    const originalUpdateStatusUI = updateStatusUI;
-    updateStatusUI = function(data) {
-        originalUpdateStatusUI(data);
-        // Ajustar intervalo basado en estado
-        if (autoRefreshInterval) {
-            clearInterval(autoRefreshInterval);
-        }
-        const interval = data.ready ? 30000 : 5000;
-        autoRefreshInterval = setInterval(refreshStatus, interval);
-    };
-});
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', function() {
-    if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-    }
+    // Check unread count
+    fetch('/whatsapp/unread-count')
+        .then(r => r.json())
+        .then(data => {
+            const badge = document.getElementById('totalUnread');
+            if (data.unread_count > 0) {
+                badge.textContent = data.unread_count;
+                badge.style.display = 'inline';
+            }
+        });
 });
 </script>
 {% endblock %}
