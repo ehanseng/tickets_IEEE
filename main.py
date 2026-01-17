@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, validator
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, or_
 from datetime import datetime, timedelta
 from typing import List, Optional
 import os
@@ -28,6 +28,8 @@ from auth import (
     get_current_user,
     require_admin,
     require_validator,
+    require_meta_reviewer,
+    is_meta_reviewer,
     get_password_hash,
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
@@ -72,14 +74,47 @@ def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Crear token JWT
+    # Obtener permisos del usuario (si existen)
+    # Los permisos se guardan como JSON string en la BD, hay que parsearlos
+    permissions = {}
+    if user.permissions:
+        import json
+        try:
+            permissions = json.loads(user.permissions) if isinstance(user.permissions, str) else user.permissions
+        except (json.JSONDecodeError, TypeError):
+            permissions = {}
+
+    # Debug log
+    print(f"[LOGIN] User: {user.username}, Role: {user.role.value}, Permissions raw: {repr(user.permissions)}, Permissions parsed: {permissions}")
+
+    # Crear token JWT con permisos incluidos
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.username, "role": user.role.value},
+        data={"sub": user.username, "role": user.role.value, "permissions": permissions},
         expires_delta=access_token_expires
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/auth/callback")
+async def oauth_callback(request: Request, code: str = None, state: str = None, error: str = None):
+    """
+    OAuth callback endpoint para Meta/Facebook.
+    Este endpoint es requerido por Meta para la configuración de OAuth,
+    aunque no usamos Facebook Login (solo WhatsApp Business API).
+    """
+    if error:
+        # Si hay un error, redirigir al login con mensaje
+        return RedirectResponse(url="/login?error=oauth_denied")
+
+    if code:
+        # En un flujo OAuth completo, aquí intercambiaríamos el código por un token
+        # Como no usamos Facebook Login, simplemente redirigimos
+        return RedirectResponse(url="/login?oauth=success")
+
+    # Si no hay código ni error, redirigir al login
+    return RedirectResponse(url="/login")
 
 
 @app.post("/auth/validators", response_model=schemas.AdminUserResponse, status_code=status.HTTP_201_CREATED)
@@ -116,12 +151,21 @@ def create_validator(
         full_name=validator_data.full_name,
         role=role_enum,
         access_start=validator_data.access_start,
-        access_end=validator_data.access_end
+        access_end=validator_data.access_end,
+        linked_user_id=validator_data.linked_user_id,
+        permissions=validator_data.permissions
     )
 
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+
+    # Sincronizar contraseña con User vinculado si existe
+    if db_user.linked_user_id:
+        linked_user = db.query(models.User).filter(models.User.id == db_user.linked_user_id).first()
+        if linked_user:
+            linked_user.hashed_password = hashed_password
+            db.commit()
 
     return db_user
 
@@ -174,8 +218,9 @@ def update_validator(
 
     if validator_update.role is not None:
         # Validar que el rol sea válido
-        if validator_update.role not in ['admin', 'validator']:
-            raise HTTPException(status_code=400, detail="Rol inválido. Use 'admin' o 'validator'")
+        valid_roles = ['admin', 'validator', 'meta_reviewer']
+        if validator_update.role not in valid_roles:
+            raise HTTPException(status_code=400, detail=f"Rol inválido. Use uno de: {', '.join(valid_roles)}")
         validator.role = models.RoleEnum(validator_update.role)
 
     if validator_update.is_active is not None:
@@ -189,12 +234,203 @@ def update_validator(
 
     if validator_update.password is not None:
         # Actualizar contraseña si se proporciona
-        validator.hashed_password = get_password_hash(validator_update.password)
+        new_hashed_password = get_password_hash(validator_update.password)
+        validator.hashed_password = new_hashed_password
+
+        # Sincronizar contraseña con User vinculado si existe
+        if validator.linked_user_id:
+            linked_user = db.query(models.User).filter(models.User.id == validator.linked_user_id).first()
+            if linked_user:
+                linked_user.hashed_password = new_hashed_password
+
+    if validator_update.linked_user_id is not None:
+        validator.linked_user_id = validator_update.linked_user_id
+
+    if validator_update.permissions is not None:
+        # Convertir dict a JSON string si es necesario (el modelo espera Text)
+        import json
+        if isinstance(validator_update.permissions, dict):
+            validator.permissions = json.dumps(validator_update.permissions) if validator_update.permissions else None
+        else:
+            validator.permissions = validator_update.permissions
 
     db.commit()
     db.refresh(validator)
 
     return validator
+
+
+# ========== ENDPOINTS DE USUARIOS DEL PORTAL CON LOGIN ==========
+
+@app.get("/api/portal-users-with-login")
+def list_portal_users_with_login(
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Lista los usuarios/contactos que han iniciado sesion en el portal al menos una vez.
+    Incluye informacion de si ya tienen cuenta administrativa vinculada.
+    """
+    # Obtener usuarios con al menos un login
+    users = db.query(models.User).filter(
+        models.User.login_count > 0
+    ).order_by(models.User.last_login.desc()).all()
+
+    result = []
+    for user in users:
+        # Verificar si tiene cuenta admin vinculada
+        admin_account = db.query(models.AdminUser).filter(
+            models.AdminUser.linked_user_id == user.id
+        ).first()
+
+        result.append({
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "phone": user.phone,
+            "first_login": user.first_login,
+            "last_login": user.last_login,
+            "login_count": user.login_count or 0,
+            "has_admin_account": admin_account is not None,
+            "admin_account_id": admin_account.id if admin_account else None
+        })
+
+    return result
+
+
+@app.post("/api/promote-to-admin", response_model=schemas.AdminUserResponse, status_code=status.HTTP_201_CREATED)
+def promote_user_to_admin(
+    request: schemas.PromoteToAdminRequest,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Promueve un contacto del portal a usuario administrativo.
+    Crea una cuenta admin vinculada al contacto existente.
+    """
+    # Verificar que el usuario existe
+    user = db.query(models.User).filter(models.User.id == request.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Contacto no encontrado")
+
+    # Verificar que no tenga ya una cuenta admin vinculada
+    existing_admin = db.query(models.AdminUser).filter(
+        models.AdminUser.linked_user_id == request.user_id
+    ).first()
+    if existing_admin:
+        raise HTTPException(status_code=400, detail="Este contacto ya tiene una cuenta administrativa")
+
+    # Verificar que el username no este en uso
+    existing_username = db.query(models.AdminUser).filter(
+        models.AdminUser.username == request.username
+    ).first()
+    if existing_username:
+        raise HTTPException(status_code=400, detail="El nombre de usuario ya esta en uso")
+
+    # Verificar que el email no este en uso por otro admin
+    existing_email = db.query(models.AdminUser).filter(
+        models.AdminUser.email == user.email
+    ).first()
+    if existing_email:
+        raise HTTPException(status_code=400, detail="El email ya esta registrado en otra cuenta administrativa")
+
+    # Crear la cuenta admin
+    role_enum = models.RoleEnum.ADMIN if request.role == "admin" else models.RoleEnum.VALIDATOR
+    hashed_password = get_password_hash(request.password)
+
+    # Convertir permisos a JSON string si es un diccionario
+    permissions_str = None
+    if request.permissions:
+        permissions_str = json.dumps(request.permissions) if isinstance(request.permissions, dict) else request.permissions
+
+    admin_user = models.AdminUser(
+        username=request.username,
+        email=user.email,
+        hashed_password=hashed_password,
+        full_name=user.name,
+        role=role_enum,
+        linked_user_id=user.id,
+        permissions=permissions_str,
+        access_start=request.access_start,
+        access_end=request.access_end
+    )
+
+    db.add(admin_user)
+
+    # Sincronizar contraseña con el User vinculado
+    user.hashed_password = hashed_password
+
+    db.commit()
+    db.refresh(admin_user)
+
+    return admin_user
+
+
+@app.get("/api/admin-permissions-schema")
+def get_admin_permissions_schema(
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """
+    Retorna el esquema de permisos disponibles para usuarios administrativos.
+    """
+    return {
+        "sections": [
+            {"key": "dashboard", "name": "Dashboard", "description": "Ver estadisticas generales"},
+            {"key": "events", "name": "Eventos", "description": "Gestionar eventos"},
+            {"key": "tickets", "name": "Tickets", "description": "Gestionar tickets"},
+            {"key": "users", "name": "Contactos", "description": "Gestionar contactos/usuarios"},
+            {"key": "messages", "name": "Mensajes", "description": "Enviar mensajes"},
+            {"key": "campaigns", "name": "Campañas", "description": "Gestionar campañas de mensajes"},
+            {"key": "whatsapp", "name": "WhatsApp", "description": "Administrar WhatsApp"},
+            {"key": "universities", "name": "Universidades", "description": "Gestionar universidades"},
+            {"key": "organizations", "name": "Organizaciones", "description": "Gestionar organizaciones"},
+            {"key": "tags", "name": "Etiquetas", "description": "Gestionar etiquetas"},
+            {"key": "catalogs", "name": "Catálogos", "description": "Gestionar catálogos de perfilamiento"},
+            {"key": "access", "name": "Accesos", "description": "Gestionar usuarios administrativos"},
+            {"key": "validate", "name": "Validar", "description": "Validar tickets en eventos"}
+        ]
+    }
+
+
+@app.get("/api/portal-token")
+def get_portal_token(
+    current_user: models.AdminUser = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Genera un token de portal para el admin si tiene un contacto vinculado.
+    Permite transición transparente del admin al portal de usuario.
+    """
+    from user_auth import create_access_token as create_user_token
+
+    # Buscar contacto vinculado por linked_user_id o por email
+    user = None
+    if current_user.linked_user_id:
+        user = db.query(models.User).filter(models.User.id == current_user.linked_user_id).first()
+
+    if not user:
+        user = db.query(models.User).filter(models.User.email == current_user.email).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No tienes un contacto vinculado. Crea primero tu perfil de contacto."
+        )
+
+    # Generar token de portal
+    from datetime import timedelta
+    portal_token = create_user_token(
+        data={"sub": user.email},
+        expires_delta=timedelta(hours=8)
+    )
+
+    return {
+        "access_token": portal_token,
+        "token_type": "bearer",
+        "user_id": user.id,
+        "name": user.name,
+        "email": user.email
+    }
 
 
 # ========== ENDPOINTS DE UNIVERSIDADES ==========
@@ -328,6 +564,496 @@ def delete_university(
         "message": "Universidad eliminada exitosamente",
         "university_id": university_id
     }
+
+
+# ========== ENDPOINTS DE CATÁLOGOS DE PERFILAMIENTO ==========
+
+# --- Programas Académicos ---
+@app.get("/api/catalogs/academic-programs")
+def list_academic_programs(db: Session = Depends(get_db)):
+    """Listar programas académicos"""
+    return db.query(models.AcademicProgram).order_by(
+        models.AcademicProgram.display_order, models.AcademicProgram.name
+    ).all()
+
+
+@app.post("/api/catalogs/academic-programs")
+def create_academic_program(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Crear programa académico"""
+    item = models.AcademicProgram(**data)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.put("/api/catalogs/academic-programs/{item_id}")
+def update_academic_program(
+    item_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Actualizar programa académico"""
+    item = db.query(models.AcademicProgram).filter(models.AcademicProgram.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    for key, value in data.items():
+        if hasattr(item, key):
+            setattr(item, key, value)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.delete("/api/catalogs/academic-programs/{item_id}")
+def delete_academic_program(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Eliminar programa académico"""
+    item = db.query(models.AcademicProgram).filter(models.AcademicProgram.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    # Verificar si hay usuarios usando este programa
+    count = db.query(models.User).filter(models.User.academic_program_id == item_id).count()
+    if count > 0:
+        raise HTTPException(status_code=400, detail=f"No se puede eliminar: {count} usuario(s) lo están usando")
+    db.delete(item)
+    db.commit()
+    return {"success": True}
+
+
+# --- Rangos de Semestre ---
+@app.get("/api/catalogs/semester-ranges")
+def list_semester_ranges(db: Session = Depends(get_db)):
+    """Listar rangos de semestre"""
+    return db.query(models.SemesterRange).order_by(models.SemesterRange.display_order).all()
+
+
+@app.post("/api/catalogs/semester-ranges")
+def create_semester_range(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = models.SemesterRange(**data)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.put("/api/catalogs/semester-ranges/{item_id}")
+def update_semester_range(
+    item_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = db.query(models.SemesterRange).filter(models.SemesterRange.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    for key, value in data.items():
+        if hasattr(item, key):
+            setattr(item, key, value)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.delete("/api/catalogs/semester-ranges/{item_id}")
+def delete_semester_range(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = db.query(models.SemesterRange).filter(models.SemesterRange.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    count = db.query(models.User).filter(models.User.semester_range_id == item_id).count()
+    if count > 0:
+        raise HTTPException(status_code=400, detail=f"No se puede eliminar: {count} usuario(s) lo están usando")
+    db.delete(item)
+    db.commit()
+    return {"success": True}
+
+
+# --- Niveles de Inglés ---
+@app.get("/api/catalogs/english-levels")
+def list_english_levels(db: Session = Depends(get_db)):
+    return db.query(models.EnglishLevel).order_by(models.EnglishLevel.display_order).all()
+
+
+@app.post("/api/catalogs/english-levels")
+def create_english_level(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = models.EnglishLevel(**data)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.put("/api/catalogs/english-levels/{item_id}")
+def update_english_level(
+    item_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = db.query(models.EnglishLevel).filter(models.EnglishLevel.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    for key, value in data.items():
+        if hasattr(item, key):
+            setattr(item, key, value)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.delete("/api/catalogs/english-levels/{item_id}")
+def delete_english_level(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = db.query(models.EnglishLevel).filter(models.EnglishLevel.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    count = db.query(models.User).filter(models.User.english_level_id == item_id).count()
+    if count > 0:
+        raise HTTPException(status_code=400, detail=f"No se puede eliminar: {count} usuario(s) lo están usando")
+    db.delete(item)
+    db.commit()
+    return {"success": True}
+
+
+# --- Estados de Membresía IEEE ---
+@app.get("/api/catalogs/ieee-membership-statuses")
+def list_ieee_membership_statuses(db: Session = Depends(get_db)):
+    return db.query(models.IEEEMembershipStatus).order_by(models.IEEEMembershipStatus.display_order).all()
+
+
+@app.post("/api/catalogs/ieee-membership-statuses")
+def create_ieee_membership_status(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = models.IEEEMembershipStatus(**data)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.put("/api/catalogs/ieee-membership-statuses/{item_id}")
+def update_ieee_membership_status(
+    item_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = db.query(models.IEEEMembershipStatus).filter(models.IEEEMembershipStatus.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    for key, value in data.items():
+        if hasattr(item, key):
+            setattr(item, key, value)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.delete("/api/catalogs/ieee-membership-statuses/{item_id}")
+def delete_ieee_membership_status(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = db.query(models.IEEEMembershipStatus).filter(models.IEEEMembershipStatus.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    count = db.query(models.User).filter(models.User.ieee_membership_status_id == item_id).count()
+    if count > 0:
+        raise HTTPException(status_code=400, detail=f"No se puede eliminar: {count} usuario(s) lo están usando")
+    db.delete(item)
+    db.commit()
+    return {"success": True}
+
+
+# --- Sociedades IEEE ---
+@app.get("/api/catalogs/ieee-societies")
+def list_ieee_societies(db: Session = Depends(get_db)):
+    return db.query(models.IEEESociety).order_by(models.IEEESociety.display_order).all()
+
+
+@app.post("/api/catalogs/ieee-societies")
+def create_ieee_society(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = models.IEEESociety(**data)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.put("/api/catalogs/ieee-societies/{item_id}")
+def update_ieee_society(
+    item_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = db.query(models.IEEESociety).filter(models.IEEESociety.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    for key, value in data.items():
+        if hasattr(item, key):
+            setattr(item, key, value)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.delete("/api/catalogs/ieee-societies/{item_id}")
+def delete_ieee_society(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = db.query(models.IEEESociety).filter(models.IEEESociety.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    db.delete(item)
+    db.commit()
+    return {"success": True}
+
+
+# --- Áreas de Interés ---
+@app.get("/api/catalogs/interest-areas")
+def list_interest_areas(db: Session = Depends(get_db)):
+    return db.query(models.InterestArea).order_by(models.InterestArea.display_order).all()
+
+
+@app.post("/api/catalogs/interest-areas")
+def create_interest_area(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = models.InterestArea(**data)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.put("/api/catalogs/interest-areas/{item_id}")
+def update_interest_area(
+    item_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = db.query(models.InterestArea).filter(models.InterestArea.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    for key, value in data.items():
+        if hasattr(item, key):
+            setattr(item, key, value)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.delete("/api/catalogs/interest-areas/{item_id}")
+def delete_interest_area(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = db.query(models.InterestArea).filter(models.InterestArea.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    count = db.query(models.User).filter(models.User.interest_area_id == item_id).count()
+    if count > 0:
+        raise HTTPException(status_code=400, detail=f"No se puede eliminar: {count} usuario(s) lo están usando")
+    db.delete(item)
+    db.commit()
+    return {"success": True}
+
+
+# --- Niveles de Disponibilidad ---
+@app.get("/api/catalogs/availability-levels")
+def list_availability_levels(db: Session = Depends(get_db)):
+    return db.query(models.AvailabilityLevel).order_by(models.AvailabilityLevel.display_order).all()
+
+
+@app.post("/api/catalogs/availability-levels")
+def create_availability_level(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = models.AvailabilityLevel(**data)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.put("/api/catalogs/availability-levels/{item_id}")
+def update_availability_level(
+    item_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = db.query(models.AvailabilityLevel).filter(models.AvailabilityLevel.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    for key, value in data.items():
+        if hasattr(item, key):
+            setattr(item, key, value)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.delete("/api/catalogs/availability-levels/{item_id}")
+def delete_availability_level(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = db.query(models.AvailabilityLevel).filter(models.AvailabilityLevel.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    count = db.query(models.User).filter(models.User.availability_level_id == item_id).count()
+    if count > 0:
+        raise HTTPException(status_code=400, detail=f"No se puede eliminar: {count} usuario(s) lo están usando")
+    db.delete(item)
+    db.commit()
+    return {"success": True}
+
+
+# --- Canales de Comunicación ---
+@app.get("/api/catalogs/communication-channels")
+def list_communication_channels(db: Session = Depends(get_db)):
+    return db.query(models.CommunicationChannel).order_by(models.CommunicationChannel.display_order).all()
+
+
+@app.post("/api/catalogs/communication-channels")
+def create_communication_channel(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = models.CommunicationChannel(**data)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.put("/api/catalogs/communication-channels/{item_id}")
+def update_communication_channel(
+    item_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = db.query(models.CommunicationChannel).filter(models.CommunicationChannel.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    for key, value in data.items():
+        if hasattr(item, key):
+            setattr(item, key, value)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.delete("/api/catalogs/communication-channels/{item_id}")
+def delete_communication_channel(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = db.query(models.CommunicationChannel).filter(models.CommunicationChannel.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    count = db.query(models.User).filter(models.User.preferred_channel_id == item_id).count()
+    if count > 0:
+        raise HTTPException(status_code=400, detail=f"No se puede eliminar: {count} usuario(s) lo están usando")
+    db.delete(item)
+    db.commit()
+    return {"success": True}
+
+
+# --- Habilidades ---
+@app.get("/api/catalogs/skills")
+def list_skills(db: Session = Depends(get_db)):
+    return db.query(models.Skill).order_by(models.Skill.category, models.Skill.display_order).all()
+
+
+@app.post("/api/catalogs/skills")
+def create_skill(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = models.Skill(**data)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.put("/api/catalogs/skills/{item_id}")
+def update_skill(
+    item_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = db.query(models.Skill).filter(models.Skill.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    for key, value in data.items():
+        if hasattr(item, key):
+            setattr(item, key, value)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.delete("/api/catalogs/skills/{item_id}")
+def delete_skill(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    item = db.query(models.Skill).filter(models.Skill.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    db.delete(item)
+    db.commit()
+    return {"success": True}
 
 
 # ========== ENDPOINTS DE TAGS ==========
@@ -679,6 +1405,39 @@ def list_users(
         users_with_birthday.append(user_dict)
 
     return users_with_birthday
+
+
+@app.get("/users/search")
+def search_users(
+    q: str,
+    limit: int = 20,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Buscar usuarios por nombre, email o teléfono"""
+    if len(q) < 2:
+        return []
+
+    search_term = f"%{q}%"
+    users = db.query(models.User).filter(
+        or_(
+            models.User.name.ilike(search_term),
+            models.User.email.ilike(search_term),
+            models.User.phone.ilike(search_term),
+            models.User.identification.ilike(search_term)
+        )
+    ).limit(limit).all()
+
+    return [
+        {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "phone": user.phone,
+            "country_code": user.country_code
+        }
+        for user in users
+    ]
 
 
 @app.get("/users/{user_id}", response_model=schemas.UserResponse)
@@ -1890,7 +2649,7 @@ async def whatsapp_webhook_handler(request: Request):
 def send_ticket_whatsapp_endpoint(
     ticket_id: int,
     use_template: bool = False,
-    template_name: str = "ticket_evento",
+    template_name: str = "tickets_event",
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(require_admin)
 ):
@@ -1900,7 +2659,7 @@ def send_ticket_whatsapp_endpoint(
     Args:
         ticket_id: ID del ticket a enviar
         use_template: Si es True, usa template de Meta (funciona fuera de 24h). Si es False, mensaje libre.
-        template_name: Nombre del template a usar (solo si use_template=True)
+        template_name: Nombre del template a usar (solo si use_template=True). Default: "tickets_event"
     """
     ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
     if not ticket:
@@ -1943,9 +2702,12 @@ def send_ticket_whatsapp_endpoint(
     try:
         if use_template:
             # Usar template de Meta (funciona fuera de ventana de 24h)
-            # Generar QR si está habilitado para el evento
+            # Para tickets_event, el QR es OBLIGATORIO (header IMAGE)
+            # Para otros templates, solo si está habilitado en el evento
             qr_base64 = None
-            if event and hasattr(event, 'send_qr_with_whatsapp') and event.send_qr_with_whatsapp:
+            needs_qr = template_name == "tickets_event"  # Este template REQUIERE imagen
+
+            if needs_qr or (event and hasattr(event, 'send_qr_with_whatsapp') and event.send_qr_with_whatsapp):
                 try:
                     from ticket_service import ticket_service
                     qr_base64 = ticket_service.generate_qr_base64(
@@ -1956,6 +2718,11 @@ def send_ticket_whatsapp_endpoint(
                     )
                 except Exception as e:
                     print(f"[WARNING] No se pudo generar QR para template: {e}")
+                    if needs_qr:
+                        raise HTTPException(
+                            status_code=500,
+                            detail=f"El template '{template_name}' requiere QR pero no se pudo generar: {e}"
+                        )
 
             result = send_ticket_with_template(
                 phone=user.phone,
@@ -2066,16 +2833,28 @@ def get_whatsapp_preview(
         event=event
     )
 
+    # Generar QR en base64 para preview
+    qr_base64 = ticket_service.generate_qr_base64(
+        ticket_code=ticket.ticket_code,
+        user_name=user.name,
+        event_name=event.name,
+        event_date=event_date_formatted
+    )
+
     return {
         "ticket_id": ticket_id,
+        "ticket_code": ticket.ticket_code,
         "user_name": user.name,
         "phone": f"{user.country_code}{user.phone}" if user.phone else None,
         "event_name": event.name,
+        "event_date": event_date_formatted,
+        "event_location": event.location,
         "message_preview": message_preview,
         "template_source": "evento" if event.whatsapp_template else ("organizacion" if organization and organization.whatsapp_template else "default"),
         "has_image": bool(event.whatsapp_image_path),
         "image_url": f"/{event.whatsapp_image_path}" if event.whatsapp_image_path else None,
-        "send_qr_with_whatsapp": event.send_qr_with_whatsapp if hasattr(event, 'send_qr_with_whatsapp') else False
+        "send_qr_with_whatsapp": event.send_qr_with_whatsapp if hasattr(event, 'send_qr_with_whatsapp') else False,
+        "qr_base64": qr_base64
     }
 
 
@@ -2516,7 +3295,7 @@ async def send_tickets_whatsapp_by_event_stream(
     Body:
     - event_id: ID del evento
     - use_template: (opcional) Si es True, usa template de Meta. Default: False
-    - template_name: (opcional) Nombre del template a usar. Default: "ticket_evento"
+    - template_name: (opcional) Nombre del template a usar. Default: "tickets_event"
 
     Retorna un stream de eventos con el formato:
     - event: progress -> Progreso de envío individual
@@ -2524,7 +3303,7 @@ async def send_tickets_whatsapp_by_event_stream(
     """
     event_id = data.get('event_id')
     use_template = data.get('use_template', False)
-    template_name = data.get('template_name', 'ticket_evento')
+    template_name = data.get('template_name', 'tickets_event')
 
     if not event_id:
         raise HTTPException(status_code=400, detail="event_id es requerido")
@@ -2603,9 +3382,11 @@ async def send_tickets_whatsapp_by_event_stream(
                     # Enviar por WhatsApp
                     if use_template:
                         # Usar template de Meta
-                        # Generar QR si está habilitado para el evento
+                        # Para tickets_event, el QR es OBLIGATORIO (header IMAGE)
                         qr_base64 = None
-                        if event and hasattr(event, 'send_qr_with_whatsapp') and event.send_qr_with_whatsapp:
+                        needs_qr = template_name == "tickets_event"
+
+                        if needs_qr or (event and hasattr(event, 'send_qr_with_whatsapp') and event.send_qr_with_whatsapp):
                             try:
                                 from ticket_service import ticket_service
                                 qr_base64 = ticket_service.generate_qr_base64(
@@ -2616,6 +3397,9 @@ async def send_tickets_whatsapp_by_event_stream(
                                 )
                             except Exception as qr_err:
                                 print(f"[WARNING] No se pudo generar QR para template: {qr_err}")
+                                if needs_qr:
+                                    # Si el template requiere QR y no se pudo generar, es un error
+                                    raise Exception(f"El template '{template_name}' requiere QR: {qr_err}")
 
                         result = send_ticket_with_template(
                             phone=user.phone,
@@ -3230,11 +4014,13 @@ async def admin_access_management(
             "username": v.username,
             "email": v.email,
             "full_name": v.full_name,
-            "role": v.role.value if v.role else None,  # Convertir enum a string
+            "role": v.role,  # Pasar el enum directamente para que el template use .value
             "is_active": v.is_active,
             "created_at": v.created_at,
             "access_start": v.access_start,
-            "access_end": v.access_end
+            "access_end": v.access_end,
+            "permissions": v.permissions,
+            "linked_user_id": v.linked_user_id
         }
         validators_list.append(type('Validator', (), v_dict))
 
@@ -3404,6 +4190,11 @@ async def admin_users(
         user_obj.university = user.university
         user_obj.tags = user.tags
         user_obj.birthday_status = birthday_status
+        user_obj.photo_path = user.photo_path
+        user_obj.email_personal = user.email_personal
+        user_obj.email_institutional = user.email_institutional
+        user_obj.email_ieee = user.email_ieee
+        user_obj.primary_email_type = user.primary_email_type
 
         users_list.append(user_obj)
 
@@ -3419,6 +4210,26 @@ async def admin_universities(
 ):
     """Página de gestión de universidades"""
     return templates.TemplateResponse("universities.html", {
+        "request": request
+    })
+
+
+@app.get("/admin/tags", response_class=HTMLResponse)
+async def admin_tags(
+    request: Request
+):
+    """Página de gestión de etiquetas"""
+    return templates.TemplateResponse("tags.html", {
+        "request": request
+    })
+
+
+@app.get("/admin/catalogs", response_class=HTMLResponse)
+async def admin_catalogs(
+    request: Request
+):
+    """Página de gestión de catálogos de perfilamiento"""
+    return templates.TemplateResponse("catalogs.html", {
         "request": request
     })
 
@@ -4106,6 +4917,64 @@ async def terms_of_service(request: Request):
 async def data_deletion(request: Request):
     """Instrucciones para Eliminación de Datos"""
     return templates.TemplateResponse("data_deletion.html", {"request": request})
+
+
+# ========== PÁGINA DE PRESENTACIÓN EJECUTIVA ==========
+
+@app.get("/brochure", response_class=HTMLResponse)
+async def brochure_page(request: Request):
+    """Presentación ejecutiva del sistema IEEE Tadeo Control System"""
+    return templates.TemplateResponse("brochure.html", {"request": request})
+
+
+# ========== PÁGINA DE DEMOSTRACIÓN PARA REVISIÓN DE META ==========
+
+@app.get("/meta-demo", response_class=HTMLResponse)
+async def meta_demo_page(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Página de demostración para revisores de Meta App.
+    Muestra la funcionalidad del sistema sin exponer datos de usuarios.
+    El template verifica autenticación via JavaScript.
+    """
+    # Obtener estadísticas agregadas (sin datos personales)
+    total_events = db.query(models.Event).count()
+    active_events = db.query(models.Event).filter(models.Event.is_active == True).count()
+    total_tickets = db.query(models.Ticket).count()
+
+    # Obtener lista de eventos (sin asistentes)
+    events = db.query(models.Event).order_by(models.Event.event_date.desc()).limit(10).all()
+    events_data = []
+    for event in events:
+        ticket_count = db.query(models.Ticket).filter(models.Ticket.event_id == event.id).count()
+        events_data.append({
+            "name": event.name,
+            "date": event.event_date.strftime("%Y-%m-%d %H:%M") if event.event_date else "Sin fecha",
+            "location": event.location or "Sin ubicación",
+            "is_active": event.is_active,
+            "ticket_count": ticket_count  # Solo conteo, no datos de usuarios
+        })
+
+    return templates.TemplateResponse("meta_demo.html", {
+        "request": request,
+        "total_events": total_events,
+        "active_events": active_events,
+        "total_tickets": total_tickets,
+        "events_data": events_data
+    })
+
+
+@app.get("/meta-tickets", response_class=HTMLResponse)
+async def meta_tickets_demo(request: Request):
+    """
+    Página de demostración de tickets para revisores de Meta.
+    Muestra la interfaz de tickets con datos ficticios.
+    """
+    return templates.TemplateResponse("meta_tickets_demo.html", {
+        "request": request
+    })
 
 
 if __name__ == "__main__":
