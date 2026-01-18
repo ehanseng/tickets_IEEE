@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+
+{% block title %}Proyectos - IEEE Tadeo{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight">Proyectos</h1>
+            <p class="text-muted-foreground">Gestiona los proyectos de la rama IEEE Tadeo.</p>
+        </div>
+        <button onclick="openCreateModal()" class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Nuevo Proyecto
+        </button>
+    </div>
+
+    <!-- Projects Grid -->
+    <div id="projects-container" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Projects will be loaded here -->
+    </div>
+
+    <!-- Empty state -->
+    <div id="empty-state" class="hidden text-center py-12 bg-card rounded-lg border">
+        <svg class="w-16 h-16 mx-auto text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+        </svg>
+        <h3 class="text-lg font-semibold mb-2">No hay proyectos</h3>
+        <p class="text-muted-foreground mb-4">Crea tu primer proyecto para mostrarlo en la página pública.</p>
+        <button onclick="openCreateModal()" class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+            Crear Proyecto
+        </button>
+    </div>
+</div>
+
+<!-- Modal Crear/Editar Proyecto -->
+<div id="projectModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-background rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 id="modal-title" class="text-xl font-bold">Nuevo Proyecto</h2>
+                <button onclick="closeModal()" class="text-muted-foreground hover:text-foreground">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="projectForm" class="space-y-4">
+                <input type="hidden" id="project_id" name="project_id">
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">Nombre del Proyecto *</label>
+                    <input type="text" id="name" name="name" required
+                        class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Ej: IEEE Tadeo Control System">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">Descripción corta</label>
+                    <input type="text" id="short_description" name="short_description"
+                        class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Una línea describiendo el proyecto"
+                        maxlength="200">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">Descripción completa</label>
+                    <textarea id="description" name="description" rows="3"
+                        class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                        placeholder="Descripción detallada del proyecto"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Estado</label>
+                        <select id="status" name="status"
+                            class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="active">Activo</option>
+                            <option value="planning">En planeación</option>
+                            <option value="paused">Pausado</option>
+                            <option value="completed">Completado</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Icono</label>
+                        <select id="icon" name="icon"
+                            class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="">Por defecto</option>
+                            <option value="laptop">Laptop (Tecnología)</option>
+                            <option value="recycle">Reciclar (Sostenibilidad)</option>
+                            <option value="robot">Robot (Robótica)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Color</label>
+                        <input type="color" id="color" name="color" value="#006699"
+                            class="w-full h-10 px-1 py-1 border rounded-md cursor-pointer">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Orden</label>
+                        <input type="number" id="display_order" name="display_order" value="0" min="0"
+                            class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="is_public" name="is_public" checked
+                        class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                    <label for="is_public" class="text-sm font-medium">Mostrar en página pública</label>
+                </div>
+
+                <div id="formMessage" class="hidden"></div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeModal()"
+                        class="flex-1 px-4 py-2 border rounded-md hover:bg-accent transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmar Eliminar -->
+<div id="deleteModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-background rounded-lg shadow-xl max-w-md w-full p-6">
+        <h2 class="text-xl font-bold mb-2">Eliminar Proyecto</h2>
+        <p class="text-muted-foreground mb-4">¿Estás seguro de que deseas eliminar este proyecto? Esta acción no se puede deshacer.</p>
+        <input type="hidden" id="delete_project_id">
+        <div class="flex gap-3">
+            <button onclick="closeDeleteModal()"
+                class="flex-1 px-4 py-2 border rounded-md hover:bg-accent transition-colors">
+                Cancelar
+            </button>
+            <button onclick="confirmDelete()"
+                class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
+                Eliminar
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let projects = [];
+
+    // Cargar proyectos
+    async function loadProjects() {
+        const token = localStorage.getItem('access_token');
+        try {
+            const response = await fetch('/api/projects', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            projects = await response.json();
+            renderProjects();
+        } catch (error) {
+            console.error('Error loading projects:', error);
+        }
+    }
+
+    // Renderizar proyectos
+    function renderProjects() {
+        const container = document.getElementById('projects-container');
+        const emptyState = document.getElementById('empty-state');
+
+        if (projects.length === 0) {
+            container.classList.add('hidden');
+            emptyState.classList.remove('hidden');
+            return;
+        }
+
+        container.classList.remove('hidden');
+        emptyState.classList.add('hidden');
+
+        container.innerHTML = projects.map(project => `
+            <div class="bg-card rounded-lg border p-6 shadow-sm">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: ${project.color || '#006699'};">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                        </svg>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editProject(${project.id})" class="text-muted-foreground hover:text-foreground">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </button>
+                        <button onclick="openDeleteModal(${project.id})" class="text-red-500 hover:text-red-700">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <h3 class="font-semibold text-lg mb-2">${project.name}</h3>
+                <p class="text-sm text-muted-foreground mb-4 line-clamp-2">${project.short_description || project.description || 'Sin descripción'}</p>
+
+                <div class="flex items-center justify-between">
+                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                        ${project.status === 'active' ? 'bg-green-100 text-green-700' :
+                          project.status === 'planning' ? 'bg-yellow-100 text-yellow-700' :
+                          project.status === 'paused' ? 'bg-gray-100 text-gray-700' :
+                          'bg-blue-100 text-blue-700'}">
+                        ${project.status === 'active' ? 'Activo' :
+                          project.status === 'planning' ? 'En planeación' :
+                          project.status === 'paused' ? 'Pausado' :
+                          project.status === 'completed' ? 'Completado' : project.status}
+                    </span>
+                    ${project.is_public ?
+                        '<span class="text-xs text-green-600 flex items-center gap-1"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path></svg> Público</span>' :
+                        '<span class="text-xs text-gray-500 flex items-center gap-1"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd"></path><path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"></path></svg> Oculto</span>'}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Modal crear
+    function openCreateModal() {
+        document.getElementById('modal-title').textContent = 'Nuevo Proyecto';
+        document.getElementById('projectForm').reset();
+        document.getElementById('project_id').value = '';
+        document.getElementById('color').value = '#006699';
+        document.getElementById('is_public').checked = true;
+        document.getElementById('formMessage').classList.add('hidden');
+        document.getElementById('projectModal').classList.remove('hidden');
+    }
+
+    // Modal editar
+    function editProject(id) {
+        const project = projects.find(p => p.id === id);
+        if (!project) return;
+
+        document.getElementById('modal-title').textContent = 'Editar Proyecto';
+        document.getElementById('project_id').value = project.id;
+        document.getElementById('name').value = project.name;
+        document.getElementById('short_description').value = project.short_description || '';
+        document.getElementById('description').value = project.description || '';
+        document.getElementById('status').value = project.status;
+        document.getElementById('icon').value = project.icon || '';
+        document.getElementById('color').value = project.color || '#006699';
+        document.getElementById('display_order').value = project.display_order || 0;
+        document.getElementById('is_public').checked = project.is_public;
+        document.getElementById('formMessage').classList.add('hidden');
+        document.getElementById('projectModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('projectModal').classList.add('hidden');
+    }
+
+    // Submit form
+    document.getElementById('projectForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const token = localStorage.getItem('access_token');
+        const message = document.getElementById('formMessage');
+        const projectId = document.getElementById('project_id').value;
+
+        const data = {
+            name: document.getElementById('name').value,
+            short_description: document.getElementById('short_description').value || null,
+            description: document.getElementById('description').value || null,
+            status: document.getElementById('status').value,
+            icon: document.getElementById('icon').value || null,
+            color: document.getElementById('color').value,
+            display_order: parseInt(document.getElementById('display_order').value) || 0,
+            is_public: document.getElementById('is_public').checked
+        };
+
+        try {
+            const url = projectId ? `/api/projects/${projectId}` : '/api/projects';
+            const method = projectId ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                message.innerHTML = '<div class="rounded-lg border bg-green-50 px-4 py-3 text-sm text-green-900">Proyecto guardado exitosamente</div>';
+                message.classList.remove('hidden');
+                setTimeout(() => {
+                    closeModal();
+                    loadProjects();
+                }, 1000);
+            } else {
+                const error = await response.json();
+                message.innerHTML = `<div class="rounded-lg border bg-red-50 px-4 py-3 text-sm text-red-900">Error: ${error.detail}</div>`;
+                message.classList.remove('hidden');
+            }
+        } catch (error) {
+            message.innerHTML = '<div class="rounded-lg border bg-red-50 px-4 py-3 text-sm text-red-900">Error de conexión</div>';
+            message.classList.remove('hidden');
+        }
+    });
+
+    // Delete modal
+    function openDeleteModal(id) {
+        document.getElementById('delete_project_id').value = id;
+        document.getElementById('deleteModal').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.add('hidden');
+    }
+
+    async function confirmDelete() {
+        const token = localStorage.getItem('access_token');
+        const projectId = document.getElementById('delete_project_id').value;
+
+        try {
+            const response = await fetch(`/api/projects/${projectId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                closeDeleteModal();
+                loadProjects();
+            }
+        } catch (error) {
+            console.error('Error deleting project:', error);
+        }
+    }
+
+    // Cargar al iniciar
+    loadProjects();
+</script>
+{% endblock %}

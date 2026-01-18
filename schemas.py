@@ -33,6 +33,109 @@ class TagResponse(BaseModel):
         from_attributes = True
 
 
+# ============================================================
+# Schemas de Catálogos de Perfilamiento (para la ficha de usuario)
+# ============================================================
+
+class AcademicProgramResponse(BaseModel):
+    """Schema para respuesta de programa académico"""
+    id: int
+    name: str
+    short_name: Optional[str] = None
+    category: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SemesterRangeResponse(BaseModel):
+    """Schema para respuesta de rango de semestre"""
+    id: int
+    name: str
+    min_semester: Optional[int] = None
+    max_semester: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class EnglishLevelResponse(BaseModel):
+    """Schema para respuesta de nivel de inglés"""
+    id: int
+    name: str
+    code: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class IEEEMembershipStatusResponse(BaseModel):
+    """Schema para respuesta de estado de membresía IEEE"""
+    id: int
+    name: str
+    description: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class IEEESocietyResponse(BaseModel):
+    """Schema para respuesta de sociedad IEEE"""
+    id: int
+    name: str
+    code: Optional[str] = None
+    short_name: Optional[str] = None
+    color: Optional[str] = None
+    society_type: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class InterestAreaResponse(BaseModel):
+    """Schema para respuesta de área de interés"""
+    id: int
+    name: str
+    icon: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AvailabilityLevelResponse(BaseModel):
+    """Schema para respuesta de nivel de disponibilidad"""
+    id: int
+    name: str
+    hours_description: Optional[str] = None
+    min_hours: Optional[int] = None
+    max_hours: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CommunicationChannelResponse(BaseModel):
+    """Schema para respuesta de canal de comunicación"""
+    id: int
+    name: str
+    icon: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SkillResponse(BaseModel):
+    """Schema para respuesta de habilidad"""
+    id: int
+    name: str
+    category: Optional[str] = None
+    icon: Optional[str] = None
+    color: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 # Schemas de Universidad
 class UniversityCreate(BaseModel):
     """Schema para crear universidad"""
@@ -142,6 +245,10 @@ class UserCreate(BaseModel):
     name: str
     nick: Optional[str] = None  # Apodo o forma corta de llamar al usuario
     email: EmailStr
+    email_personal: Optional[EmailStr] = None  # Email personal
+    email_institutional: Optional[EmailStr] = None  # Email institucional
+    email_ieee: Optional[EmailStr] = None  # Email IEEE
+    primary_email_type: Optional[str] = 'email'  # Tipo de email principal para OTP
     country_code: Optional[str] = "+57"
     phone: Optional[str] = None
     identification: Optional[str] = None  # Cédula
@@ -157,6 +264,10 @@ class UserUpdate(BaseModel):
     name: Optional[str] = None
     nick: Optional[str] = None
     email: Optional[EmailStr] = None
+    email_personal: Optional[EmailStr] = None
+    email_institutional: Optional[EmailStr] = None
+    email_ieee: Optional[EmailStr] = None
+    primary_email_type: Optional[str] = None
     country_code: Optional[str] = None
     phone: Optional[str] = None
     identification: Optional[str] = None
@@ -165,26 +276,70 @@ class UserUpdate(BaseModel):
     birthday: Optional[datetime] = None
     is_ieee_member: Optional[bool] = None
     ieee_member_id: Optional[str] = None
+    branch_role: Optional[str] = None  # Rol interno en la rama
 
 
 class UserResponse(BaseModel):
-    """Schema para respuesta de usuario"""
+    """Schema para respuesta de usuario con todos los datos de perfilamiento"""
     id: int
     name: str
     nick: Optional[str]
+    photo_path: Optional[str] = None
     email: str
+    email_personal: Optional[str] = None
+    email_institutional: Optional[str] = None
+    email_ieee: Optional[str] = None
+    primary_email_type: Optional[str] = 'email'
     country_code: Optional[str]
     phone: Optional[str]
     identification: Optional[str]
+    birthday: Optional[datetime]
+    created_at: datetime
+
+    # IDs de relaciones
     university_id: Optional[int]
     organization_id: Optional[int]
-    birthday: Optional[datetime]
+    academic_program_id: Optional[int] = None
+    semester_range_id: Optional[int] = None
+    english_level_id: Optional[int] = None
+    ieee_membership_status_id: Optional[int] = None
+    interest_area_id: Optional[int] = None
+    availability_level_id: Optional[int] = None
+    preferred_channel_id: Optional[int] = None
+
+    # Información IEEE
     is_ieee_member: bool
     ieee_member_id: Optional[str]
-    created_at: datetime
+    ieee_roles_history: Optional[str] = None
+    branch_role: Optional[str] = None  # Rol interno en la rama
+
+    # Perfilamiento adicional
+    expected_graduation: Optional[datetime] = None
+    goals_in_branch: Optional[str] = None
+    profile_completed: Optional[bool] = False
+    profile_completed_at: Optional[datetime] = None
+    last_profile_update: Optional[datetime] = None
+
+    # Seguimiento de acceso
+    first_login: Optional[datetime] = None
+    last_login: Optional[datetime] = None
+    login_count: Optional[int] = 0
+
+    # Relaciones básicas
     university: Optional[UniversityResponse] = None
     organization: Optional[OrganizationResponse] = None
     tags: List[TagResponse] = []
+
+    # Relaciones de perfilamiento
+    academic_program: Optional[AcademicProgramResponse] = None
+    semester_range: Optional[SemesterRangeResponse] = None
+    english_level: Optional[EnglishLevelResponse] = None
+    ieee_membership_status: Optional[IEEEMembershipStatusResponse] = None
+    ieee_societies: List[IEEESocietyResponse] = []
+    interest_area: Optional[InterestAreaResponse] = None
+    availability_level: Optional[AvailabilityLevelResponse] = None
+    preferred_channel: Optional[CommunicationChannelResponse] = None
+    skills: List[SkillResponse] = []
 
     class Config:
         from_attributes = True
@@ -351,6 +506,8 @@ class AdminUserCreate(BaseModel):
     role: str  # "admin" o "validator"
     access_start: Optional[datetime] = None  # Para validadores
     access_end: Optional[datetime] = None  # Para validadores
+    linked_user_id: Optional[int] = None  # Vincular con contacto del portal
+    permissions: Optional[str] = None  # JSON string con permisos por seccion
 
 
 class AdminUserResponse(BaseModel):
@@ -364,6 +521,8 @@ class AdminUserResponse(BaseModel):
     created_at: datetime
     access_start: Optional[datetime]
     access_end: Optional[datetime]
+    linked_user_id: Optional[int] = None
+    permissions: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -379,3 +538,86 @@ class AdminUserUpdate(BaseModel):
     access_start: Optional[datetime] = None
     access_end: Optional[datetime] = None
     password: Optional[str] = None
+    linked_user_id: Optional[int] = None
+    permissions: Optional[dict] = None
+
+
+# Schema para usuarios que han iniciado sesion en el portal
+class PortalUserWithLoginResponse(BaseModel):
+    """Schema para usuarios del portal con datos de login"""
+    id: int
+    name: str
+    email: str
+    phone: Optional[str]
+    first_login: Optional[datetime]
+    last_login: Optional[datetime]
+    login_count: Optional[int] = 0
+    has_admin_account: bool = False
+    admin_account_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+# Schema para promover contacto a admin
+class PromoteToAdminRequest(BaseModel):
+    """Schema para promover un contacto a usuario administrativo"""
+    user_id: int  # ID del contacto a promover
+    username: str
+    password: str
+    role: str = "validator"  # Por defecto validador
+    permissions: Optional[dict] = None  # Diccionario con permisos
+    access_start: Optional[datetime] = None
+    access_end: Optional[datetime] = None
+
+
+# ============================================================
+# Schemas de Proyectos
+# ============================================================
+
+class ProjectCreate(BaseModel):
+    """Schema para crear proyecto"""
+    name: str
+    short_description: Optional[str] = None
+    description: Optional[str] = None
+    status: str = "active"
+    icon: Optional[str] = None
+    color: str = "#006699"
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    is_public: bool = True
+    display_order: int = 0
+
+
+class ProjectUpdate(BaseModel):
+    """Schema para actualizar proyecto"""
+    name: Optional[str] = None
+    short_description: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    is_public: Optional[bool] = None
+    display_order: Optional[int] = None
+
+
+class ProjectResponse(BaseModel):
+    """Schema para respuesta de proyecto"""
+    id: int
+    name: str
+    short_description: Optional[str]
+    description: Optional[str]
+    status: str
+    icon: Optional[str]
+    color: Optional[str]
+    start_date: Optional[datetime]
+    end_date: Optional[datetime]
+    is_public: bool
+    display_order: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

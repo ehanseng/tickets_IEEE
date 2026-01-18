@@ -1474,8 +1474,6 @@ def update_user(
     # Actualizar solo los campos proporcionados
     if user_update.name is not None:
         user.name = user_update.name
-    if user_update.email is not None:
-        user.email = user_update.email
     if user_update.country_code is not None:
         user.country_code = user_update.country_code
     if user_update.phone is not None:
@@ -1488,6 +1486,34 @@ def update_user(
         user.birthday = user_update.birthday
     if user_update.is_ieee_member is not None:
         user.is_ieee_member = user_update.is_ieee_member
+    if user_update.branch_role is not None:
+        user.branch_role = user_update.branch_role if user_update.branch_role else None
+
+    # Actualizar campos de email nuevos
+    if user_update.email_personal is not None:
+        user.email_personal = user_update.email_personal if user_update.email_personal else None
+    if user_update.email_institutional is not None:
+        user.email_institutional = user_update.email_institutional if user_update.email_institutional else None
+    if user_update.email_ieee is not None:
+        user.email_ieee = user_update.email_ieee if user_update.email_ieee else None
+    if user_update.primary_email_type is not None:
+        user.primary_email_type = user_update.primary_email_type
+
+    # Sincronizar campo email (legacy) con el email primario actual
+    primary_type = user_update.primary_email_type or user.primary_email_type or 'email_personal'
+    if primary_type == 'email_personal' and user.email_personal:
+        user.email = user.email_personal
+    elif primary_type == 'email_institutional' and user.email_institutional:
+        user.email = user.email_institutional
+    elif primary_type == 'email_ieee' and user.email_ieee:
+        user.email = user.email_ieee
+    # Si el email primario está vacío, usar cualquier email disponible
+    elif user.email_personal:
+        user.email = user.email_personal
+    elif user.email_institutional:
+        user.email = user.email_institutional
+    elif user.email_ieee:
+        user.email = user.email_ieee
 
     db.commit()
     db.refresh(user)
@@ -3998,6 +4024,12 @@ async def login_page(request: Request):
     })
 
 
+@app.get("/admin/projects", response_class=HTMLResponse)
+async def admin_projects_page(request: Request, db: Session = Depends(get_db)):
+    """Página de gestión de proyectos"""
+    return templates.TemplateResponse("projects.html", {"request": request})
+
+
 @app.get("/admin/access", response_class=HTMLResponse)
 async def admin_access_management(
     request: Request,
@@ -4195,6 +4227,7 @@ async def admin_users(
         user_obj.email_institutional = user.email_institutional
         user_obj.email_ieee = user.email_ieee
         user_obj.primary_email_type = user.primary_email_type
+        user_obj.branch_role = user.branch_role
 
         users_list.append(user_obj)
 
@@ -4864,39 +4897,8 @@ async def verify_ticket_pin(
     }
 
 
-# ========== ENDPOINT PRINCIPAL ==========
-
-@app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
-    """Página principal - redirige al login"""
-    return """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>IEEE Tadeo Control System</title>
-        <meta http-equiv="refresh" content="0; url=/login">
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                margin: 0;
-            }
-        </style>
-    </head>
-    <body>
-        <div style="text-align: center;">
-            <h1>IEEE Tadeo Control System</h1>
-            <p>Redirigiendo al login...</p>
-            <p><a href="/login" style="color: white;">Haz clic aquí si no eres redirigido automáticamente</a></p>
-        </div>
-    </body>
-    </html>
-    """
+# ========== ENDPOINT PRINCIPAL (movido a sección de página pública) ==========
+# La ruta "/" ahora está definida más abajo y redirige a /home para ieeetadeo.org
 
 
 # ========== PÁGINAS LEGALES (Para Meta/Facebook) ==========
@@ -4917,6 +4919,325 @@ async def terms_of_service(request: Request):
 async def data_deletion(request: Request):
     """Instrucciones para Eliminación de Datos"""
     return templates.TemplateResponse("data_deletion.html", {"request": request})
+
+
+# ========== GALERÍA DE FOTOS (Google Drive) ==========
+
+@app.get("/api/gallery")
+async def get_gallery_images():
+    """Obtener imágenes de la carpeta de Google Drive para la galería"""
+    import httpx
+
+    api_key = os.getenv("GOOGLE_DRIVE_API_KEY")
+    folder_id = os.getenv("GOOGLE_DRIVE_FOLDER_ID")
+
+    if not api_key or not folder_id:
+        return {"images": [], "error": "Google Drive no configurado"}
+
+    try:
+        # Consultar la API de Google Drive
+        url = f"https://www.googleapis.com/drive/v3/files"
+        params = {
+            "q": f"'{folder_id}' in parents and mimeType contains 'image/'",
+            "key": api_key,
+            "fields": "files(id,name,mimeType,thumbnailLink)",
+            "pageSize": 50
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params)
+
+            if response.status_code != 200:
+                return {"images": [], "error": f"Error de API: {response.status_code}"}
+
+            data = response.json()
+            files = data.get("files", [])
+
+            # Construir URLs de imagen
+            images = []
+            for file in files:
+                file_id = file.get("id")
+                name = file.get("name", "")
+                # URL usando lh3.googleusercontent.com que funciona mejor para <img> tags
+                # Formato: https://lh3.googleusercontent.com/d/{file_id}
+                image_url = f"https://lh3.googleusercontent.com/d/{file_id}=w1600"
+                # Thumbnail más pequeño para carga rápida
+                thumb_url = f"https://lh3.googleusercontent.com/d/{file_id}=w400"
+
+                images.append({
+                    "id": file_id,
+                    "name": name,
+                    "url": image_url,
+                    "thumbnail": thumb_url
+                })
+
+            return {"images": images, "count": len(images)}
+
+    except Exception as e:
+        return {"images": [], "error": str(e)}
+
+
+# ========== PROYECTOS ==========
+
+@app.get("/api/projects")
+async def get_projects(
+    public_only: bool = False,
+    db: Session = Depends(get_db)
+):
+    """Obtener lista de proyectos"""
+    query = db.query(models.Project)
+    if public_only:
+        query = query.filter(models.Project.is_public == True)
+    projects = query.order_by(models.Project.display_order, models.Project.id).all()
+    return [
+        {
+            "id": p.id,
+            "name": p.name,
+            "short_description": p.short_description,
+            "description": p.description,
+            "status": p.status.value if p.status else "active",
+            "icon": p.icon,
+            "color": p.color,
+            "start_date": p.start_date.isoformat() if p.start_date else None,
+            "end_date": p.end_date.isoformat() if p.end_date else None,
+            "is_public": p.is_public,
+            "display_order": p.display_order
+        }
+        for p in projects
+    ]
+
+
+@app.get("/api/projects/{project_id}")
+async def get_project(
+    project_id: int,
+    db: Session = Depends(get_db)
+):
+    """Obtener un proyecto por ID"""
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+    return {
+        "id": project.id,
+        "name": project.name,
+        "short_description": project.short_description,
+        "description": project.description,
+        "status": project.status.value if project.status else "active",
+        "icon": project.icon,
+        "color": project.color,
+        "start_date": project.start_date.isoformat() if project.start_date else None,
+        "end_date": project.end_date.isoformat() if project.end_date else None,
+        "is_public": project.is_public,
+        "display_order": project.display_order
+    }
+
+
+@app.post("/api/projects")
+async def create_project(
+    project: schemas.ProjectCreate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Crear un nuevo proyecto"""
+    db_project = models.Project(
+        name=project.name,
+        short_description=project.short_description,
+        description=project.description,
+        status=models.ProjectStatus(project.status) if project.status else models.ProjectStatus.active,
+        icon=project.icon,
+        color=project.color,
+        start_date=project.start_date,
+        end_date=project.end_date,
+        is_public=project.is_public,
+        display_order=project.display_order
+    )
+    db.add(db_project)
+    db.commit()
+    db.refresh(db_project)
+    return {"message": "Proyecto creado exitosamente", "id": db_project.id}
+
+
+@app.put("/api/projects/{project_id}")
+async def update_project(
+    project_id: int,
+    project: schemas.ProjectUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Actualizar un proyecto"""
+    db_project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not db_project:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    update_data = project.dict(exclude_unset=True)
+    if "status" in update_data and update_data["status"]:
+        update_data["status"] = models.ProjectStatus(update_data["status"])
+
+    for key, value in update_data.items():
+        setattr(db_project, key, value)
+
+    db.commit()
+    db.refresh(db_project)
+    return {"message": "Proyecto actualizado exitosamente"}
+
+
+@app.delete("/api/projects/{project_id}")
+async def delete_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Eliminar un proyecto"""
+    db_project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not db_project:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    db.delete(db_project)
+    db.commit()
+    return {"message": "Proyecto eliminado exitosamente"}
+
+
+# ========== PÁGINA DE INICIO PÚBLICA ==========
+
+@app.get("/")
+async def root_redirect(request: Request):
+    """Redireccionar raíz según el dominio"""
+    host = request.headers.get("host", "").lower()
+
+    # Si es ieeetadeo.org (sin ticket.), redirigir a /home
+    if host.startswith("ieeetadeo.org") or host.startswith("www.ieeetadeo.org"):
+        return RedirectResponse(url="/home", status_code=302)
+
+    # Para ticket.ieeetadeo.org o cualquier otro, redirigir a /login
+    return RedirectResponse(url="/login", status_code=302)
+
+
+@app.get("/home", response_class=HTMLResponse)
+async def public_home_page(request: Request, db: Session = Depends(get_db)):
+    """Página de inicio pública para ieeetadeo.org"""
+    from datetime import datetime
+
+    # Obtener eventos próximos (activos y con fecha futura) - máximo 2
+    upcoming_events = db.query(models.Event).filter(
+        models.Event.is_active == True,
+        models.Event.event_date >= datetime.now()
+    ).order_by(models.Event.event_date.asc()).limit(2).all()
+
+    # Obtener eventos pasados (activos y con fecha pasada) - máximo 2
+    past_events = db.query(models.Event).filter(
+        models.Event.is_active == True,
+        models.Event.event_date < datetime.now()
+    ).order_by(models.Event.event_date.desc()).limit(2).all()
+
+    # Obtener miembros con tag "IEEE Tadeo" (solo nombres)
+    ieee_tadeo_tag = db.query(models.Tag).filter(models.Tag.name == "IEEE Tadeo").first()
+    members = []
+    if ieee_tadeo_tag:
+        members = db.query(models.User).join(models.User.tags).filter(
+            models.Tag.id == ieee_tadeo_tag.id
+        ).all()
+
+    # Contar eventos totales realizados
+    event_count = db.query(models.Event).count()
+
+    # Obtener proyectos públicos
+    projects = db.query(models.Project).filter(
+        models.Project.is_public == True
+    ).order_by(models.Project.display_order, models.Project.id).all()
+
+    # Contar proyectos activos
+    active_projects_count = db.query(models.Project).filter(
+        models.Project.is_public == True,
+        models.Project.status == models.ProjectStatus.active
+    ).count()
+
+    # Estadísticas de perfiles de miembros
+    from sqlalchemy import func, distinct
+
+    # Inicializar listas
+    member_careers = []
+    member_skills_technical = []
+    member_skills_soft = []
+
+    if ieee_tadeo_tag:
+        # Obtener carreras representadas por los miembros
+        career_results = db.query(models.AcademicProgram.name).join(
+            models.User, models.User.academic_program_id == models.AcademicProgram.id
+        ).join(models.User.tags).filter(
+            models.Tag.id == ieee_tadeo_tag.id,
+            models.User.academic_program_id.isnot(None)
+        ).distinct().all()
+        member_careers = [c[0] for c in career_results]
+
+        # Obtener habilidades técnicas de los miembros
+        technical_skills = db.query(models.Skill).join(
+            models.user_skills, models.Skill.id == models.user_skills.c.skill_id
+        ).join(models.User, models.user_skills.c.user_id == models.User.id
+        ).join(models.User.tags).filter(
+            models.Tag.id == ieee_tadeo_tag.id,
+            models.Skill.category == 'technical'
+        ).distinct().all()
+        member_skills_technical = technical_skills
+
+        # Obtener habilidades blandas de los miembros
+        soft_skills = db.query(models.Skill).join(
+            models.user_skills, models.Skill.id == models.user_skills.c.skill_id
+        ).join(models.User, models.user_skills.c.user_id == models.User.id
+        ).join(models.User.tags).filter(
+            models.Tag.id == ieee_tadeo_tag.id,
+            models.Skill.category == 'soft'
+        ).distinct().all()
+        member_skills_soft = soft_skills
+
+    return templates.TemplateResponse("home.html", {
+        "request": request,
+        "upcoming_events": upcoming_events,
+        "past_events": past_events,
+        "members": members,
+        "member_count": len(members),
+        "event_count": event_count,
+        "projects": projects,
+        "active_projects_count": active_projects_count,
+        "member_careers": member_careers,
+        "member_skills_technical": member_skills_technical,
+        "member_skills_soft": member_skills_soft
+    })
+
+
+class ContactFormData(BaseModel):
+    """Datos del formulario de contacto"""
+    name: str
+    email: str
+    program: Optional[str] = None
+    message: Optional[str] = None
+
+
+@app.post("/api/contact")
+async def submit_contact_form(data: ContactFormData, db: Session = Depends(get_db)):
+    """Procesar formulario de contacto de la página de inicio"""
+    try:
+        # Enviar email de notificación
+        subject = f"Nuevo contacto desde ieeetadeo.org: {data.name}"
+        body = f"""
+        <h2>Nuevo contacto desde la página web</h2>
+        <p><strong>Nombre:</strong> {data.name}</p>
+        <p><strong>Email:</strong> {data.email}</p>
+        <p><strong>Carrera/Programa:</strong> {data.program or 'No especificado'}</p>
+        <p><strong>Mensaje:</strong></p>
+        <p>{data.message or 'Sin mensaje'}</p>
+        """
+
+        # Enviar a info@ieeetadeo.org
+        email_service.send_email(
+            to_email="info@ieeetadeo.org",
+            subject=subject,
+            html_content=body
+        )
+
+        return {"success": True, "message": "Mensaje enviado correctamente"}
+    except Exception as e:
+        print(f"Error enviando email de contacto: {e}")
+        # Aún retornamos success para no bloquear al usuario
+        return {"success": True, "message": "Mensaje recibido"}
 
 
 # ========== PÁGINA DE PRESENTACIÓN EJECUTIVA ==========

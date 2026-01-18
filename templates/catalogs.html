@@ -1,0 +1,575 @@
+{% extends "base.html" %}
+
+{% block title %}Catálogos - IEEE Tadeo Control System{% endblock %}
+
+{% block content %}
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div class="flex flex-col space-y-1.5 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-2xl font-semibold leading-none tracking-tight">Gestión de Catálogos</h3>
+                <p class="text-sm text-muted-foreground mt-1">Administra las opciones del formulario de perfilamiento de contactos</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs de catalogos -->
+    <div class="border-b border-gray-200">
+        <nav class="flex overflow-x-auto px-6 -mb-px" id="catalogTabs">
+            <button onclick="switchCatalog('programs')" data-tab="programs" class="catalog-tab whitespace-nowrap px-4 py-3 border-b-2 border-primary font-medium text-sm text-primary">
+                Programas
+            </button>
+            <button onclick="switchCatalog('semesters')" data-tab="semesters" class="catalog-tab whitespace-nowrap px-4 py-3 border-b-2 border-transparent font-medium text-sm text-muted-foreground hover:text-foreground hover:border-gray-300">
+                Semestres
+            </button>
+            <button onclick="switchCatalog('english')" data-tab="english" class="catalog-tab whitespace-nowrap px-4 py-3 border-b-2 border-transparent font-medium text-sm text-muted-foreground hover:text-foreground hover:border-gray-300">
+                Inglés
+            </button>
+            <button onclick="switchCatalog('membership')" data-tab="membership" class="catalog-tab whitespace-nowrap px-4 py-3 border-b-2 border-transparent font-medium text-sm text-muted-foreground hover:text-foreground hover:border-gray-300">
+                Membresía IEEE
+            </button>
+            <button onclick="switchCatalog('societies')" data-tab="societies" class="catalog-tab whitespace-nowrap px-4 py-3 border-b-2 border-transparent font-medium text-sm text-muted-foreground hover:text-foreground hover:border-gray-300">
+                Sociedades
+            </button>
+            <button onclick="switchCatalog('interests')" data-tab="interests" class="catalog-tab whitespace-nowrap px-4 py-3 border-b-2 border-transparent font-medium text-sm text-muted-foreground hover:text-foreground hover:border-gray-300">
+                Áreas Interés
+            </button>
+            <button onclick="switchCatalog('availability')" data-tab="availability" class="catalog-tab whitespace-nowrap px-4 py-3 border-b-2 border-transparent font-medium text-sm text-muted-foreground hover:text-foreground hover:border-gray-300">
+                Disponibilidad
+            </button>
+            <button onclick="switchCatalog('channels')" data-tab="channels" class="catalog-tab whitespace-nowrap px-4 py-3 border-b-2 border-transparent font-medium text-sm text-muted-foreground hover:text-foreground hover:border-gray-300">
+                Canales
+            </button>
+            <button onclick="switchCatalog('skills')" data-tab="skills" class="catalog-tab whitespace-nowrap px-4 py-3 border-b-2 border-transparent font-medium text-sm text-muted-foreground hover:text-foreground hover:border-gray-300">
+                Habilidades
+            </button>
+        </nav>
+    </div>
+
+    <!-- Contenido de cada catalogo -->
+    <div class="p-6">
+        <!-- Header con boton agregar -->
+        <div class="flex justify-between items-center mb-4">
+            <h4 id="catalogTitle" class="text-lg font-medium">Programas Académicos</h4>
+            <button onclick="openAddModal()" class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2">
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Agregar
+            </button>
+        </div>
+
+        <!-- Tabla de items -->
+        <div class="relative w-full overflow-auto">
+            <table class="w-full caption-bottom text-sm">
+                <thead class="[&_tr]:border-b">
+                    <tr class="border-b transition-colors hover:bg-muted/50">
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-16">ID</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nombre</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground" id="extraHeader">Categoría</th>
+                        <th class="h-12 px-4 text-center align-middle font-medium text-muted-foreground w-20">Orden</th>
+                        <th class="h-12 px-4 text-center align-middle font-medium text-muted-foreground w-24">Estado</th>
+                        <th class="h-12 px-4 text-right align-middle font-medium text-muted-foreground w-32">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="catalogBody" class="[&_tr:last-child]:border-0">
+                    <tr>
+                        <td colspan="6" class="p-4 text-center text-muted-foreground">Cargando...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para crear/editar item -->
+<div id="itemModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div class="flex flex-col space-y-1.5 p-6 border-b sticky top-0 bg-white">
+            <div class="flex items-center justify-between">
+                <h3 id="modalTitle" class="text-lg font-semibold leading-none tracking-tight">Agregar Item</h3>
+                <button onclick="closeModal()" class="rounded-sm opacity-70 hover:opacity-100">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="p-6">
+            <form id="itemForm" class="space-y-4">
+                <input type="hidden" id="itemId">
+
+                <!-- Campo: Nombre (todos) -->
+                <div>
+                    <label class="text-sm font-medium">Nombre *</label>
+                    <input type="text" id="itemName" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1">
+                </div>
+
+                <!-- Campo: Nombre Corto (programs, societies) -->
+                <div id="shortNameGroup">
+                    <label class="text-sm font-medium">Nombre Corto</label>
+                    <input type="text" id="itemShortName" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1">
+                </div>
+
+                <!-- Campo: Código (english, societies) -->
+                <div id="codeGroup" class="hidden">
+                    <label class="text-sm font-medium">Código *</label>
+                    <input type="text" id="itemCode" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1" placeholder="Ej: A1, CS, RAS">
+                </div>
+
+                <!-- Campo: Categoría (programs, skills) -->
+                <div id="categoryGroup">
+                    <label class="text-sm font-medium">Categoría</label>
+                    <input type="text" id="itemCategory" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1" placeholder="Ej: Ingeniería, Diseño">
+                </div>
+
+                <!-- Campo: Tipo Sociedad (societies) -->
+                <div id="societyTypeGroup" class="hidden">
+                    <label class="text-sm font-medium">Tipo</label>
+                    <select id="itemSocietyType" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1">
+                        <option value="technical">Técnica</option>
+                        <option value="affinity">Afinidad</option>
+                    </select>
+                </div>
+
+                <!-- Campo: Skill Category (skills) -->
+                <div id="skillCategoryGroup" class="hidden">
+                    <label class="text-sm font-medium">Tipo de Habilidad</label>
+                    <select id="itemSkillCategory" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1">
+                        <option value="technical">Técnica (Hard Skill)</option>
+                        <option value="soft">Blanda (Soft Skill)</option>
+                    </select>
+                </div>
+
+                <!-- Campo: Min/Max Semestre (semesters) -->
+                <div id="semesterRangeGroup" class="hidden">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-sm font-medium">Semestre Min</label>
+                            <input type="number" id="itemMinSemester" min="1" max="12" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1">
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium">Semestre Max</label>
+                            <input type="number" id="itemMaxSemester" min="1" max="12" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1">
+                        </div>
+                    </div>
+                    <p class="text-xs text-muted-foreground mt-1">Dejar vacío para egresados/posgrado</p>
+                </div>
+
+                <!-- Campo: Horas (availability) -->
+                <div id="hoursGroup" class="hidden">
+                    <label class="text-sm font-medium">Descripción de Horas</label>
+                    <input type="text" id="itemHoursDesc" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1" placeholder="Ej: Menos de 2 horas">
+                    <div class="grid grid-cols-2 gap-4 mt-2">
+                        <div>
+                            <label class="text-sm font-medium">Min Horas</label>
+                            <input type="number" id="itemMinHours" min="0" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1">
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium">Max Horas</label>
+                            <input type="number" id="itemMaxHours" min="0" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Campo: Descripción (todos) -->
+                <div id="descriptionGroup">
+                    <label class="text-sm font-medium">Descripción</label>
+                    <textarea id="itemDescription" rows="2" class="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"></textarea>
+                </div>
+
+                <!-- Campo: Color (societies, skills) -->
+                <div id="colorGroup" class="hidden">
+                    <label class="text-sm font-medium">Color</label>
+                    <div class="flex gap-2 mt-1">
+                        <input type="color" id="itemColor" value="#0066cc" class="h-10 w-14 rounded border cursor-pointer">
+                        <input type="text" id="itemColorText" value="#0066cc" class="flex h-10 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm" pattern="^#[0-9A-Fa-f]{6}$">
+                    </div>
+                </div>
+
+                <!-- Campo: Icono (interests, channels, skills) -->
+                <div id="iconGroup" class="hidden">
+                    <label class="text-sm font-medium">Icono (Font Awesome)</label>
+                    <input type="text" id="itemIcon" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1" placeholder="fa-users-cog">
+                    <p class="text-xs text-muted-foreground mt-1">Nombre del icono sin el prefijo "fas"</p>
+                </div>
+
+                <!-- Campo: Orden -->
+                <div>
+                    <label class="text-sm font-medium">Orden de Display</label>
+                    <input type="number" id="itemOrder" value="0" min="0" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1">
+                </div>
+
+                <!-- Campo: Activo -->
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="itemActive" checked class="h-4 w-4 rounded border-gray-300">
+                    <label for="itemActive" class="text-sm font-medium">Activo</label>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeModal()" class="flex-1 h-10 px-4 py-2 border border-input rounded-md text-sm font-medium hover:bg-accent">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 h-10 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90">
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Toast de notificación -->
+<div id="toast" class="hidden fixed bottom-4 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2">
+    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    </svg>
+    <span id="toastMessage">Guardado exitosamente</span>
+</div>
+
+<script>
+    // Configuración de catálogos
+    const catalogConfig = {
+        programs: {
+            title: 'Programas Académicos',
+            endpoint: '/api/catalogs/academic-programs',
+            extraHeader: 'Categoría',
+            fields: ['shortName', 'category', 'description'],
+            getExtra: (item) => item.category || '-'
+        },
+        semesters: {
+            title: 'Rangos de Semestre',
+            endpoint: '/api/catalogs/semester-ranges',
+            extraHeader: 'Rango',
+            fields: ['semesterRange', 'description'],
+            getExtra: (item) => item.min_semester && item.max_semester ? `${item.min_semester} - ${item.max_semester}` : 'N/A'
+        },
+        english: {
+            title: 'Niveles de Inglés',
+            endpoint: '/api/catalogs/english-levels',
+            extraHeader: 'Código',
+            fields: ['code', 'description'],
+            getExtra: (item) => item.code || '-'
+        },
+        membership: {
+            title: 'Estados de Membresía IEEE',
+            endpoint: '/api/catalogs/ieee-membership-statuses',
+            extraHeader: 'Descripción',
+            fields: ['description'],
+            getExtra: (item) => item.description ? item.description.substring(0, 30) + '...' : '-'
+        },
+        societies: {
+            title: 'Sociedades IEEE',
+            endpoint: '/api/catalogs/ieee-societies',
+            extraHeader: 'Codigo / Tipo',
+            fields: ['code', 'shortName', 'societyType', 'color', 'description'],
+            getExtra: (item) => `<span class="font-mono" style="color: ${item.color}">${item.code}</span> - ${item.society_type}`
+        },
+        interests: {
+            title: 'Áreas de Interés',
+            endpoint: '/api/catalogs/interest-areas',
+            extraHeader: 'Icono',
+            fields: ['icon', 'description'],
+            getExtra: (item) => item.icon ? `<i class="fas ${item.icon}"></i> ${item.icon}` : '-'
+        },
+        availability: {
+            title: 'Niveles de Disponibilidad',
+            endpoint: '/api/catalogs/availability-levels',
+            extraHeader: 'Horas',
+            fields: ['hours', 'description'],
+            getExtra: (item) => item.hours_description || '-'
+        },
+        channels: {
+            title: 'Canales de Comunicación',
+            endpoint: '/api/catalogs/communication-channels',
+            extraHeader: 'Icono',
+            fields: ['icon', 'description'],
+            getExtra: (item) => item.icon ? `<i class="fas ${item.icon}"></i>` : '-'
+        },
+        skills: {
+            title: 'Habilidades',
+            endpoint: '/api/catalogs/skills',
+            extraHeader: 'Categoría',
+            fields: ['skillCategory', 'icon', 'color', 'description'],
+            getExtra: (item) => `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs" style="background-color: ${item.color}20; color: ${item.color}">${item.category === 'technical' ? 'Técnica' : 'Blanda'}</span>`
+        }
+    };
+
+    let currentCatalog = 'programs';
+    let catalogData = [];
+
+    // Inicializar
+    document.addEventListener('DOMContentLoaded', () => {
+        loadCatalog('programs');
+        setupColorSync();
+    });
+
+    // Cambiar catálogo
+    function switchCatalog(catalog) {
+        currentCatalog = catalog;
+
+        // Actualizar tabs
+        document.querySelectorAll('.catalog-tab').forEach(tab => {
+            if (tab.dataset.tab === catalog) {
+                tab.classList.add('border-primary', 'text-primary');
+                tab.classList.remove('border-transparent', 'text-muted-foreground');
+            } else {
+                tab.classList.remove('border-primary', 'text-primary');
+                tab.classList.add('border-transparent', 'text-muted-foreground');
+            }
+        });
+
+        // Actualizar titulo y header
+        const config = catalogConfig[catalog];
+        document.getElementById('catalogTitle').textContent = config.title;
+        document.getElementById('extraHeader').textContent = config.extraHeader;
+
+        loadCatalog(catalog);
+    }
+
+    // Cargar catálogo
+    async function loadCatalog(catalog) {
+        const config = catalogConfig[catalog];
+        const tbody = document.getElementById('catalogBody');
+        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-muted-foreground">Cargando...</td></tr>';
+
+        try {
+            const response = await fetch(config.endpoint);
+            catalogData = await response.json();
+
+            if (catalogData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-muted-foreground">No hay items</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = catalogData.map(item => `
+                <tr class="border-b transition-colors hover:bg-muted/50">
+                    <td class="p-4 align-middle text-muted-foreground">${item.id}</td>
+                    <td class="p-4 align-middle font-medium">${item.name}</td>
+                    <td class="p-4 align-middle">${config.getExtra(item)}</td>
+                    <td class="p-4 align-middle text-center">${item.display_order || 0}</td>
+                    <td class="p-4 align-middle text-center">
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${item.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${item.is_active ? 'Activo' : 'Inactivo'}
+                        </span>
+                    </td>
+                    <td class="p-4 align-middle text-right">
+                        <button onclick="editItem(${item.id})" class="inline-flex items-center justify-center rounded-md text-sm font-medium h-8 w-8 hover:bg-accent" title="Editar">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </button>
+                        <button onclick="deleteItem(${item.id})" class="inline-flex items-center justify-center rounded-md text-sm font-medium h-8 w-8 hover:bg-red-100 text-red-600" title="Eliminar">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            console.error('Error cargando catálogo:', error);
+            tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-red-500">Error al cargar</td></tr>';
+        }
+    }
+
+    // Abrir modal para agregar
+    function openAddModal() {
+        document.getElementById('modalTitle').textContent = 'Agregar ' + catalogConfig[currentCatalog].title.replace('es de ', ' de ').replace('Programas Académicos', 'Programa').replace('Rangos de Semestre', 'Rango').replace('Niveles de Inglés', 'Nivel').replace('Estados de Membresía IEEE', 'Estado').replace('Sociedades IEEE', 'Sociedad').replace('Áreas de Interés', 'Área').replace('Niveles de Disponibilidad', 'Nivel').replace('Canales de Comunicación', 'Canal').replace('Habilidades', 'Habilidad');
+        document.getElementById('itemForm').reset();
+        document.getElementById('itemId').value = '';
+        document.getElementById('itemActive').checked = true;
+        document.getElementById('itemColor').value = '#0066cc';
+        document.getElementById('itemColorText').value = '#0066cc';
+        showFieldsForCatalog();
+        document.getElementById('itemModal').classList.remove('hidden');
+    }
+
+    // Editar item
+    function editItem(id) {
+        const item = catalogData.find(i => i.id === id);
+        if (!item) return;
+
+        document.getElementById('modalTitle').textContent = 'Editar Item';
+        document.getElementById('itemId').value = item.id;
+        document.getElementById('itemName').value = item.name || '';
+        document.getElementById('itemShortName').value = item.short_name || '';
+        document.getElementById('itemCode').value = item.code || '';
+        document.getElementById('itemCategory').value = item.category || '';
+        document.getElementById('itemDescription').value = item.description || '';
+        document.getElementById('itemOrder').value = item.display_order || 0;
+        document.getElementById('itemActive').checked = item.is_active;
+        document.getElementById('itemColor').value = item.color || '#0066cc';
+        document.getElementById('itemColorText').value = item.color || '#0066cc';
+        document.getElementById('itemIcon').value = item.icon || '';
+        document.getElementById('itemSocietyType').value = item.society_type || 'technical';
+        document.getElementById('itemSkillCategory').value = item.category || 'technical';
+        document.getElementById('itemMinSemester').value = item.min_semester || '';
+        document.getElementById('itemMaxSemester').value = item.max_semester || '';
+        document.getElementById('itemHoursDesc').value = item.hours_description || '';
+        document.getElementById('itemMinHours').value = item.min_hours || '';
+        document.getElementById('itemMaxHours').value = item.max_hours || '';
+
+        showFieldsForCatalog();
+        document.getElementById('itemModal').classList.remove('hidden');
+    }
+
+    // Mostrar campos según catálogo
+    function showFieldsForCatalog() {
+        const fields = catalogConfig[currentCatalog].fields;
+
+        // Ocultar todos los grupos opcionales
+        ['shortNameGroup', 'codeGroup', 'categoryGroup', 'societyTypeGroup', 'skillCategoryGroup',
+         'semesterRangeGroup', 'hoursGroup', 'colorGroup', 'iconGroup', 'descriptionGroup'].forEach(id => {
+            document.getElementById(id).classList.add('hidden');
+        });
+
+        // Mostrar según catálogo
+        if (fields.includes('shortName')) document.getElementById('shortNameGroup').classList.remove('hidden');
+        if (fields.includes('code')) {
+            document.getElementById('codeGroup').classList.remove('hidden');
+            document.getElementById('itemCode').required = true;
+        } else {
+            document.getElementById('itemCode').required = false;
+        }
+        if (fields.includes('category')) document.getElementById('categoryGroup').classList.remove('hidden');
+        if (fields.includes('societyType')) document.getElementById('societyTypeGroup').classList.remove('hidden');
+        if (fields.includes('skillCategory')) document.getElementById('skillCategoryGroup').classList.remove('hidden');
+        if (fields.includes('semesterRange')) document.getElementById('semesterRangeGroup').classList.remove('hidden');
+        if (fields.includes('hours')) document.getElementById('hoursGroup').classList.remove('hidden');
+        if (fields.includes('color')) document.getElementById('colorGroup').classList.remove('hidden');
+        if (fields.includes('icon')) document.getElementById('iconGroup').classList.remove('hidden');
+        if (fields.includes('description')) document.getElementById('descriptionGroup').classList.remove('hidden');
+    }
+
+    // Sincronizar color picker con texto
+    function setupColorSync() {
+        document.getElementById('itemColor').addEventListener('input', (e) => {
+            document.getElementById('itemColorText').value = e.target.value;
+        });
+        document.getElementById('itemColorText').addEventListener('input', (e) => {
+            if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                document.getElementById('itemColor').value = e.target.value;
+            }
+        });
+    }
+
+    // Cerrar modal
+    function closeModal() {
+        document.getElementById('itemModal').classList.add('hidden');
+    }
+
+    // Guardar item
+    document.getElementById('itemForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const id = document.getElementById('itemId').value;
+        const config = catalogConfig[currentCatalog];
+
+        // Construir data según catálogo
+        const data = {
+            name: document.getElementById('itemName').value,
+            display_order: parseInt(document.getElementById('itemOrder').value) || 0,
+            is_active: document.getElementById('itemActive').checked
+        };
+
+        // Campos adicionales según catálogo
+        if (config.fields.includes('shortName')) {
+            data.short_name = document.getElementById('itemShortName').value || null;
+        }
+        if (config.fields.includes('code')) {
+            data.code = document.getElementById('itemCode').value;
+        }
+        if (config.fields.includes('category') && currentCatalog !== 'skills') {
+            data.category = document.getElementById('itemCategory').value || null;
+        }
+        if (config.fields.includes('description')) {
+            data.description = document.getElementById('itemDescription').value || null;
+        }
+        if (config.fields.includes('color')) {
+            data.color = document.getElementById('itemColorText').value || '#0066cc';
+        }
+        if (config.fields.includes('icon')) {
+            data.icon = document.getElementById('itemIcon').value || null;
+        }
+        if (config.fields.includes('societyType')) {
+            data.society_type = document.getElementById('itemSocietyType').value;
+        }
+        if (config.fields.includes('skillCategory')) {
+            data.category = document.getElementById('itemSkillCategory').value;
+        }
+        if (config.fields.includes('semesterRange')) {
+            data.min_semester = document.getElementById('itemMinSemester').value ? parseInt(document.getElementById('itemMinSemester').value) : null;
+            data.max_semester = document.getElementById('itemMaxSemester').value ? parseInt(document.getElementById('itemMaxSemester').value) : null;
+        }
+        if (config.fields.includes('hours')) {
+            data.hours_description = document.getElementById('itemHoursDesc').value || null;
+            data.min_hours = document.getElementById('itemMinHours').value ? parseInt(document.getElementById('itemMinHours').value) : null;
+            data.max_hours = document.getElementById('itemMaxHours').value ? parseInt(document.getElementById('itemMaxHours').value) : null;
+        }
+
+        try {
+            const url = id ? `${config.endpoint}/${id}` : config.endpoint;
+            const method = id ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                showToast(id ? 'Actualizado exitosamente' : 'Creado exitosamente');
+                closeModal();
+                loadCatalog(currentCatalog);
+            } else {
+                const error = await response.json();
+                showToast(error.detail || 'Error al guardar', 'error');
+            }
+        } catch (error) {
+            showToast('Error de conexión', 'error');
+        }
+    });
+
+    // Eliminar item
+    async function deleteItem(id) {
+        if (!confirm('¿Está seguro de eliminar este item?')) return;
+
+        const config = catalogConfig[currentCatalog];
+
+        try {
+            const response = await fetch(`${config.endpoint}/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                showToast('Eliminado exitosamente');
+                loadCatalog(currentCatalog);
+            } else {
+                const error = await response.json();
+                showToast(error.detail || 'Error al eliminar', 'error');
+            }
+        } catch (error) {
+            showToast('Error de conexión', 'error');
+        }
+    }
+
+    // Mostrar toast
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        toastMessage.textContent = message;
+
+        if (type === 'error') {
+            toast.classList.remove('bg-green-600');
+            toast.classList.add('bg-red-600');
+        } else {
+            toast.classList.remove('bg-red-600');
+            toast.classList.add('bg-green-600');
+        }
+
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+</script>
+{% endblock %}
