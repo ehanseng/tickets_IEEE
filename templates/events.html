@@ -106,9 +106,9 @@
 </div>
 
 <!-- Modal para crear evento -->
-<div id="eventModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-lg">
-        <div class="flex flex-col space-y-1.5 p-6 border-b">
+<div id="eventModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto">
+    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-lg my-8 max-h-[90vh] flex flex-col">
+        <div class="flex flex-col space-y-1.5 p-6 border-b flex-shrink-0">
             <div class="flex items-center justify-between">
                 <h2 class="text-2xl font-semibold leading-none tracking-tight">Crear Nuevo Evento</h2>
                 <button onclick="closeModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
@@ -117,7 +117,7 @@
             </div>
         </div>
 
-        <div class="p-6">
+        <div class="p-6 overflow-y-auto flex-1">
             <form id="eventForm" class="space-y-4">
                 <div class="space-y-2">
                     <label for="name" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Nombre del Evento *</label>
@@ -171,8 +171,8 @@
                     </p>
                 </div>
 
-                <!-- Templates Personalizados (Opcional) -->
-                <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-3">
+                <!-- Templates Personalizados (Opcional) - Solo para eventos organizados -->
+                <div id="templatesContainer" class="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-3">
                     <div class="flex items-center justify-between">
                         <h3 class="font-semibold text-sm text-blue-900">📱 Templates Personalizados (Opcional)</h3>
                         <button type="button" onclick="toggleTemplates()" class="text-xs text-blue-600 hover:text-blue-800">
@@ -469,7 +469,7 @@ IEEE Tadeo Student Branch`;
     // Función para mostrar/ocultar campos según tipo de evento
     function toggleEventTypeFields() {
         const eventType = document.querySelector('input[name="event_type"]:checked').value;
-        const templatesContainer = document.querySelector('#templatesSection').closest('.rounded-lg.border-blue-200');
+        const templatesContainer = document.getElementById('templatesContainer');
 
         if (eventType === 'participation') {
             templatesContainer.style.display = 'none';
@@ -477,6 +477,11 @@ IEEE Tadeo Student Branch`;
             templatesContainer.style.display = 'block';
         }
     }
+
+    // Ejecutar al cargar la página para establecer el estado inicial
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleEventTypeFields();
+    });
 
     // Función para mostrar/ocultar la sección de templates
     function toggleTemplates() {
