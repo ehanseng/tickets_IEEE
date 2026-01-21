@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Eventos - Sistema de Tickets{% endblock %}
+{% block title %}Eventos - IEEE Tadeo Control System{% endblock %}
 
 {% block content %}
 <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
@@ -29,6 +29,11 @@
                             </div>
                         </div>
                         <div class="flex items-center space-x-3">
+                            {% if event.event_type == 'participation' %}
+                            <span class="inline-flex items-center rounded-full border border-transparent bg-green-100 text-green-700 px-2.5 py-0.5 text-xs font-semibold">Participamos</span>
+                            {% else %}
+                            <span class="inline-flex items-center rounded-full border border-transparent bg-blue-100 text-blue-700 px-2.5 py-0.5 text-xs font-semibold">Organizamos</span>
+                            {% endif %}
                             {% if event.organization_id and event.organization %}
                             <span class="inline-flex items-center rounded-full border border-transparent bg-purple-100 text-purple-700 px-2.5 py-0.5 text-xs font-semibold">🏢 {{ event.organization.short_name or event.organization.name }}</span>
                             {% endif %}
@@ -37,7 +42,9 @@
                             {% else %}
                             <span class="inline-flex items-center rounded-full border border-transparent bg-red-100 text-red-700 px-2.5 py-0.5 text-xs font-semibold">Inactivo</span>
                             {% endif %}
+                            {% if event.event_type != 'participation' %}
                             <span class="inline-flex items-center rounded-full border border-transparent bg-amber-100 text-amber-700 px-2.5 py-0.5 text-xs font-semibold">{{ event.ticket_count }} tickets</span>
+                            {% endif %}
                             <a href="/admin/events/{{ event.id }}/edit" onclick="event.stopPropagation()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3 py-1">
                                 ✏️ Editar
                             </a>
@@ -48,15 +55,44 @@
                 <!-- Detalles del evento (desplegable) -->
                 <div id="details-{{ event.id }}" class="hidden border-t">
                     <div class="p-2">
-                        <div class="flex items-center justify-between mb-4">
-                            <h4 class="font-semibold">Tickets del Evento</h4>
-                            <div id="stats-{{ event.id }}" class="text-sm text-muted-foreground">
-                                Cargando...
+                        <!-- Tabs -->
+                        <div class="border-b border-gray-200 mb-4">
+                            <nav class="-mb-px flex space-x-8">
+                                <button onclick="showTab({{ event.id }}, 'tickets')" id="tab-tickets-{{ event.id }}" class="border-b-2 border-primary py-2 px-1 text-sm font-medium text-primary">
+                                    Tickets
+                                </button>
+                                <button onclick="showTab({{ event.id }}, 'validations')" id="tab-validations-{{ event.id }}" class="border-b-2 border-transparent py-2 px-1 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-gray-300">
+                                    Historial de Validaciones
+                                </button>
+                            </nav>
+                        </div>
+
+                        <!-- Contenido Tab Tickets -->
+                        <div id="content-tickets-{{ event.id }}">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="font-semibold">Tickets del Evento</h4>
+                                <div id="stats-{{ event.id }}" class="text-sm text-muted-foreground">
+                                    Cargando...
+                                </div>
+                            </div>
+
+                            <div id="tickets-{{ event.id }}" class="space-y-2">
+                                <!-- Los tickets se cargarán aquí dinámicamente -->
                             </div>
                         </div>
 
-                        <div id="tickets-{{ event.id }}" class="space-y-2">
-                            <!-- Los tickets se cargarán aquí dinámicamente -->
+                        <!-- Contenido Tab Validaciones -->
+                        <div id="content-validations-{{ event.id }}" class="hidden">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="font-semibold">Historial de Validaciones</h4>
+                                <div id="validation-stats-{{ event.id }}" class="text-sm text-muted-foreground">
+                                    Cargando...
+                                </div>
+                            </div>
+
+                            <div id="validations-{{ event.id }}" class="space-y-2">
+                                <!-- Las validaciones se cargarán aquí dinámicamente -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -110,6 +146,29 @@
                         <!-- Las organizaciones se cargarán dinámicamente -->
                     </select>
                     <p class="text-xs text-muted-foreground">Selecciona una organización externa si el evento no es de IEEE Tadeo</p>
+                </div>
+
+                <!-- Tipo de Evento -->
+                <div class="space-y-2">
+                    <label class="text-sm font-medium leading-none">Tipo de Evento *</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="event_type" value="organized" checked
+                                   onchange="toggleEventTypeFields()" class="text-primary">
+                            <span class="text-sm">Organizamos</span>
+                            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Con tickets</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="event_type" value="participation"
+                                   onchange="toggleEventTypeFields()" class="text-primary">
+                            <span class="text-sm">Participamos</span>
+                            <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Solo galeria</span>
+                        </label>
+                    </div>
+                    <p class="text-xs text-muted-foreground">
+                        <strong>Organizamos:</strong> Evento con sistema de tickets y registro de asistentes.<br>
+                        <strong>Participamos:</strong> Evento donde IEEE participa pero no organiza (solo galeria de fotos).
+                    </p>
                 </div>
 
                 <!-- Templates Personalizados (Opcional) -->
@@ -407,6 +466,18 @@ IEEE Tadeo Student Branch`;
 </html>`;
     {% endraw %}
 
+    // Función para mostrar/ocultar campos según tipo de evento
+    function toggleEventTypeFields() {
+        const eventType = document.querySelector('input[name="event_type"]:checked').value;
+        const templatesContainer = document.querySelector('#templatesSection').closest('.rounded-lg.border-blue-200');
+
+        if (eventType === 'participation') {
+            templatesContainer.style.display = 'none';
+        } else {
+            templatesContainer.style.display = 'block';
+        }
+    }
+
     // Función para mostrar/ocultar la sección de templates
     function toggleTemplates() {
         const section = document.getElementById('templatesSection');
@@ -443,6 +514,7 @@ IEEE Tadeo Student Branch`;
         e.preventDefault();
 
         const orgId = document.getElementById('organization_id').value;
+        const eventType = document.querySelector('input[name="event_type"]:checked').value;
 
         const whatsappTemplate = document.getElementById('whatsapp_template').value.trim();
         const emailTemplate = document.getElementById('email_template').value.trim();
@@ -453,8 +525,9 @@ IEEE Tadeo Student Branch`;
             location: document.getElementById('location').value,
             event_date: document.getElementById('event_date').value,
             organization_id: orgId ? parseInt(orgId) : null,
-            whatsapp_template: whatsappTemplate || null,
-            email_template: emailTemplate || null
+            event_type: eventType,
+            whatsapp_template: eventType === 'organized' ? (whatsappTemplate || null) : null,
+            email_template: eventType === 'organized' ? (emailTemplate || null) : null
         };
 
         try {
@@ -488,6 +561,117 @@ IEEE Tadeo Student Branch`;
         const modal = document.getElementById('eventModal');
         if (event.target == modal) {
             closeModal();
+        }
+    }
+
+    // Función para cambiar entre tabs
+    function showTab(eventId, tabName) {
+        // Ocultar todos los contenidos
+        document.getElementById(`content-tickets-${eventId}`).classList.add('hidden');
+        document.getElementById(`content-validations-${eventId}`).classList.add('hidden');
+
+        // Desactivar todos los tabs
+        document.getElementById(`tab-tickets-${eventId}`).className = 'border-b-2 border-transparent py-2 px-1 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-gray-300';
+        document.getElementById(`tab-validations-${eventId}`).className = 'border-b-2 border-transparent py-2 px-1 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-gray-300';
+
+        // Mostrar el contenido seleccionado
+        document.getElementById(`content-${tabName}-${eventId}`).classList.remove('hidden');
+
+        // Activar el tab seleccionado
+        document.getElementById(`tab-${tabName}-${eventId}`).className = 'border-b-2 border-primary py-2 px-1 text-sm font-medium text-primary';
+
+        // Cargar validaciones si se selecciona ese tab y aún no se han cargado
+        if (tabName === 'validations' && !expandedEvents.has(`validations-loaded-${eventId}`)) {
+            loadEventValidations(eventId);
+            expandedEvents.add(`validations-loaded-${eventId}`);
+        }
+    }
+
+    // Función para cargar el historial de validaciones
+    async function loadEventValidations(eventId) {
+        const validationsDiv = document.getElementById(`validations-${eventId}`);
+        const statsDiv = document.getElementById(`validation-stats-${eventId}`);
+
+        validationsDiv.innerHTML = '<p class="text-sm text-muted-foreground">Cargando validaciones...</p>';
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`/events/${eventId}/validation-history`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                // Actualizar estadísticas
+                statsDiv.innerHTML = `Total validaciones: ${data.total_validations} | Tickets validados: ${data.unique_tickets}`;
+
+                // Mostrar validaciones agrupadas por día
+                if (data.validations_by_day.length === 0) {
+                    validationsDiv.innerHTML = '<p class="text-sm text-muted-foreground py-4">No hay validaciones para este evento</p>';
+                } else {
+                    let html = '<div class="space-y-4">';
+
+                    data.validations_by_day.forEach(dayGroup => {
+                        html += `
+                            <div class="rounded-lg border bg-white p-4">
+                                <div class="flex items-center justify-between mb-3 pb-2 border-b">
+                                    <h5 class="font-semibold text-sm">${dayGroup.date}</h5>
+                                    <span class="text-xs text-muted-foreground">${dayGroup.validations.length} ${dayGroup.validations.length === 1 ? 'validación' : 'validaciones'}</span>
+                                </div>
+                                <div class="space-y-2">
+        `;
+
+                        dayGroup.validations.forEach(validation => {
+                            const modeClass = validation.validation_mode === 'daily'
+                                ? 'bg-green-100 text-green-700 border-green-200'
+                                : 'bg-orange-100 text-orange-700 border-orange-200';
+                            const modeText = validation.validation_mode === 'daily' ? 'Diario' : 'Una vez';
+
+                            html += `
+                                <div class="rounded-lg border bg-slate-50 p-3">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex-1">
+                                            <div class="flex items-center space-x-2">
+                                                <span class="font-medium text-sm">${validation.user_name}</span>
+                                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${modeClass}">
+                                                    ${modeText}
+                                                </span>
+                                            </div>
+                                            <div class="text-xs text-muted-foreground mt-1">
+                                                ${validation.user_email}
+                                            </div>
+                                            <div class="text-xs text-muted-foreground mt-1">
+                                                Validado por: <strong>${validation.validator_name}</strong>
+                                            </div>
+                                            ${validation.notes ? `<div class="text-xs text-muted-foreground mt-1 italic">${validation.notes}</div>` : ''}
+                                        </div>
+                                        <div class="text-right text-xs text-muted-foreground">
+                                            <div class="font-medium">${new Date(validation.validated_at).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})}</div>
+                                            ${validation.validation_count > 1 ? `<div class="text-xs mt-1 text-blue-600">Validación #${validation.validation_count}</div>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+
+                        html += `
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += '</div>';
+                    validationsDiv.innerHTML = html;
+                }
+            } else {
+                validationsDiv.innerHTML = `<p class="text-sm text-red-600">Error al cargar validaciones: ${data.detail}</p>`;
+                statsDiv.innerHTML = '';
+            }
+        } catch (error) {
+            validationsDiv.innerHTML = '<p class="text-sm text-red-600">Error de conexión al cargar validaciones</p>';
+            statsDiv.innerHTML = '';
         }
     }
 </script>

@@ -345,6 +345,19 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
+class EventGalleryImageResponse(BaseModel):
+    """Schema para respuesta de imagen de galería"""
+    id: int
+    event_id: int
+    image_path: str
+    caption: Optional[str] = None
+    display_order: int = 0
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class EventCreate(BaseModel):
     """Schema para crear evento"""
     name: str
@@ -354,10 +367,17 @@ class EventCreate(BaseModel):
     event_end_date: Optional[datetime] = None  # Fecha de finalización del evento
     event_duration_days: Optional[int] = 1  # Duración del evento en días
     organization_id: Optional[int] = None  # ID de organización (opcional)
+    event_type: str = 'organized'  # 'organized' = Organizamos, 'participation' = Participamos
     whatsapp_template: Optional[str] = None  # Template personalizado de WhatsApp
     email_template: Optional[str] = None  # Template personalizado de Email
     whatsapp_image_path: Optional[str] = None  # Ruta de la imagen para WhatsApp
     send_qr_with_whatsapp: Optional[bool] = False  # Enviar QR con mensaje de WhatsApp
+
+    @validator('event_type')
+    def validate_event_type(cls, v):
+        if v not in ['organized', 'participation']:
+            raise ValueError('El tipo de evento debe ser "organized" o "participation"')
+        return v
 
 
 class EventUpdate(BaseModel):
@@ -370,10 +390,17 @@ class EventUpdate(BaseModel):
     event_duration_days: Optional[int] = None
     organization_id: Optional[int] = None
     is_active: Optional[bool] = None
+    event_type: Optional[str] = None  # 'organized' o 'participation'
     whatsapp_template: Optional[str] = None  # Template personalizado de WhatsApp
     email_template: Optional[str] = None  # Template personalizado de Email
     whatsapp_image_path: Optional[str] = None  # Ruta de la imagen para WhatsApp
     send_qr_with_whatsapp: Optional[bool] = None  # Enviar QR con mensaje de WhatsApp
+
+    @validator('event_type')
+    def validate_event_type(cls, v):
+        if v is not None and v not in ['organized', 'participation']:
+            raise ValueError('El tipo de evento debe ser "organized" o "participation"')
+        return v
 
 
 class EventResponse(BaseModel):
@@ -386,6 +413,7 @@ class EventResponse(BaseModel):
     event_end_date: Optional[datetime] = None
     event_duration_days: int = 1
     organization_id: Optional[int]
+    event_type: str = 'organized'  # Tipo de evento
     whatsapp_template: Optional[str] = None  # Template personalizado de WhatsApp
     email_template: Optional[str] = None  # Template personalizado de Email
     whatsapp_image_path: Optional[str] = None  # Ruta de la imagen para WhatsApp
@@ -393,6 +421,7 @@ class EventResponse(BaseModel):
     is_active: bool
     created_at: datetime
     organization: Optional[OrganizationResponse] = None
+    gallery_images: List[EventGalleryImageResponse] = []  # Imágenes de galería
 
     class Config:
         from_attributes = True

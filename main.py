@@ -377,6 +377,7 @@ def get_admin_permissions_schema(
         "sections": [
             {"key": "dashboard", "name": "Dashboard", "description": "Ver estadisticas generales"},
             {"key": "events", "name": "Eventos", "description": "Gestionar eventos"},
+            {"key": "projects", "name": "Proyectos", "description": "Gestionar proyectos"},
             {"key": "tickets", "name": "Tickets", "description": "Gestionar tickets"},
             {"key": "users", "name": "Contactos", "description": "Gestionar contactos/usuarios"},
             {"key": "messages", "name": "Mensajes", "description": "Enviar mensajes"},
@@ -2032,6 +2033,149 @@ def delete_event_whatsapp_image(
     db.refresh(event)
 
     return {"message": "Imagen eliminada exitosamente"}
+
+
+# ============================================================
+# ENDPOINTS DE GALERÍA DE EVENTOS
+# ============================================================
+
+@app.get("/events/{event_id}/gallery")
+def get_event_gallery(
+    event_id: int,
+    db: Session = Depends(get_db)
+):
+    """Obtener galería de imágenes de un evento"""
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    images = db.query(models.EventGalleryImage).filter(
+        models.EventGalleryImage.event_id == event_id
+    ).order_by(models.EventGalleryImage.display_order).all()
+
+    return [schemas.EventGalleryImageResponse.model_validate(img) for img in images]
+
+
+@app.post("/events/{event_id}/gallery")
+async def upload_event_gallery_image(
+    event_id: int,
+    image: UploadFile = File(...),
+    caption: str = Form(None),
+    display_order: int = Form(0),
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Subir imagen a la galería del evento"""
+    import os
+    from pathlib import Path
+
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    # Validar que sea una imagen
+    if not image.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="El archivo debe ser una imagen")
+
+    # Validar tamaño (máx 5MB)
+    content = await image.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="La imagen no puede superar los 5MB")
+
+    # Crear directorio del evento si no existe
+    event_gallery_dir = f"static/event_gallery/{event_id}"
+    os.makedirs(event_gallery_dir, exist_ok=True)
+
+    # Generar nombre único para el archivo
+    ext = Path(image.filename).suffix
+    filename = f"img_{int(datetime.now().timestamp())}{ext}"
+    filepath = f"{event_gallery_dir}/{filename}"
+
+    # Guardar el archivo
+    try:
+        with open(filepath, 'wb') as f:
+            f.write(content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al guardar la imagen: {str(e)}")
+
+    # Si no se especificó display_order, usar el siguiente disponible
+    if display_order == 0:
+        max_order = db.query(models.EventGalleryImage).filter(
+            models.EventGalleryImage.event_id == event_id
+        ).count()
+        display_order = max_order
+
+    # Crear registro en la BD
+    gallery_image = models.EventGalleryImage(
+        event_id=event_id,
+        image_path=filepath,
+        caption=caption,
+        display_order=display_order
+    )
+    db.add(gallery_image)
+    db.commit()
+    db.refresh(gallery_image)
+
+    return {
+        "message": "Imagen agregada a la galería",
+        "image": schemas.EventGalleryImageResponse.model_validate(gallery_image)
+    }
+
+
+@app.delete("/events/{event_id}/gallery/{image_id}")
+def delete_gallery_image(
+    event_id: int,
+    image_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Eliminar imagen de la galería del evento"""
+    import os
+
+    gallery_image = db.query(models.EventGalleryImage).filter(
+        models.EventGalleryImage.id == image_id,
+        models.EventGalleryImage.event_id == event_id
+    ).first()
+
+    if not gallery_image:
+        raise HTTPException(status_code=404, detail="Imagen no encontrada")
+
+    # Eliminar el archivo
+    if os.path.exists(gallery_image.image_path):
+        try:
+            os.remove(gallery_image.image_path)
+        except Exception as e:
+            print(f"Error eliminando archivo: {e}")
+
+    # Eliminar registro de la BD
+    db.delete(gallery_image)
+    db.commit()
+
+    return {"message": "Imagen eliminada de la galería"}
+
+
+@app.put("/events/{event_id}/gallery/reorder")
+def reorder_gallery_images(
+    event_id: int,
+    image_orders: list,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Reordenar imágenes de la galería"""
+    event = db.query(models.Event).filter(models.Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+
+    # image_orders: [{"id": 1, "order": 0}, {"id": 2, "order": 1}, ...]
+    for item in image_orders:
+        db.query(models.EventGalleryImage).filter(
+            models.EventGalleryImage.id == item.get("id"),
+            models.EventGalleryImage.event_id == event_id
+        ).update({"display_order": item.get("order", 0)})
+
+    db.commit()
+
+    return {"message": "Orden actualizado"}
 
 
 @app.get("/events/{event_id}/tickets")
@@ -5115,18 +5259,44 @@ async def root_redirect(request: Request):
 async def public_home_page(request: Request, db: Session = Depends(get_db)):
     """Página de inicio pública para ieeetadeo.org"""
     from datetime import datetime
+    from sqlalchemy import func
 
-    # Obtener eventos próximos (activos y con fecha futura) - máximo 2
-    upcoming_events = db.query(models.Event).filter(
+    # Obtener eventos próximos (activos y con fecha futura) - máximo 4
+    # Incluimos ticket_count para mostrar cantidad de registrados
+    upcoming_events_query = db.query(
+        models.Event,
+        func.count(models.Ticket.id).label('ticket_count')
+    ).outerjoin(models.Ticket).filter(
         models.Event.is_active == True,
         models.Event.event_date >= datetime.now()
-    ).order_by(models.Event.event_date.asc()).limit(2).all()
+    ).group_by(models.Event.id).order_by(models.Event.event_date.asc()).limit(4).all()
 
-    # Obtener eventos pasados (activos y con fecha pasada) - máximo 2
-    past_events = db.query(models.Event).filter(
+    # Procesar eventos próximos para incluir ticket_count y gallery_images
+    upcoming_events = []
+    for event, ticket_count in upcoming_events_query:
+        event.ticket_count = ticket_count
+        event.gallery_images = db.query(models.EventGalleryImage).filter(
+            models.EventGalleryImage.event_id == event.id
+        ).order_by(models.EventGalleryImage.display_order).all()
+        upcoming_events.append(event)
+
+    # Obtener eventos pasados (activos y con fecha pasada) - máximo 4
+    past_events_query = db.query(
+        models.Event,
+        func.count(models.Ticket.id).label('ticket_count')
+    ).outerjoin(models.Ticket).filter(
         models.Event.is_active == True,
         models.Event.event_date < datetime.now()
-    ).order_by(models.Event.event_date.desc()).limit(2).all()
+    ).group_by(models.Event.id).order_by(models.Event.event_date.desc()).limit(4).all()
+
+    # Procesar eventos pasados para incluir ticket_count y gallery_images
+    past_events = []
+    for event, ticket_count in past_events_query:
+        event.ticket_count = ticket_count
+        event.gallery_images = db.query(models.EventGalleryImage).filter(
+            models.EventGalleryImage.event_id == event.id
+        ).order_by(models.EventGalleryImage.display_order).all()
+        past_events.append(event)
 
     # Obtener miembros con tag "IEEE Tadeo" (solo nombres)
     ieee_tadeo_tag = db.query(models.Tag).filter(models.Tag.name == "IEEE Tadeo").first()

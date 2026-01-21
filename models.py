@@ -359,6 +359,9 @@ class Event(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 
+    # Tipo de evento: 'organized' = Organizamos (con tickets), 'participation' = Participamos (solo galería)
+    event_type = Column(String(20), default='organized')
+
     # Templates personalizados para este evento (opcional)
     whatsapp_template = Column(Text, nullable=True)  # Template de WhatsApp para este evento
     email_template = Column(Text, nullable=True)  # Template de Email para este evento
@@ -368,6 +371,22 @@ class Event(Base):
     # Relaciones
     tickets = relationship("Ticket", back_populates="event")
     organization = relationship("Organization", back_populates="events")
+    gallery_images = relationship("EventGalleryImage", back_populates="event", cascade="all, delete-orphan")
+
+
+class EventGalleryImage(Base):
+    """Imágenes de galería para eventos"""
+    __tablename__ = "event_gallery_images"
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
+    image_path = Column(String(500), nullable=False)
+    caption = Column(String(300), nullable=True)
+    display_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relación
+    event = relationship("Event", back_populates="gallery_images")
 
 
 class Ticket(Base):
