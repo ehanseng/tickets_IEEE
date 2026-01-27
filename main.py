@@ -1550,6 +1550,166 @@ def delete_user(
     }
 
 
+# ========== ENDPOINTS DE ESTUDIOS DE USUARIOS (ADMIN) ==========
+
+@app.get("/users/{user_id}/studies")
+def get_user_studies(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Obtener estudios de un usuario (ADMIN)"""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    studies = db.query(models.UserStudy).filter(
+        models.UserStudy.user_id == user_id
+    ).order_by(models.UserStudy.is_primary.desc(), models.UserStudy.created_at.desc()).all()
+
+    return [
+        {
+            "id": s.id,
+            "study_type": s.study_type.value if hasattr(s.study_type, 'value') else s.study_type,
+            "program_name": s.program_name,
+            "institution": s.institution,
+            "is_primary": s.is_primary,
+            "created_at": s.created_at.isoformat() if s.created_at else None
+        }
+        for s in studies
+    ]
+
+
+@app.post("/users/{user_id}/studies")
+def add_user_study(
+    user_id: int,
+    study_data: schemas.UserStudyCreate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Agregar estudio a un usuario (ADMIN)"""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    # Validar tipo de estudio
+    valid_types = ['pregrado', 'posgrado', 'otro']
+    if study_data.study_type not in valid_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipo de estudio inválido. Debe ser uno de: {', '.join(valid_types)}"
+        )
+
+    # Si es primario, quitar el flag de primario de los demás
+    if study_data.is_primary:
+        db.query(models.UserStudy).filter(
+            models.UserStudy.user_id == user_id
+        ).update({"is_primary": False})
+
+    # Crear el nuevo estudio
+    new_study = models.UserStudy(
+        user_id=user_id,
+        study_type=models.StudyType(study_data.study_type),
+        program_name=study_data.program_name,
+        institution=study_data.institution,
+        is_primary=study_data.is_primary
+    )
+    db.add(new_study)
+    db.commit()
+    db.refresh(new_study)
+
+    return {
+        "success": True,
+        "message": "Estudio agregado exitosamente",
+        "study": {
+            "id": new_study.id,
+            "study_type": new_study.study_type.value,
+            "program_name": new_study.program_name,
+            "institution": new_study.institution,
+            "is_primary": new_study.is_primary
+        }
+    }
+
+
+@app.put("/users/{user_id}/studies/{study_id}")
+def update_user_study(
+    user_id: int,
+    study_id: int,
+    study_data: schemas.UserStudyUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Actualizar estudio de un usuario (ADMIN)"""
+    study = db.query(models.UserStudy).filter(
+        models.UserStudy.id == study_id,
+        models.UserStudy.user_id == user_id
+    ).first()
+
+    if not study:
+        raise HTTPException(status_code=404, detail="Estudio no encontrado")
+
+    # Validar tipo de estudio si se proporciona
+    if study_data.study_type:
+        valid_types = ['pregrado', 'posgrado', 'otro']
+        if study_data.study_type not in valid_types:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Tipo de estudio inválido. Debe ser uno de: {', '.join(valid_types)}"
+            )
+        study.study_type = models.StudyType(study_data.study_type)
+
+    if study_data.program_name is not None:
+        study.program_name = study_data.program_name
+
+    if study_data.institution is not None:
+        study.institution = study_data.institution
+
+    if study_data.is_primary is not None:
+        if study_data.is_primary:
+            db.query(models.UserStudy).filter(
+                models.UserStudy.user_id == user_id,
+                models.UserStudy.id != study_id
+            ).update({"is_primary": False})
+        study.is_primary = study_data.is_primary
+
+    db.commit()
+    db.refresh(study)
+
+    return {
+        "success": True,
+        "message": "Estudio actualizado exitosamente",
+        "study": {
+            "id": study.id,
+            "study_type": study.study_type.value,
+            "program_name": study.program_name,
+            "institution": study.institution,
+            "is_primary": study.is_primary
+        }
+    }
+
+
+@app.delete("/users/{user_id}/studies/{study_id}")
+def delete_user_study(
+    user_id: int,
+    study_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Eliminar estudio de un usuario (ADMIN)"""
+    study = db.query(models.UserStudy).filter(
+        models.UserStudy.id == study_id,
+        models.UserStudy.user_id == user_id
+    ).first()
+
+    if not study:
+        raise HTTPException(status_code=404, detail="Estudio no encontrado")
+
+    db.delete(study)
+    db.commit()
+
+    return {"success": True, "message": "Estudio eliminado exitosamente"}
+
+
 @app.post("/users/import-csv")
 async def import_users_from_csv(
     file: UploadFile = File(...),
@@ -1956,9 +2116,10 @@ async def upload_event_whatsapp_image(
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(require_admin)
 ):
-    """Subir imagen de WhatsApp para un evento"""
+    """Subir imagen de WhatsApp para un evento (redimensiona automáticamente si es muy grande)"""
     import os
-    from pathlib import Path
+    from PIL import Image, ExifTags
+    import io
 
     event = db.query(models.Event).filter(models.Event.id == event_id).first()
     if not event:
@@ -1968,22 +2129,63 @@ async def upload_event_whatsapp_image(
     if not image.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="El archivo debe ser una imagen")
 
-    # Validar tamaño (máx 5MB)
     content = await image.read()
-    if len(content) > 5 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="La imagen no puede superar los 5MB")
 
-    # Generar nombre único para el archivo
-    ext = Path(image.filename).suffix
-    filename = f"event_{event_id}_{int(datetime.now().timestamp())}{ext}"
+    # Generar nombre único para el archivo (siempre .jpg para optimización)
+    filename = f"event_{event_id}_{int(datetime.now().timestamp())}.jpg"
     filepath = f"static/event_images/{filename}"
 
-    # Guardar el archivo
+    # Procesar y optimizar la imagen
     try:
+        img = Image.open(io.BytesIO(content))
+
+        # Corregir orientación según EXIF
+        try:
+            for orientation in ExifTags.TAGS.keys():
+                if ExifTags.TAGS[orientation] == 'Orientation':
+                    break
+            exif = img._getexif()
+            if exif is not None:
+                orientation_value = exif.get(orientation)
+                if orientation_value == 3:
+                    img = img.rotate(180, expand=True)
+                elif orientation_value == 6:
+                    img = img.rotate(270, expand=True)
+                elif orientation_value == 8:
+                    img = img.rotate(90, expand=True)
+        except (AttributeError, KeyError, IndexError):
+            pass  # No EXIF data
+
+        # Convertir a RGB si es necesario (para RGBA, P, etc.)
+        if img.mode in ('RGBA', 'P', 'LA'):
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+            img = background
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
+
+        # Redimensionar si es muy grande (max 1920px en el lado más largo)
+        max_size = 1920
+        if img.width > max_size or img.height > max_size:
+            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+
+        # Guardar con calidad optimizada (target: menor a 1MB)
+        quality = 85
+        while quality >= 50:
+            output = io.BytesIO()
+            img.save(output, format='JPEG', quality=quality, optimize=True)
+            if output.tell() <= 1 * 1024 * 1024:  # 1MB
+                break
+            quality -= 10
+
+        # Guardar el archivo
         with open(filepath, 'wb') as f:
-            f.write(content)
+            f.write(output.getvalue())
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al guardar la imagen: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al procesar la imagen: {str(e)}")
 
     # Eliminar imagen anterior si existe
     if event.whatsapp_image_path and os.path.exists(event.whatsapp_image_path):
@@ -2065,9 +2267,11 @@ async def upload_event_gallery_image(
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(require_admin)
 ):
-    """Subir imagen a la galería del evento"""
+    """Subir imagen a la galería del evento (redimensiona automáticamente si es muy grande)"""
     import os
     from pathlib import Path
+    from PIL import Image, ExifTags
+    import io
 
     event = db.query(models.Event).filter(models.Event.id == event_id).first()
     if not event:
@@ -2077,26 +2281,68 @@ async def upload_event_gallery_image(
     if not image.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="El archivo debe ser una imagen")
 
-    # Validar tamaño (máx 5MB)
     content = await image.read()
-    if len(content) > 5 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="La imagen no puede superar los 5MB")
 
     # Crear directorio del evento si no existe
     event_gallery_dir = f"static/event_gallery/{event_id}"
     os.makedirs(event_gallery_dir, exist_ok=True)
 
-    # Generar nombre único para el archivo
-    ext = Path(image.filename).suffix
-    filename = f"img_{int(datetime.now().timestamp())}{ext}"
+    # Generar nombre único para el archivo (siempre .jpg para optimización)
+    filename = f"img_{int(datetime.now().timestamp())}.jpg"
     filepath = f"{event_gallery_dir}/{filename}"
 
-    # Guardar el archivo
+    # Procesar y optimizar la imagen
     try:
+        img = Image.open(io.BytesIO(content))
+
+        # Corregir orientación según EXIF
+        try:
+            for orientation in ExifTags.TAGS.keys():
+                if ExifTags.TAGS[orientation] == 'Orientation':
+                    break
+            exif = img._getexif()
+            if exif is not None:
+                orientation_value = exif.get(orientation)
+                if orientation_value == 3:
+                    img = img.rotate(180, expand=True)
+                elif orientation_value == 6:
+                    img = img.rotate(270, expand=True)
+                elif orientation_value == 8:
+                    img = img.rotate(90, expand=True)
+        except (AttributeError, KeyError, IndexError):
+            pass  # No EXIF data
+
+        # Convertir a RGB si es necesario (para RGBA, P, etc.)
+        if img.mode in ('RGBA', 'P', 'LA'):
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+            img = background
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
+
+        # Redimensionar si es muy grande (max 1920px en el lado más largo)
+        max_size = 1920
+        if img.width > max_size or img.height > max_size:
+            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+
+        # Guardar con calidad optimizada
+        # Intentar diferentes calidades hasta que el archivo sea menor a 1MB
+        quality = 85
+        while quality >= 50:
+            output = io.BytesIO()
+            img.save(output, format='JPEG', quality=quality, optimize=True)
+            if output.tell() <= 1 * 1024 * 1024:  # 1MB
+                break
+            quality -= 10
+
+        # Guardar el archivo
         with open(filepath, 'wb') as f:
-            f.write(content)
+            f.write(output.getvalue())
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al guardar la imagen: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al procesar la imagen: {str(e)}")
 
     # Si no se especificó display_order, usar el siguiente disponible
     if display_order == 0:
@@ -5261,7 +5507,7 @@ async def public_home_page(request: Request, db: Session = Depends(get_db)):
     from datetime import datetime
     from sqlalchemy import func
 
-    # Obtener eventos próximos (activos y con fecha futura) - máximo 4
+    # Obtener eventos próximos (activos y con fecha futura)
     # Incluimos ticket_count para mostrar cantidad de registrados
     upcoming_events_query = db.query(
         models.Event,
@@ -5269,7 +5515,7 @@ async def public_home_page(request: Request, db: Session = Depends(get_db)):
     ).outerjoin(models.Ticket).filter(
         models.Event.is_active == True,
         models.Event.event_date >= datetime.now()
-    ).group_by(models.Event.id).order_by(models.Event.event_date.asc()).limit(4).all()
+    ).group_by(models.Event.id).order_by(models.Event.event_date.asc()).all()
 
     # Procesar eventos próximos para incluir ticket_count y gallery_images
     upcoming_events = []
@@ -5280,14 +5526,14 @@ async def public_home_page(request: Request, db: Session = Depends(get_db)):
         ).order_by(models.EventGalleryImage.display_order).all()
         upcoming_events.append(event)
 
-    # Obtener eventos pasados (activos y con fecha pasada) - máximo 4
+    # Obtener últimos 12 eventos pasados (activos y con fecha pasada) ordenados por fecha descendente
     past_events_query = db.query(
         models.Event,
         func.count(models.Ticket.id).label('ticket_count')
     ).outerjoin(models.Ticket).filter(
         models.Event.is_active == True,
         models.Event.event_date < datetime.now()
-    ).group_by(models.Event.id).order_by(models.Event.event_date.desc()).limit(4).all()
+    ).group_by(models.Event.id).order_by(models.Event.event_date.desc()).limit(12).all()
 
     # Procesar eventos pasados para incluir ticket_count y gallery_images
     past_events = []
@@ -5329,14 +5575,26 @@ async def public_home_page(request: Request, db: Session = Depends(get_db)):
     member_skills_soft = []
 
     if ieee_tadeo_tag:
-        # Obtener carreras representadas por los miembros
+        # Obtener carreras representadas por los miembros (de academic_program)
         career_results = db.query(models.AcademicProgram.name).join(
             models.User, models.User.academic_program_id == models.AcademicProgram.id
         ).join(models.User.tags).filter(
             models.Tag.id == ieee_tadeo_tag.id,
             models.User.academic_program_id.isnot(None)
         ).distinct().all()
-        member_careers = [c[0] for c in career_results]
+        old_careers = [c[0] for c in career_results]
+
+        # Obtener carreras de la nueva tabla user_studies
+        study_careers = db.query(models.UserStudy.program_name).join(
+            models.User, models.UserStudy.user_id == models.User.id
+        ).join(models.User.tags).filter(
+            models.Tag.id == ieee_tadeo_tag.id
+        ).distinct().all()
+        new_careers = [c[0] for c in study_careers]
+
+        # Combinar y eliminar duplicados
+        all_careers = set(old_careers + new_careers)
+        member_careers = list(all_careers)
 
         # Obtener habilidades técnicas de los miembros
         technical_skills = db.query(models.Skill).join(
@@ -5416,6 +5674,65 @@ async def submit_contact_form(data: ContactFormData, db: Session = Depends(get_d
 async def brochure_page(request: Request):
     """Presentación ejecutiva del sistema IEEE Tadeo Control System"""
     return templates.TemplateResponse("brochure.html", {"request": request})
+
+
+@app.get("/espacio2026", response_class=HTMLResponse)
+async def espacio2026_page(request: Request, db: Session = Depends(get_db)):
+    """Propuesta de espacio para IEEE Tadeo - Presentación a la Universidad"""
+    # Obtener usuarios con el tag "IEEE Tadeo" que tengan nombre
+    ieee_tadeo_tag = db.query(models.Tag).filter(models.Tag.name == "IEEE Tadeo").first()
+
+    members = []
+    if ieee_tadeo_tag:
+        # Obtener usuarios con ese tag
+        users_with_tag = db.query(models.User).join(
+            models.user_tags, models.User.id == models.user_tags.c.user_id
+        ).filter(
+            models.user_tags.c.tag_id == ieee_tadeo_tag.id,
+            models.User.name.isnot(None),
+            models.User.name != ""
+        ).all()
+
+        # Ordenar: primero presidente, luego otros roles, luego miembros, al final consejero
+        role_order = {
+            "presidente": 1,
+            "presidenta": 1,
+            "vicepresidente": 2,
+            "vicepresidenta": 2,
+            "secretario": 3,
+            "secretaria": 3,
+            "tesorero": 4,
+            "tesorera": 4,
+            "coordinador": 5,
+            "coordinadora": 5,
+            "webmaster": 6,
+            "consejero": 99,  # Al final
+            "consejera": 99,
+            "mentor": 98
+        }
+
+        for user in users_with_tag:
+            # Incluir miembros con datos completos (nombre y programa académico)
+            if not user.academic_program:
+                continue
+            role = user.branch_role.lower() if user.branch_role else ""
+            order = role_order.get(role, 50)  # Miembros sin rol en medio
+            members.append({
+                "name": user.name,
+                "nick": user.nick,
+                "photo": user.photo_path,
+                "role": user.branch_role,
+                "program": user.academic_program.name if user.academic_program else None,
+                "order": order
+            })
+
+        # Ordenar por el campo order
+        members.sort(key=lambda x: x["order"])
+
+    return templates.TemplateResponse("espacio2026.html", {
+        "request": request,
+        "members": members
+    })
 
 
 # ========== PÁGINA DE DEMOSTRACIÓN PARA REVISIÓN DE META ==========

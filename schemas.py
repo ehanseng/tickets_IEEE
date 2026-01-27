@@ -136,6 +136,40 @@ class SkillResponse(BaseModel):
         from_attributes = True
 
 
+# ============================================================
+# Schemas de Estudios del Usuario
+# ============================================================
+
+class UserStudyCreate(BaseModel):
+    """Schema para crear estudio de usuario"""
+    study_type: str  # "pregrado", "posgrado", "otro"
+    program_name: str
+    institution: Optional[str] = None
+    is_primary: bool = False
+
+
+class UserStudyUpdate(BaseModel):
+    """Schema para actualizar estudio de usuario"""
+    study_type: Optional[str] = None
+    program_name: Optional[str] = None
+    institution: Optional[str] = None
+    is_primary: Optional[bool] = None
+
+
+class UserStudyResponse(BaseModel):
+    """Schema para respuesta de estudio de usuario"""
+    id: int
+    user_id: int
+    study_type: str
+    program_name: str
+    institution: Optional[str] = None
+    is_primary: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # Schemas de Universidad
 class UniversityCreate(BaseModel):
     """Schema para crear universidad"""
@@ -340,6 +374,7 @@ class UserResponse(BaseModel):
     availability_level: Optional[AvailabilityLevelResponse] = None
     preferred_channel: Optional[CommunicationChannelResponse] = None
     skills: List[SkillResponse] = []
+    studies: List[UserStudyResponse] = []  # Estudios del usuario
 
     class Config:
         from_attributes = True

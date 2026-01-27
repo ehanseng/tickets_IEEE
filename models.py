@@ -5,6 +5,13 @@ from database import Base
 import enum
 
 
+class StudyType(enum.Enum):
+    """Tipos de estudio"""
+    pregrado = "pregrado"
+    posgrado = "posgrado"
+    otro = "otro"
+
+
 # Tabla de asociación many-to-many entre Users y Tags
 user_tags = Table(
     'user_tags',
@@ -342,6 +349,23 @@ class User(Base):
     availability_level = relationship("AvailabilityLevel", back_populates="users")
     preferred_channel = relationship("CommunicationChannel", back_populates="users")
     skills = relationship("Skill", secondary=user_skills, back_populates="users")
+    studies = relationship("UserStudy", back_populates="user", cascade="all, delete-orphan")
+
+
+class UserStudy(Base):
+    """Estudios adicionales del usuario (pregrado, posgrado, etc.)"""
+    __tablename__ = "user_studies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    study_type = Column(Enum(StudyType), nullable=False)  # pregrado/posgrado/otro
+    program_name = Column(String(200), nullable=False)     # Nombre de la carrera/programa
+    institution = Column(String(200), nullable=True)       # Institución (si es externa a UTadeo)
+    is_primary = Column(Boolean, default=False)            # Estudio principal para mostrar
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relación
+    user = relationship("User", back_populates="studies")
 
 
 class Event(Base):

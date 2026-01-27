@@ -574,6 +574,50 @@
     </div>
 </div>
 
+<!-- Modal para agregar estudio -->
+<div id="addStudyModal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md">
+        <div class="flex flex-col space-y-1.5 p-4 border-b bg-purple-600">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-semibold leading-none tracking-tight text-white">Agregar Estudio</h3>
+                <button onclick="closeAddStudyModal()" class="rounded-sm text-white opacity-70 transition-opacity hover:opacity-100">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="p-4 space-y-4">
+            <input type="hidden" id="addStudyUserId">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Estudio *</label>
+                <select id="addStudyType" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500">
+                    <option value="">Seleccionar...</option>
+                    <option value="pregrado">Pregrado</option>
+                    <option value="posgrado">Posgrado</option>
+                    <option value="otro">Otro (diplomado, certificación, etc.)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Programa *</label>
+                <input type="text" id="addStudyProgram" placeholder="Ej: Maestría en Ciencia de Datos" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Institución</label>
+                <input type="text" id="addStudyInstitution" placeholder="Universidad de Bogotá Jorge Tadeo Lozano" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button type="button" onclick="submitAddStudy()" class="flex-1 bg-purple-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-purple-700 transition">
+                    Agregar
+                </button>
+                <button type="button" onclick="closeAddStudyModal()" class="flex-1 border border-gray-300 py-2 px-4 rounded-md text-sm font-medium hover:bg-gray-50 transition">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal para ver ficha del usuario -->
 <div id="viewUserModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-lg shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -859,6 +903,8 @@
             if (response.ok) {
                 const user = await response.json();
                 renderUserCard(user);
+                // Cargar estudios del usuario
+                loadUserStudies(userId);
             } else {
                 content.innerHTML = `
                     <div class="text-center py-8 text-red-600">
@@ -1076,6 +1122,28 @@
             </div>
             ` : ''}
 
+            <!-- Otros Estudios -->
+            <div class="space-y-3 pt-4 border-t">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Otros Estudios</h4>
+                    <button onclick="openAddStudyModal(${user.id})" class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 transition">
+                        <svg class="inline h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        Agregar
+                    </button>
+                </div>
+                <div id="userStudiesList" class="space-y-2">
+                    <div class="text-center py-2 text-gray-400 text-sm">
+                        <svg class="animate-spin h-4 w-4 mx-auto mb-1" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        Cargando estudios...
+                    </div>
+                </div>
+            </div>
+
             <!-- Información IEEE -->
             ${hasIEEEInfo ? `
             <div class="space-y-3 pt-4 border-t">
@@ -1248,6 +1316,143 @@
 
     function closeViewUserModal() {
         document.getElementById('viewUserModal').classList.add('hidden');
+    }
+
+    // ========== FUNCIONES DE ESTUDIOS ==========
+    let currentViewUserId = null;
+
+    function openAddStudyModal(userId) {
+        currentViewUserId = userId;
+        document.getElementById('addStudyUserId').value = userId;
+        document.getElementById('addStudyType').value = '';
+        document.getElementById('addStudyProgram').value = '';
+        document.getElementById('addStudyInstitution').value = '';
+        document.getElementById('addStudyModal').classList.remove('hidden');
+    }
+
+    function closeAddStudyModal() {
+        document.getElementById('addStudyModal').classList.add('hidden');
+    }
+
+    async function loadUserStudies(userId) {
+        const container = document.getElementById('userStudiesList');
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`/users/${userId}/studies`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                const studies = await response.json();
+                renderUserStudies(studies, userId);
+            } else {
+                container.innerHTML = '<p class="text-sm text-gray-400 text-center">Error al cargar estudios</p>';
+            }
+        } catch (error) {
+            container.innerHTML = '<p class="text-sm text-gray-400 text-center">Error de conexión</p>';
+        }
+    }
+
+    function renderUserStudies(studies, userId) {
+        const container = document.getElementById('userStudiesList');
+        currentViewUserId = userId;
+
+        if (studies.length === 0) {
+            container.innerHTML = '<p class="text-sm text-gray-400 italic text-center">No tiene otros estudios registrados</p>';
+            return;
+        }
+
+        const typeLabels = {
+            'pregrado': { label: 'Pregrado', color: 'blue' },
+            'posgrado': { label: 'Posgrado', color: 'purple' },
+            'otro': { label: 'Otro', color: 'gray' }
+        };
+
+        container.innerHTML = studies.map(study => {
+            const typeInfo = typeLabels[study.study_type] || typeLabels['otro'];
+            return `
+                <div class="flex items-start justify-between p-2 bg-gray-50 rounded-lg border">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-1 mb-1">
+                            <span class="text-xs px-1.5 py-0.5 rounded bg-${typeInfo.color}-100 text-${typeInfo.color}-700">${typeInfo.label}</span>
+                            ${study.is_primary ? '<span class="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">Principal</span>' : ''}
+                        </div>
+                        <p class="text-sm font-medium truncate">${study.program_name}</p>
+                        ${study.institution ? `<p class="text-xs text-gray-500 truncate">${study.institution}</p>` : ''}
+                    </div>
+                    <button onclick="deleteUserStudy(${userId}, ${study.id})" class="text-red-500 hover:text-red-700 p-1 flex-shrink-0" title="Eliminar estudio">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function submitAddStudy() {
+        const userId = document.getElementById('addStudyUserId').value;
+        const studyType = document.getElementById('addStudyType').value;
+        const programName = document.getElementById('addStudyProgram').value.trim();
+        const institution = document.getElementById('addStudyInstitution').value.trim();
+
+        if (!studyType) {
+            showNotification('Selecciona el tipo de estudio', 'error');
+            return;
+        }
+        if (!programName) {
+            showNotification('Ingresa el nombre del programa', 'error');
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`/users/${userId}/studies`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    study_type: studyType,
+                    program_name: programName,
+                    institution: institution || null,
+                    is_primary: false
+                })
+            });
+
+            if (response.ok) {
+                showNotification('Estudio agregado exitosamente', 'success');
+                closeAddStudyModal();
+                await loadUserStudies(userId);
+            } else {
+                const error = await response.json();
+                showNotification(error.detail || 'Error al agregar estudio', 'error');
+            }
+        } catch (error) {
+            showNotification('Error de conexión', 'error');
+        }
+    }
+
+    async function deleteUserStudy(userId, studyId) {
+        if (!confirm('¿Eliminar este estudio?')) return;
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`/users/${userId}/studies/${studyId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                showNotification('Estudio eliminado', 'success');
+                await loadUserStudies(userId);
+            } else {
+                showNotification('Error al eliminar estudio', 'error');
+            }
+        } catch (error) {
+            showNotification('Error de conexión', 'error');
+        }
     }
 
     async function sendBirthdayGreeting(userId, userName) {

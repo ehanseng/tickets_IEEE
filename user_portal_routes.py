@@ -1220,6 +1220,161 @@ async def delete_profile_photo(
     return {"success": True, "message": "Foto de perfil eliminada"}
 
 
+# ========== ENDPOINTS DE ESTUDIOS DEL USUARIO ==========
+
+@router.get("/profile/studies")
+async def get_user_studies(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Obtiene la lista de estudios del usuario"""
+    studies = db.query(models.UserStudy).filter(
+        models.UserStudy.user_id == current_user.id
+    ).order_by(models.UserStudy.is_primary.desc(), models.UserStudy.created_at.desc()).all()
+
+    return [
+        {
+            "id": s.id,
+            "study_type": s.study_type.value if hasattr(s.study_type, 'value') else s.study_type,
+            "program_name": s.program_name,
+            "institution": s.institution,
+            "is_primary": s.is_primary,
+            "created_at": s.created_at.isoformat() if s.created_at else None
+        }
+        for s in studies
+    ]
+
+
+@router.post("/profile/studies")
+async def add_user_study(
+    study_data: schemas.UserStudyCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Agrega un nuevo estudio al usuario"""
+    # Validar tipo de estudio
+    valid_types = ['pregrado', 'posgrado', 'otro']
+    if study_data.study_type not in valid_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Tipo de estudio inválido. Debe ser uno de: {', '.join(valid_types)}"
+        )
+
+    # Si es primario, quitar el flag de primario de los demás
+    if study_data.is_primary:
+        db.query(models.UserStudy).filter(
+            models.UserStudy.user_id == current_user.id
+        ).update({"is_primary": False})
+
+    # Crear el nuevo estudio
+    new_study = models.UserStudy(
+        user_id=current_user.id,
+        study_type=models.StudyType(study_data.study_type),
+        program_name=study_data.program_name,
+        institution=study_data.institution,
+        is_primary=study_data.is_primary
+    )
+    db.add(new_study)
+    db.commit()
+    db.refresh(new_study)
+
+    return {
+        "success": True,
+        "message": "Estudio agregado exitosamente",
+        "study": {
+            "id": new_study.id,
+            "study_type": new_study.study_type.value,
+            "program_name": new_study.program_name,
+            "institution": new_study.institution,
+            "is_primary": new_study.is_primary
+        }
+    }
+
+
+@router.put("/profile/studies/{study_id}")
+async def update_user_study(
+    study_id: int,
+    study_data: schemas.UserStudyUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Actualiza un estudio del usuario"""
+    study = db.query(models.UserStudy).filter(
+        models.UserStudy.id == study_id,
+        models.UserStudy.user_id == current_user.id
+    ).first()
+
+    if not study:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Estudio no encontrado"
+        )
+
+    # Validar tipo de estudio si se proporciona
+    if study_data.study_type:
+        valid_types = ['pregrado', 'posgrado', 'otro']
+        if study_data.study_type not in valid_types:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Tipo de estudio inválido. Debe ser uno de: {', '.join(valid_types)}"
+            )
+        study.study_type = models.StudyType(study_data.study_type)
+
+    if study_data.program_name is not None:
+        study.program_name = study_data.program_name
+
+    if study_data.institution is not None:
+        study.institution = study_data.institution
+
+    if study_data.is_primary is not None:
+        if study_data.is_primary:
+            # Quitar el flag de primario de los demás
+            db.query(models.UserStudy).filter(
+                models.UserStudy.user_id == current_user.id,
+                models.UserStudy.id != study_id
+            ).update({"is_primary": False})
+        study.is_primary = study_data.is_primary
+
+    db.commit()
+    db.refresh(study)
+
+    return {
+        "success": True,
+        "message": "Estudio actualizado exitosamente",
+        "study": {
+            "id": study.id,
+            "study_type": study.study_type.value,
+            "program_name": study.program_name,
+            "institution": study.institution,
+            "is_primary": study.is_primary
+        }
+    }
+
+
+@router.delete("/profile/studies/{study_id}")
+async def delete_user_study(
+    study_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Elimina un estudio del usuario"""
+    study = db.query(models.UserStudy).filter(
+        models.UserStudy.id == study_id,
+        models.UserStudy.user_id == current_user.id
+    ).first()
+
+    if not study:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Estudio no encontrado"
+        )
+
+    db.delete(study)
+    db.commit()
+
+    return {"success": True, "message": "Estudio eliminado exitosamente"}
+
+
 # ========== ENDPOINT DE CROSS-LOGIN (PORTAL <-> ADMIN) ==========
 @router.get("/auth/admin-token")
 async def get_admin_token(

@@ -274,6 +274,56 @@
                     </div>
                 </div>
 
+                <!-- Seccion: Otros Estudios -->
+                <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                    <button type="button" onclick="toggleSection('studies')" class="w-full p-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-book-reader text-purple-600"></i>
+                            </div>
+                            <span class="font-medium">Otros Estudios</span>
+                            <span id="studies-count" class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">0</span>
+                        </div>
+                        <i class="fas fa-chevron-down text-gray-400 transition" id="icon-studies"></i>
+                    </button>
+                    <div id="section-studies" class="p-4 border-t border-gray-100 hidden">
+                        <p class="text-sm text-gray-500 mb-4">Agrega otros estudios de pregrado, posgrado u otros programas que hayas cursado o estés cursando.</p>
+
+                        <!-- Lista de estudios -->
+                        <div id="studies-list" class="space-y-3 mb-4">
+                            <!-- Estudios se cargan dinámicamente -->
+                        </div>
+
+                        <!-- Formulario para agregar nuevo estudio -->
+                        <div class="border-t pt-4">
+                            <h4 class="text-sm font-medium text-gray-700 mb-3">Agregar nuevo estudio</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de estudio *</label>
+                                    <select id="new_study_type" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                        <option value="">Seleccionar...</option>
+                                        <option value="pregrado">Pregrado</option>
+                                        <option value="posgrado">Posgrado</option>
+                                        <option value="otro">Otro (diplomado, certificación, etc.)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Nombre del programa *</label>
+                                    <input type="text" id="new_study_program" placeholder="Ej: Maestría en Ciencia de Datos" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Institución</label>
+                                    <input type="text" id="new_study_institution" placeholder="Universidad de Bogotá Jorge Tadeo Lozano" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                            </div>
+                            <button type="button" onclick="addStudy()" class="mt-3 inline-flex items-center gap-2 px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                                <i class="fas fa-plus"></i>
+                                Agregar Estudio
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Seccion: Membresía IEEE -->
                 <div class="bg-white rounded-lg shadow-sm overflow-hidden">
                     <button type="button" onclick="toggleSection('ieee')" class="w-full p-4 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition">
@@ -445,6 +495,7 @@
             await loadCatalogs();
             await loadProfile();
             await loadTickets();
+            await loadStudies();
         });
 
         // Cargar catalogos
@@ -954,6 +1005,126 @@
                 }
             });
         });
+
+        // ========== FUNCIONES DE ESTUDIOS ==========
+        let userStudies = [];
+
+        async function loadStudies() {
+            try {
+                const response = await fetch('/portal/profile/studies', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    userStudies = await response.json();
+                    renderStudies();
+                }
+            } catch (error) {
+                console.error('Error cargando estudios:', error);
+            }
+        }
+
+        function renderStudies() {
+            const container = document.getElementById('studies-list');
+            const countBadge = document.getElementById('studies-count');
+
+            countBadge.textContent = userStudies.length;
+
+            if (userStudies.length === 0) {
+                container.innerHTML = '<p class="text-sm text-gray-400 italic">No has agregado otros estudios aún.</p>';
+                return;
+            }
+
+            const studyTypeLabels = {
+                'pregrado': { label: 'Pregrado', color: 'blue' },
+                'posgrado': { label: 'Posgrado', color: 'purple' },
+                'otro': { label: 'Otro', color: 'gray' }
+            };
+
+            container.innerHTML = userStudies.map(study => {
+                const typeInfo = studyTypeLabels[study.study_type] || studyTypeLabels['otro'];
+                return `
+                    <div class="flex items-start justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-xs px-2 py-0.5 rounded-full bg-${typeInfo.color}-100 text-${typeInfo.color}-700">${typeInfo.label}</span>
+                                ${study.is_primary ? '<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700"><i class="fas fa-star mr-1"></i>Principal</span>' : ''}
+                            </div>
+                            <p class="font-medium text-gray-800">${study.program_name}</p>
+                            ${study.institution ? `<p class="text-sm text-gray-500"><i class="fas fa-university mr-1"></i>${study.institution}</p>` : ''}
+                        </div>
+                        <button onclick="deleteStudy(${study.id})" class="text-red-500 hover:text-red-700 p-1" title="Eliminar estudio">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function addStudy() {
+            const studyType = document.getElementById('new_study_type').value;
+            const programName = document.getElementById('new_study_program').value.trim();
+            const institution = document.getElementById('new_study_institution').value.trim();
+
+            if (!studyType) {
+                showNotification('Selecciona el tipo de estudio', 'error');
+                return;
+            }
+            if (!programName) {
+                showNotification('Ingresa el nombre del programa', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/portal/profile/studies', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        study_type: studyType,
+                        program_name: programName,
+                        institution: institution || null,
+                        is_primary: false
+                    })
+                });
+
+                if (response.ok) {
+                    showNotification('Estudio agregado exitosamente', 'success');
+                    // Limpiar formulario
+                    document.getElementById('new_study_type').value = '';
+                    document.getElementById('new_study_program').value = '';
+                    document.getElementById('new_study_institution').value = '';
+                    // Recargar lista
+                    await loadStudies();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.detail || 'Error al agregar estudio', 'error');
+                }
+            } catch (error) {
+                showNotification('Error de conexión', 'error');
+            }
+        }
+
+        async function deleteStudy(studyId) {
+            if (!confirm('¿Estás seguro de eliminar este estudio?')) return;
+
+            try {
+                const response = await fetch(`/portal/profile/studies/${studyId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    showNotification('Estudio eliminado', 'success');
+                    await loadStudies();
+                } else {
+                    showNotification('Error al eliminar estudio', 'error');
+                }
+            } catch (error) {
+                showNotification('Error de conexión', 'error');
+            }
+        }
 
         function logout() {
             localStorage.removeItem('user_access_token');
