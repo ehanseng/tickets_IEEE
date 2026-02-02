@@ -238,7 +238,7 @@ chmod +x birthday_checker.py
 
 ```bash
 # Verificar usuarios con cumpleaños
-sqlite3 tickets.db "SELECT name, email, birthday FROM users WHERE birthday IS NOT NULL;"
+mysql -u ieeetadeo -p ieeetadeo -e "SELECT name, email, birthday FROM users WHERE birthday IS NOT NULL;"
 ```
 
 ## Mantenimiento

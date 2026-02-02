@@ -26,7 +26,7 @@ El modo `'daily'` es útil para:
 
 **Ejemplo con cURL:**
 ```bash
-curl -X POST "http://localhost:8000/events/1/change-validation-mode" \
+curl -X POST "http://localhost:8070/events/1/change-validation-mode" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TU_TOKEN_AQUI" \
   -d '{"validation_mode": "daily"}'
@@ -56,7 +56,7 @@ curl -X POST "http://localhost:8000/events/1/change-validation-mode" \
 
 **Ejemplo con cURL:**
 ```bash
-curl -X POST "http://localhost:8000/events/1/change-validation-mode" \
+curl -X POST "http://localhost:8070/events/1/change-validation-mode" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TU_TOKEN_AQUI" \
   -d '{
@@ -79,7 +79,7 @@ curl -X POST "http://localhost:8000/events/1/change-validation-mode" \
 
 **Ejemplo con cURL:**
 ```bash
-curl -X POST "http://localhost:8000/tickets/batch-change-validation-mode" \
+curl -X POST "http://localhost:8070/tickets/batch-change-validation-mode" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TU_TOKEN_AQUI" \
   -d '{
@@ -101,7 +101,7 @@ curl -X POST "http://localhost:8000/tickets/batch-change-validation-mode" \
 
 **Ejemplo con cURL:**
 ```bash
-curl -X PUT "http://localhost:8000/tickets/1" \
+curl -X PUT "http://localhost:8070/tickets/1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TU_TOKEN_AQUI" \
   -d '{"validation_mode": "daily"}'
@@ -175,18 +175,18 @@ GROUP BY validation_mode;
 
 Ejecutar:
 ```bash
-sqlite3 tickets.db < mi_script.sql
+mysql -u ieeetadeo -p ieeetadeo < mi_script.sql
 ```
 
 ---
 
 ## Método 3: SQL Directo
 
-### Usando sqlite3 en la terminal
+### Usando MySQL en la terminal
 
 ```bash
-# Abrir la base de datos
-sqlite3 tickets.db
+# Abrir la base de datos MySQL
+mysql -u ieeetadeo -p ieeetadeo
 
 # Cambiar todos los tickets de un evento
 UPDATE tickets SET validation_mode = 'daily' WHERE event_id = 1;
@@ -195,7 +195,7 @@ UPDATE tickets SET validation_mode = 'daily' WHERE event_id = 1;
 SELECT validation_mode, COUNT(*) as count FROM tickets WHERE event_id = 1 GROUP BY validation_mode;
 
 # Salir
-.quit
+EXIT;
 ```
 
 ### Cambiar tickets según condiciones
@@ -235,7 +235,7 @@ Cuando creas nuevos tickets, simplemente especifica el modo:
 
 **Ejemplo con cURL:**
 ```bash
-curl -X POST "http://localhost:8000/tickets/" \
+curl -X POST "http://localhost:8070/tickets/" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TU_TOKEN_AQUI" \
   -d '{
@@ -253,7 +253,7 @@ curl -X POST "http://localhost:8000/tickets/" \
 **Endpoint:** `GET /events/{event_id}/validation-stats`
 
 ```bash
-curl -X GET "http://localhost:8000/events/1/validation-stats" \
+curl -X GET "http://localhost:8070/events/1/validation-stats" \
   -H "Authorization: Bearer TU_TOKEN_AQUI"
 ```
 
@@ -307,7 +307,7 @@ curl -X GET "http://localhost:8000/events/1/validation-stats" \
 UPDATE events
 SET
     event_duration_days = 3,
-    event_end_date = DATE(event_date, '+2 days')
+    event_end_date = DATE_ADD(event_date, INTERVAL 2 DAY)
 WHERE id = 1;
 ```
 
@@ -319,13 +319,13 @@ Si necesitas revertir los cambios:
 
 ```bash
 # API
-curl -X POST "http://localhost:8000/events/1/change-validation-mode" \
+curl -X POST "http://localhost:8070/events/1/change-validation-mode" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TU_TOKEN_AQUI" \
   -d '{"validation_mode": "once"}'
 
 # SQL
-sqlite3 tickets.db "UPDATE tickets SET validation_mode = 'once' WHERE event_id = 1"
+mysql -u ieeetadeo -p ieeetadeo -e "UPDATE tickets SET validation_mode = 'once' WHERE event_id = 1"
 
 # Script Python
 python cambiar_tickets_a_daily.py 1
@@ -338,18 +338,18 @@ python cambiar_tickets_a_daily.py 1
 
 ```bash
 # 1. Actualizar el evento
-sqlite3 tickets.db <<EOF
+mysql -u ieeetadeo -p ieeetadeo -e "
 UPDATE events
 SET event_duration_days = 3,
-    event_end_date = DATE(event_date, '+2 days')
+    event_end_date = DATE_ADD(event_date, INTERVAL 2 DAY)
 WHERE id = 1;
-EOF
+"
 
 # 2. Cambiar todos los tickets a modo daily
 python cambiar_tickets_a_daily.py 1
 
 # 3. Verificar estadísticas
-curl -X GET "http://localhost:8000/events/1/validation-stats" \
+curl -X GET "http://localhost:8070/events/1/validation-stats" \
   -H "Authorization: Bearer TU_TOKEN_AQUI"
 
 # 4. Listo para validar!
@@ -374,7 +374,7 @@ curl -X GET "http://localhost:8000/events/1/validation-stats" \
 
 ### ¿Cómo sé qué tickets están en modo daily?
 ```bash
-curl -X GET "http://localhost:8000/events/1/validation-stats" \
+curl -X GET "http://localhost:8070/events/1/validation-stats" \
   -H "Authorization: Bearer TU_TOKEN_AQUI"
 ```
 

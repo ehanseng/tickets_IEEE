@@ -221,7 +221,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                                     </svg>
                                 </button>
-                                <button onclick="editUser({{ user.id }}, '{{ user.name|e }}', '{{ (user.nick or '')|e }}', '{{ user.email|e }}', '{{ (user.identification or '')|e }}', {{ user.university_id or 'null' }}, '{{ (user.country_code or '+57')|e }}', '{{ (user.phone or '')|e }}', {{ 'true' if user.is_ieee_member else 'false' }}, '{{ user.birthday.strftime('%Y-%m-%d') if user.birthday else '' }}', '{{ (user.email_personal or '')|e }}', '{{ (user.email_institutional or '')|e }}', '{{ (user.email_ieee or '')|e }}', '{{ (user.primary_email_type or 'email')|e }}', '{{ (user.branch_role or '')|e }}')" class="inline-flex items-center justify-center rounded text-xs font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-7 w-7" title="Editar usuario">
+                                <button onclick="editUser({{ user.id }})" class="inline-flex items-center justify-center rounded text-xs font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-7 w-7" title="Editar usuario">
                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                     </svg>
@@ -386,6 +386,255 @@
                     Registrar Usuario
                 </button>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Edición Completa de Usuario -->
+<div id="fullEditModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+            <div class="flex items-center gap-3">
+                <div id="editUserPhoto" class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
+                    <span id="editUserInitial" class="text-xl font-bold">?</span>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold">Editar Usuario</h3>
+                    <p id="editUserNameHeader" class="text-sm text-white/80">Cargando...</p>
+                </div>
+            </div>
+            <button onclick="closeFullEditModal()" class="text-white/80 hover:text-white">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Content with tabs -->
+        <div class="flex-1 overflow-y-auto p-4">
+            <input type="hidden" id="fullEditUserId">
+
+            <!-- Tabs -->
+            <div class="flex border-b mb-4 overflow-x-auto">
+                <button onclick="switchEditTab('basic')" class="edit-tab active px-4 py-2 text-sm font-medium border-b-2 border-blue-600 text-blue-600" data-tab="basic">
+                    <i class="fas fa-user mr-1"></i>Básico
+                </button>
+                <button onclick="switchEditTab('academic')" class="edit-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="academic">
+                    <i class="fas fa-graduation-cap mr-1"></i>Académico
+                </button>
+                <button onclick="switchEditTab('ieee')" class="edit-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="ieee">
+                    <i class="fas fa-id-card mr-1"></i>IEEE
+                </button>
+                <button onclick="switchEditTab('profile')" class="edit-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="profile">
+                    <i class="fas fa-sliders-h mr-1"></i>Perfilamiento
+                </button>
+                <button onclick="switchEditTab('admin')" class="edit-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="admin">
+                    <i class="fas fa-shield-alt mr-1"></i>Admin
+                </button>
+            </div>
+
+            <!-- Tab: Básico -->
+            <div id="tab-basic" class="edit-tab-content">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre Completo *</label>
+                        <input type="text" id="fe_name" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Apodo / Nick</label>
+                        <input type="text" id="fe_nick" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Cédula</label>
+                        <input type="text" id="fe_identification" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Cumpleaños</label>
+                        <input type="date" id="fe_birthday" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                        <div class="flex gap-2">
+                            <select id="fe_country_code" class="w-24 px-2 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                                <option value="+57">🇨🇴 +57</option>
+                                <option value="+1">🇺🇸 +1</option>
+                                <option value="+52">🇲🇽 +52</option>
+                                <option value="+34">🇪🇸 +34</option>
+                            </select>
+                            <input type="tel" id="fe_phone" class="flex-1 px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Universidad</label>
+                        <select id="fe_university_id" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                            <option value="">Seleccionar...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Emails -->
+                <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <h4 class="font-medium text-gray-700 mb-3"><i class="fas fa-envelope mr-2"></i>Correos Electrónicos</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <input type="radio" name="fe_primary_email" value="email_personal" id="fe_primary_personal">
+                                <label for="fe_primary_personal" class="text-sm font-medium text-gray-600">Personal</label>
+                            </div>
+                            <input type="email" id="fe_email_personal" class="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <input type="radio" name="fe_primary_email" value="email_institutional" id="fe_primary_institutional">
+                                <label for="fe_primary_institutional" class="text-sm font-medium text-gray-600">Institucional</label>
+                            </div>
+                            <input type="email" id="fe_email_institutional" class="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <input type="radio" name="fe_primary_email" value="email_ieee" id="fe_primary_ieee">
+                                <label for="fe_primary_ieee" class="text-sm font-medium text-gray-600">IEEE</label>
+                            </div>
+                            <input type="email" id="fe_email_ieee" class="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">★ El email seleccionado recibe los códigos OTP</p>
+                </div>
+            </div>
+
+            <!-- Tab: Académico -->
+            <div id="tab-academic" class="edit-tab-content hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Programa Académico</label>
+                        <select id="fe_academic_program_id" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                            <option value="">Seleccionar...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Semestre Actual</label>
+                        <select id="fe_semester_range_id" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                            <option value="">Seleccionar...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Estimada de Grado</label>
+                        <input type="month" id="fe_expected_graduation" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nivel de Inglés</label>
+                        <select id="fe_english_level_id" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                            <option value="">Seleccionar...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: IEEE -->
+            <div id="tab-ieee" class="edit-tab-content hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            <input type="checkbox" id="fe_is_ieee_member" class="mr-2">
+                            Miembro activo de IEEE
+                        </label>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Número de Miembro IEEE</label>
+                        <input type="text" id="fe_ieee_member_id" placeholder="12345678" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Estado de Membresía</label>
+                        <select id="fe_ieee_membership_status_id" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                            <option value="">Seleccionar...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Rol en la Rama</label>
+                        <select id="fe_branch_role" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                            <option value="">Sin rol</option>
+                            <option value="presidente">Presidente/a</option>
+                            <option value="vicepresidente">Vicepresidente/a</option>
+                            <option value="secretario">Secretario/a</option>
+                            <option value="tesorero">Tesorero/a</option>
+                            <option value="webmaster">Webmaster</option>
+                            <option value="consejero">Consejero/a</option>
+                            <option value="mentor">Mentor/a</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Sociedades IEEE</label>
+                    <div id="fe_ieee_societies" class="grid grid-cols-2 md:grid-cols-3 gap-2 p-3 bg-gray-50 rounded-md max-h-40 overflow-y-auto">
+                        <!-- Cargado dinámicamente -->
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Historial de Roles IEEE</label>
+                    <textarea id="fe_ieee_roles_history" rows="2" placeholder="Ej: Presidente 2023-2024, Secretario 2022-2023" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+            </div>
+
+            <!-- Tab: Perfilamiento -->
+            <div id="tab-profile" class="edit-tab-content hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Área de Interés</label>
+                        <select id="fe_interest_area_id" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                            <option value="">Seleccionar...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Disponibilidad</label>
+                        <select id="fe_availability_level_id" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                            <option value="">Seleccionar...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Canal de Comunicación Preferido</label>
+                        <select id="fe_preferred_channel_id" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                            <option value="">Seleccionar...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Habilidades</label>
+                    <div id="fe_skills" class="grid grid-cols-2 md:grid-cols-3 gap-2 p-3 bg-gray-50 rounded-md max-h-48 overflow-y-auto">
+                        <!-- Cargado dinámicamente -->
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Metas en la Rama</label>
+                    <textarea id="fe_goals_in_branch" rows="2" placeholder="¿Qué esperas lograr en IEEE?" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+            </div>
+
+            <!-- Tab: Admin -->
+            <div id="tab-admin" class="edit-tab-content hidden">
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <p class="text-sm text-yellow-800"><i class="fas fa-exclamation-triangle mr-2"></i>Estos campos son exclusivos de administración.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Estado del Usuario</label>
+                        <select id="fe_is_active" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                            <option value="true">Activo</option>
+                            <option value="false">Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex justify-end gap-3 p-4 border-t bg-gray-50">
+            <button onclick="closeFullEditModal()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100">
+                Cancelar
+            </button>
+            <button onclick="saveFullEditUser()" class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                <i class="fas fa-save mr-2"></i>Guardar Cambios
+            </button>
         </div>
     </div>
 </div>
@@ -593,6 +842,8 @@
                 <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Estudio *</label>
                 <select id="addStudyType" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500">
                     <option value="">Seleccionar...</option>
+                    <option value="tecnica">Técnica</option>
+                    <option value="tecnologia">Tecnología</option>
                     <option value="pregrado">Pregrado</option>
                     <option value="posgrado">Posgrado</option>
                     <option value="otro">Otro (diplomado, certificación, etc.)</option>
@@ -603,6 +854,14 @@
                 <input type="text" id="addStudyProgram" placeholder="Ej: Maestría en Ciencia de Datos" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500">
             </div>
             <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Estado *</label>
+                <select id="addStudyStatus" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500">
+                    <option value="cursando">Cursando</option>
+                    <option value="egresado">Egresado</option>
+                    <option value="sin_terminar">Sin terminar</option>
+                </select>
+            </div>
+            <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Institución</label>
                 <input type="text" id="addStudyInstitution" placeholder="Universidad de Bogotá Jorge Tadeo Lozano" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500">
             </div>
@@ -611,6 +870,63 @@
                     Agregar
                 </button>
                 <button type="button" onclick="closeAddStudyModal()" class="flex-1 border border-gray-300 py-2 px-4 rounded-md text-sm font-medium hover:bg-gray-50 transition">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar estudio -->
+<div id="editStudyModal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md">
+        <div class="flex flex-col space-y-1.5 p-4 border-b bg-blue-600">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-semibold leading-none tracking-tight text-white">Editar Estudio</h3>
+                <button onclick="closeEditStudyModal()" class="rounded-sm text-white opacity-70 transition-opacity hover:opacity-100">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="p-4 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Estudio *</label>
+                <select id="editStudyType" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                    <option value="">Seleccionar...</option>
+                    <option value="tecnica">Técnica</option>
+                    <option value="tecnologia">Tecnología</option>
+                    <option value="pregrado">Pregrado</option>
+                    <option value="posgrado">Posgrado</option>
+                    <option value="otro">Otro (diplomado, certificación, etc.)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Programa *</label>
+                <input type="text" id="editStudyProgram" placeholder="Ej: Maestría en Ciencia de Datos" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Estado *</label>
+                <select id="editStudyStatus" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                    <option value="cursando">Cursando</option>
+                    <option value="egresado">Egresado</option>
+                    <option value="sin_terminar">Sin terminar</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Institución</label>
+                <input type="text" id="editStudyInstitution" placeholder="Universidad de Bogotá Jorge Tadeo Lozano" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="flex items-center">
+                <input type="checkbox" id="editStudyPrimary" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                <label for="editStudyPrimary" class="ml-2 text-sm text-gray-700">Marcar como estudio principal</label>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button type="button" onclick="submitEditStudy()" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-700 transition">
+                    Guardar
+                </button>
+                <button type="button" onclick="closeEditStudyModal()" class="flex-1 border border-gray-300 py-2 px-4 rounded-md text-sm font-medium hover:bg-gray-50 transition">
                     Cancelar
                 </button>
             </div>
@@ -834,46 +1150,246 @@
         }
     });
 
-    function editUser(id, name, nick, email, identification, universityId, countryCode, phone, isIeeeMember, birthday, emailPersonal, emailInstitutional, emailIeee, primaryEmailType, branchRole) {
-        isEditMode = true;
-        document.getElementById('modalTitle').textContent = 'Editar Usuario';
-        document.getElementById('submitBtn').textContent = 'Actualizar Usuario';
+    // ========== MODAL DE EDICIÓN COMPLETA ==========
+    let editCatalogs = {};
 
-        // Llenar el formulario con los datos del usuario
-        document.getElementById('userId').value = id;
-        document.getElementById('name').value = name;
-        document.getElementById('nick').value = nick || '';
-        document.getElementById('email').value = email;
-        document.getElementById('identification').value = identification || '';
-        document.getElementById('university_id').value = universityId || '';
-        document.getElementById('country_code').value = countryCode || '+57';
-        document.getElementById('phone').value = phone || '';
-        document.getElementById('birthday').value = birthday || '';
-        document.getElementById('is_ieee_member').checked = isIeeeMember;
-        document.getElementById('branch_role').value = branchRole || '';
+    async function loadEditCatalogs() {
+        const token = localStorage.getItem('access_token');
+        const headers = { 'Authorization': `Bearer ${token}` };
 
-        // Llenar campos de email adicionales
-        document.getElementById('email_personal').value = emailPersonal || '';
-        document.getElementById('email_institutional').value = emailInstitutional || '';
-        document.getElementById('email_ieee').value = emailIeee || '';
+        try {
+            const [universities, programs, semesters, englishLevels, membershipStatuses, societies, interestAreas, availabilityLevels, channels, skills] = await Promise.all([
+                fetch('/universities', { headers }).then(r => r.json()),
+                fetch('/api/catalogs/academic-programs', { headers }).then(r => r.json()),
+                fetch('/api/catalogs/semester-ranges', { headers }).then(r => r.json()),
+                fetch('/api/catalogs/english-levels', { headers }).then(r => r.json()),
+                fetch('/api/catalogs/ieee-membership-statuses', { headers }).then(r => r.json()),
+                fetch('/api/catalogs/ieee-societies', { headers }).then(r => r.json()),
+                fetch('/api/catalogs/interest-areas', { headers }).then(r => r.json()),
+                fetch('/api/catalogs/availability-levels', { headers }).then(r => r.json()),
+                fetch('/api/catalogs/communication-channels', { headers }).then(r => r.json()),
+                fetch('/api/catalogs/skills', { headers }).then(r => r.json())
+            ]);
 
-        // Seleccionar el radio del email principal
-        const primaryType = primaryEmailType || 'email_personal';
-        const radioBtn = document.querySelector(`input[name="primary_email_type"][value="${primaryType}"]`);
-        if (radioBtn) {
-            radioBtn.checked = true;
-        } else {
-            // Por defecto seleccionar email_personal
-            document.getElementById('primary_email_personal').checked = true;
+            editCatalogs = { universities, programs, semesters, englishLevels, membershipStatuses, societies, interestAreas, availabilityLevels, channels, skills };
+
+            // Poblar selects
+            populateSelect('fe_university_id', universities, 'id', 'name');
+            populateSelect('fe_academic_program_id', programs, 'id', 'name');
+            populateSelect('fe_semester_range_id', semesters, 'id', 'name');
+            populateSelect('fe_english_level_id', englishLevels, 'id', 'name');
+            populateSelect('fe_ieee_membership_status_id', membershipStatuses, 'id', 'name');
+            populateSelect('fe_interest_area_id', interestAreas, 'id', 'name');
+            populateSelect('fe_availability_level_id', availabilityLevels, 'id', 'name');
+            populateSelect('fe_preferred_channel_id', channels, 'id', 'name');
+
+            // Poblar checkboxes de sociedades
+            const societiesContainer = document.getElementById('fe_ieee_societies');
+            societiesContainer.innerHTML = societies.map(s => `
+                <label class="flex items-center gap-2 text-sm p-1 hover:bg-gray-100 rounded cursor-pointer">
+                    <input type="checkbox" class="society-checkbox" value="${s.id}">
+                    ${s.name}
+                </label>
+            `).join('');
+
+            // Poblar checkboxes de habilidades
+            const skillsContainer = document.getElementById('fe_skills');
+            skillsContainer.innerHTML = skills.map(s => `
+                <label class="flex items-center gap-2 text-sm p-1 hover:bg-gray-100 rounded cursor-pointer">
+                    <input type="checkbox" class="skill-checkbox" value="${s.id}">
+                    <i class="fas fa-${s.icon || 'star'}" style="color: ${s.color || '#666'}"></i>
+                    ${s.name}
+                </label>
+            `).join('');
+
+        } catch (error) {
+            console.error('Error cargando catálogos:', error);
+        }
+    }
+
+    function populateSelect(selectId, items, valueKey, labelKey) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Seleccionar...</option>' + items.map(item =>
+            `<option value="${item[valueKey]}">${item[labelKey]}</option>`
+        ).join('');
+        select.value = currentValue;
+    }
+
+    function switchEditTab(tabName) {
+        document.querySelectorAll('.edit-tab').forEach(tab => {
+            tab.classList.remove('active', 'border-blue-600', 'text-blue-600');
+            tab.classList.add('border-transparent', 'text-gray-500');
+        });
+        document.querySelectorAll('.edit-tab-content').forEach(content => {
+            content.classList.add('hidden');
+        });
+        const activeTab = document.querySelector(`.edit-tab[data-tab="${tabName}"]`);
+        if (activeTab) {
+            activeTab.classList.add('active', 'border-blue-600', 'text-blue-600');
+            activeTab.classList.remove('border-transparent', 'text-gray-500');
+        }
+        document.getElementById(`tab-${tabName}`)?.classList.remove('hidden');
+    }
+
+    async function editUser(userId) {
+        // Cargar catálogos si no están cargados
+        if (Object.keys(editCatalogs).length === 0) {
+            await loadEditCatalogs();
         }
 
-        // Ocultar campo Email Principal y mostrar sección de emails con radios
-        document.getElementById('emailPrincipalGroup').classList.add('hidden');
-        document.getElementById('email').required = false;
-        document.getElementById('additionalEmails').classList.remove('hidden');
+        const token = localStorage.getItem('access_token');
+        document.getElementById('fullEditModal').classList.remove('hidden');
+        document.getElementById('fullEditUserId').value = userId;
+        switchEditTab('basic');
 
-        // Abrir el modal
-        document.getElementById('userModal').classList.remove('hidden');
+        try {
+            const response = await fetch(`/users/${userId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const user = await response.json();
+
+            // Header
+            document.getElementById('editUserNameHeader').textContent = user.name || 'Sin nombre';
+            const initial = (user.name || '?').charAt(0).toUpperCase();
+            const photoContainer = document.getElementById('editUserPhoto');
+            if (user.photo_path) {
+                photoContainer.innerHTML = `<img src="${user.photo_path}" class="w-full h-full object-cover">`;
+            } else {
+                photoContainer.innerHTML = `<span class="text-xl font-bold text-white">${initial}</span>`;
+            }
+
+            // Tab Básico
+            document.getElementById('fe_name').value = user.name || '';
+            document.getElementById('fe_nick').value = user.nick || '';
+            document.getElementById('fe_identification').value = user.identification || '';
+            document.getElementById('fe_birthday').value = user.birthday ? user.birthday.split('T')[0] : '';
+            document.getElementById('fe_country_code').value = user.country_code || '+57';
+            document.getElementById('fe_phone').value = user.phone || '';
+            document.getElementById('fe_university_id').value = user.university_id || '';
+            document.getElementById('fe_email_personal').value = user.email_personal || '';
+            document.getElementById('fe_email_institutional').value = user.email_institutional || '';
+            document.getElementById('fe_email_ieee').value = user.email_ieee || '';
+            const primaryType = user.primary_email_type || 'email_personal';
+            const radio = document.querySelector(`input[name="fe_primary_email"][value="${primaryType}"]`);
+            if (radio) radio.checked = true;
+
+            // Tab Académico
+            document.getElementById('fe_academic_program_id').value = user.academic_program_id || '';
+            document.getElementById('fe_semester_range_id').value = user.semester_range_id || '';
+            document.getElementById('fe_english_level_id').value = user.english_level_id || '';
+            document.getElementById('fe_expected_graduation').value = user.expected_graduation ? user.expected_graduation.substring(0, 7) : '';
+
+            // Tab IEEE
+            document.getElementById('fe_is_ieee_member').checked = user.is_ieee_member || false;
+            document.getElementById('fe_ieee_member_id').value = user.ieee_member_id || '';
+            document.getElementById('fe_ieee_membership_status_id').value = user.ieee_membership_status_id || '';
+            document.getElementById('fe_branch_role').value = user.branch_role || '';
+            document.getElementById('fe_ieee_roles_history').value = user.ieee_roles_history || '';
+            // Sociedades
+            document.querySelectorAll('.society-checkbox').forEach(cb => cb.checked = false);
+            if (user.ieee_societies) {
+                user.ieee_societies.forEach(s => {
+                    const cb = document.querySelector(`.society-checkbox[value="${s.id}"]`);
+                    if (cb) cb.checked = true;
+                });
+            }
+
+            // Tab Perfilamiento
+            document.getElementById('fe_interest_area_id').value = user.interest_area_id || '';
+            document.getElementById('fe_availability_level_id').value = user.availability_level_id || '';
+            document.getElementById('fe_preferred_channel_id').value = user.preferred_channel_id || '';
+            document.getElementById('fe_goals_in_branch').value = user.goals_in_branch || '';
+            // Skills
+            document.querySelectorAll('.skill-checkbox').forEach(cb => cb.checked = false);
+            if (user.skills) {
+                user.skills.forEach(s => {
+                    const cb = document.querySelector(`.skill-checkbox[value="${s.id}"]`);
+                    if (cb) cb.checked = true;
+                });
+            }
+
+            // Tab Admin
+            document.getElementById('fe_is_active').value = user.is_active !== false ? 'true' : 'false';
+
+        } catch (error) {
+            console.error('Error cargando usuario:', error);
+            showNotification('Error al cargar datos del usuario', 'error');
+        }
+    }
+
+    function closeFullEditModal() {
+        document.getElementById('fullEditModal').classList.add('hidden');
+    }
+
+    async function saveFullEditUser() {
+        const userId = document.getElementById('fullEditUserId').value;
+        const token = localStorage.getItem('access_token');
+
+        // Recopilar sociedades seleccionadas
+        const selectedSocieties = Array.from(document.querySelectorAll('.society-checkbox:checked')).map(cb => parseInt(cb.value));
+        // Recopilar habilidades seleccionadas
+        const selectedSkills = Array.from(document.querySelectorAll('.skill-checkbox:checked')).map(cb => parseInt(cb.value));
+        // Email primario
+        const primaryEmail = document.querySelector('input[name="fe_primary_email"]:checked')?.value || 'email_personal';
+
+        const data = {
+            name: document.getElementById('fe_name').value || null,
+            nick: document.getElementById('fe_nick').value || null,
+            identification: document.getElementById('fe_identification').value || null,
+            birthday: document.getElementById('fe_birthday').value || null,
+            country_code: document.getElementById('fe_country_code').value || '+57',
+            phone: document.getElementById('fe_phone').value || null,
+            university_id: parseInt(document.getElementById('fe_university_id').value) || null,
+            email_personal: document.getElementById('fe_email_personal').value || null,
+            email_institutional: document.getElementById('fe_email_institutional').value || null,
+            email_ieee: document.getElementById('fe_email_ieee').value || null,
+            primary_email_type: primaryEmail,
+            academic_program_id: parseInt(document.getElementById('fe_academic_program_id').value) || null,
+            semester_range_id: parseInt(document.getElementById('fe_semester_range_id').value) || null,
+            english_level_id: parseInt(document.getElementById('fe_english_level_id').value) || null,
+            expected_graduation: document.getElementById('fe_expected_graduation').value ? document.getElementById('fe_expected_graduation').value + '-01' : null,
+            is_ieee_member: document.getElementById('fe_is_ieee_member').checked,
+            ieee_member_id: document.getElementById('fe_ieee_member_id').value || null,
+            ieee_membership_status_id: parseInt(document.getElementById('fe_ieee_membership_status_id').value) || null,
+            branch_role: document.getElementById('fe_branch_role').value || null,
+            ieee_roles_history: document.getElementById('fe_ieee_roles_history').value || null,
+            ieee_society_ids: selectedSocieties,
+            interest_area_id: parseInt(document.getElementById('fe_interest_area_id').value) || null,
+            availability_level_id: parseInt(document.getElementById('fe_availability_level_id').value) || null,
+            preferred_channel_id: parseInt(document.getElementById('fe_preferred_channel_id').value) || null,
+            goals_in_branch: document.getElementById('fe_goals_in_branch').value || null,
+            skill_ids: selectedSkills,
+            is_active: document.getElementById('fe_is_active').value === 'true'
+        };
+
+        try {
+            const response = await fetch(`/users/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                showNotification('Usuario actualizado exitosamente', 'success');
+                closeFullEditModal();
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                const error = await response.json();
+                showNotification(`Error: ${error.detail}`, 'error');
+            }
+        } catch (error) {
+            showNotification('Error al guardar cambios', 'error');
+        }
+    }
+
+    // Función legacy para compatibilidad
+    function editUserLegacy(id, name, nick, email, identification, universityId, countryCode, phone, isIeeeMember, birthday, emailPersonal, emailInstitutional, emailIeee, primaryEmailType, branchRole) {
+        editUser(id);
     }
 
     // Función para ver la ficha del usuario
@@ -906,9 +1422,12 @@
                 // Cargar estudios del usuario
                 loadUserStudies(userId);
             } else {
+                const errorText = await response.text();
+                console.error('Error loading user:', response.status, errorText);
                 content.innerHTML = `
                     <div class="text-center py-8 text-red-600">
-                        <p>Error al cargar los datos del usuario</p>
+                        <p>Error al cargar los datos del usuario (${response.status})</p>
+                        <p class="text-sm text-gray-500 mt-2">${response.status === 500 ? 'Error interno del servidor' : errorText}</p>
                     </div>
                 `;
             }
@@ -1326,6 +1845,7 @@
         document.getElementById('addStudyUserId').value = userId;
         document.getElementById('addStudyType').value = '';
         document.getElementById('addStudyProgram').value = '';
+        document.getElementById('addStudyStatus').value = 'cursando';
         document.getElementById('addStudyInstitution').value = '';
         document.getElementById('addStudyModal').classList.remove('hidden');
     }
@@ -1363,28 +1883,45 @@
         }
 
         const typeLabels = {
+            'tecnica': { label: 'Técnica', color: 'teal' },
+            'tecnologia': { label: 'Tecnología', color: 'cyan' },
             'pregrado': { label: 'Pregrado', color: 'blue' },
             'posgrado': { label: 'Posgrado', color: 'purple' },
             'otro': { label: 'Otro', color: 'gray' }
         };
 
+        const statusLabels = {
+            'cursando': { label: 'Cursando', color: 'yellow' },
+            'egresado': { label: 'Egresado', color: 'green' },
+            'sin_terminar': { label: 'Sin terminar', color: 'orange' }
+        };
+
         container.innerHTML = studies.map(study => {
             const typeInfo = typeLabels[study.study_type] || typeLabels['otro'];
+            const statusInfo = statusLabels[study.status] || statusLabels['cursando'];
             return `
                 <div class="flex items-start justify-between p-2 bg-gray-50 rounded-lg border">
                     <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-1 mb-1">
+                        <div class="flex items-center gap-1 mb-1 flex-wrap">
                             <span class="text-xs px-1.5 py-0.5 rounded bg-${typeInfo.color}-100 text-${typeInfo.color}-700">${typeInfo.label}</span>
+                            <span class="text-xs px-1.5 py-0.5 rounded bg-${statusInfo.color}-100 text-${statusInfo.color}-700">${statusInfo.label}</span>
                             ${study.is_primary ? '<span class="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">Principal</span>' : ''}
                         </div>
                         <p class="text-sm font-medium truncate">${study.program_name}</p>
                         ${study.institution ? `<p class="text-xs text-gray-500 truncate">${study.institution}</p>` : ''}
                     </div>
-                    <button onclick="deleteUserStudy(${userId}, ${study.id})" class="text-red-500 hover:text-red-700 p-1 flex-shrink-0" title="Eliminar estudio">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                    </button>
+                    <div class="flex gap-1 flex-shrink-0">
+                        <button onclick="openEditUserStudyModal(${userId}, ${study.id}, '${study.study_type}', '${study.program_name.replace(/'/g, "\\'")}', '${(study.institution || '').replace(/'/g, "\\'")}', '${study.status || 'cursando'}', ${study.is_primary})" class="text-blue-500 hover:text-blue-700 p-1" title="Editar estudio">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </button>
+                        <button onclick="deleteUserStudy(${userId}, ${study.id})" class="text-red-500 hover:text-red-700 p-1" title="Eliminar estudio">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             `;
         }).join('');
@@ -1394,6 +1931,7 @@
         const userId = document.getElementById('addStudyUserId').value;
         const studyType = document.getElementById('addStudyType').value;
         const programName = document.getElementById('addStudyProgram').value.trim();
+        const status = document.getElementById('addStudyStatus').value;
         const institution = document.getElementById('addStudyInstitution').value.trim();
 
         if (!studyType) {
@@ -1417,6 +1955,7 @@
                     study_type: studyType,
                     program_name: programName,
                     institution: institution || null,
+                    status: status || 'cursando',
                     is_primary: false
                 })
             });
@@ -1449,6 +1988,75 @@
                 await loadUserStudies(userId);
             } else {
                 showNotification('Error al eliminar estudio', 'error');
+            }
+        } catch (error) {
+            showNotification('Error de conexión', 'error');
+        }
+    }
+
+    // ========== EDITAR ESTUDIO ==========
+    let editingUserStudyId = null;
+    let editingUserStudyUserId = null;
+
+    function openEditUserStudyModal(userId, studyId, studyType, programName, institution, status, isPrimary) {
+        editingUserStudyUserId = userId;
+        editingUserStudyId = studyId;
+        document.getElementById('editStudyType').value = studyType;
+        document.getElementById('editStudyProgram').value = programName;
+        document.getElementById('editStudyInstitution').value = institution || '';
+        document.getElementById('editStudyStatus').value = status || 'cursando';
+        document.getElementById('editStudyPrimary').checked = isPrimary;
+        document.getElementById('editStudyModal').classList.remove('hidden');
+    }
+
+    function closeEditStudyModal() {
+        document.getElementById('editStudyModal').classList.add('hidden');
+        editingUserStudyId = null;
+        editingUserStudyUserId = null;
+    }
+
+    async function submitEditStudy() {
+        if (!editingUserStudyId || !editingUserStudyUserId) return;
+
+        const studyType = document.getElementById('editStudyType').value;
+        const programName = document.getElementById('editStudyProgram').value.trim();
+        const institution = document.getElementById('editStudyInstitution').value.trim();
+        const status = document.getElementById('editStudyStatus').value;
+        const isPrimary = document.getElementById('editStudyPrimary').checked;
+
+        if (!studyType) {
+            showNotification('Selecciona el tipo de estudio', 'error');
+            return;
+        }
+        if (!programName) {
+            showNotification('Ingresa el nombre del programa', 'error');
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(`/users/${editingUserStudyUserId}/studies/${editingUserStudyId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    study_type: studyType,
+                    program_name: programName,
+                    institution: institution || null,
+                    status: status,
+                    is_primary: isPrimary
+                })
+            });
+
+            if (response.ok) {
+                showNotification('Estudio actualizado exitosamente', 'success');
+                closeEditStudyModal();
+                await loadUserStudies(editingUserStudyUserId);
+            } else {
+                const error = await response.json();
+                showNotification(error.detail || 'Error al actualizar estudio', 'error');
             }
         } catch (error) {
             showNotification('Error de conexión', 'error');

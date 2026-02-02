@@ -904,6 +904,22 @@ async def update_profile(
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rango de semestre no encontrado")
             current_user.semester_range_id = profile_data.semester_range_id
 
+            # Auto-sincronizar estado de estudio principal con semestre
+            # Si es "Egresado / Graduado" (min_semester y max_semester son None)
+            primary_study = db.query(models.UserStudy).filter(
+                models.UserStudy.user_id == current_user.id,
+                models.UserStudy.is_primary == True
+            ).first()
+
+            if primary_study:
+                if semester.min_semester is None and semester.max_semester is None:
+                    # Es egresado o posgrado
+                    if "egresado" in semester.name.lower() or "graduado" in semester.name.lower():
+                        primary_study.status = models.StudyStatus.egresado
+                else:
+                    # Está cursando
+                    primary_study.status = models.StudyStatus.cursando
+
     if profile_data.expected_graduation is not None:
         current_user.expected_graduation = profile_data.expected_graduation
 
@@ -1238,6 +1254,7 @@ async def get_user_studies(
             "study_type": s.study_type.value if hasattr(s.study_type, 'value') else s.study_type,
             "program_name": s.program_name,
             "institution": s.institution,
+            "status": s.status.value if hasattr(s.status, 'value') else (s.status or "cursando"),
             "is_primary": s.is_primary,
             "created_at": s.created_at.isoformat() if s.created_at else None
         }
@@ -1253,11 +1270,19 @@ async def add_user_study(
 ):
     """Agrega un nuevo estudio al usuario"""
     # Validar tipo de estudio
-    valid_types = ['pregrado', 'posgrado', 'otro']
+    valid_types = ['tecnica', 'tecnologia', 'pregrado', 'posgrado', 'otro']
     if study_data.study_type not in valid_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Tipo de estudio inválido. Debe ser uno de: {', '.join(valid_types)}"
+        )
+
+    # Validar estado
+    valid_statuses = ['cursando', 'sin_terminar', 'egresado']
+    if study_data.status and study_data.status not in valid_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Estado inválido. Debe ser uno de: {', '.join(valid_statuses)}"
         )
 
     # Si es primario, quitar el flag de primario de los demás
@@ -1272,6 +1297,7 @@ async def add_user_study(
         study_type=models.StudyType(study_data.study_type),
         program_name=study_data.program_name,
         institution=study_data.institution,
+        status=models.StudyStatus(study_data.status) if study_data.status else models.StudyStatus.cursando,
         is_primary=study_data.is_primary
     )
     db.add(new_study)
@@ -1286,6 +1312,7 @@ async def add_user_study(
             "study_type": new_study.study_type.value,
             "program_name": new_study.program_name,
             "institution": new_study.institution,
+            "status": new_study.status.value if new_study.status else "cursando",
             "is_primary": new_study.is_primary
         }
     }
@@ -1312,7 +1339,7 @@ async def update_user_study(
 
     # Validar tipo de estudio si se proporciona
     if study_data.study_type:
-        valid_types = ['pregrado', 'posgrado', 'otro']
+        valid_types = ['tecnica', 'tecnologia', 'pregrado', 'posgrado', 'otro']
         if study_data.study_type not in valid_types:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -1325,6 +1352,16 @@ async def update_user_study(
 
     if study_data.institution is not None:
         study.institution = study_data.institution
+
+    # Validar y actualizar estado
+    if study_data.status is not None:
+        valid_statuses = ['cursando', 'sin_terminar', 'egresado']
+        if study_data.status not in valid_statuses:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Estado inválido. Debe ser uno de: {', '.join(valid_statuses)}"
+            )
+        study.status = models.StudyStatus(study_data.status)
 
     if study_data.is_primary is not None:
         if study_data.is_primary:
@@ -1346,6 +1383,7 @@ async def update_user_study(
             "study_type": study.study_type.value,
             "program_name": study.program_name,
             "institution": study.institution,
+            "status": study.status.value if study.status else "cursando",
             "is_primary": study.is_primary
         }
     }
@@ -1435,3 +1473,44 @@ async def get_admin_token(
         "role": admin_user.role.value if admin_user.role else "ADMIN",
         "permissions": permissions
     }
+
+
+# ============================================================
+# GENERACIÓN DE TOKEN PARA MÓDULOS EXTERNOS
+# ============================================================
+
+@router.post("/generate-external-token", response_model=schemas.ExternalTokenResponse)
+def generate_external_token(
+    body: schemas.ExternalTokenRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Genera un token temporal para que el usuario acceda a un módulo externo.
+    El usuario debe estar autenticado en el portal.
+    """
+    module = db.query(models.ExternalModule).filter(
+        models.ExternalModule.name == body.module_name,
+        models.ExternalModule.is_active == True
+    ).first()
+    if not module:
+        raise HTTPException(status_code=404, detail="Módulo no encontrado")
+
+    token = secrets.token_urlsafe(48)
+    expires = datetime.utcnow() + timedelta(minutes=30)
+
+    db.add(models.ExternalUserToken(
+        token=token,
+        user_id=current_user.id,
+        module_id=module.id,
+        expires_at=expires
+    ))
+    db.commit()
+
+    redirect_url = f"{module.callback_url}?token={token}" if module.callback_url else None
+
+    return schemas.ExternalTokenResponse(
+        token=token,
+        expires_at=expires,
+        redirect_url=redirect_url
+    )

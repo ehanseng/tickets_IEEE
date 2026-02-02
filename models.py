@@ -7,9 +7,18 @@ import enum
 
 class StudyType(enum.Enum):
     """Tipos de estudio"""
+    tecnica = "tecnica"
+    tecnologia = "tecnologia"
     pregrado = "pregrado"
     posgrado = "posgrado"
     otro = "otro"
+
+
+class StudyStatus(enum.Enum):
+    """Estado del estudio"""
+    cursando = "cursando"
+    sin_terminar = "sin_terminar"
+    egresado = "egresado"
 
 
 # Tabla de asociación many-to-many entre Users y Tags
@@ -68,6 +77,7 @@ class AcademicProgram(Base):
     name = Column(String(200), nullable=False, unique=True)
     short_name = Column(String(50), nullable=True)
     category = Column(String(100), nullable=True)  # Ingeniería, Diseño, etc.
+    description = Column(String(500), nullable=True)  # Descripción del programa
     is_active = Column(Boolean, default=True)
     display_order = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -358,9 +368,10 @@ class UserStudy(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    study_type = Column(Enum(StudyType), nullable=False)  # pregrado/posgrado/otro
+    study_type = Column(Enum(StudyType), nullable=False)  # tecnica/tecnologia/pregrado/posgrado/otro
     program_name = Column(String(200), nullable=False)     # Nombre de la carrera/programa
     institution = Column(String(200), nullable=True)       # Institución (si es externa a UTadeo)
+    status = Column(Enum(StudyStatus), default=StudyStatus.cursando)  # cursando/sin_terminar/egresado
     is_primary = Column(Boolean, default=False)            # Estudio principal para mostrar
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -712,3 +723,113 @@ class Project(Base):
     display_order = Column(Integer, default=0)  # Orden de visualización
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relaciones
+    members = relationship("User", secondary="project_members", backref="projects")
+
+
+# Tabla asociación proyecto-miembros
+project_members = Table(
+    'project_members',
+    Base.metadata,
+    Column('project_id', Integer, ForeignKey('projects.id'), primary_key=True),
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
+    Column('role', String(50), nullable=True),  # "lider", "miembro", "asesor"
+    Column('joined_at', DateTime, default=datetime.utcnow)
+)
+
+
+class AlliedCompany(Base):
+    """Empresas aliadas de IEEE Tadeo"""
+    __tablename__ = "allied_companies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False)
+    alliance_type = Column(String(200), nullable=False)  # Tipo de alianza (texto libre)
+    logo_path = Column(String(500), nullable=True)  # Ruta a la imagen/logo
+    website = Column(String(500), nullable=True)  # URL del sitio web
+    description = Column(Text, nullable=True)  # Descripción opcional
+    is_active = Column(Boolean, default=True)
+    display_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# ============================================================
+# MÓDULOS EXTERNOS Y API
+# ============================================================
+
+class ExternalModule(Base):
+    """Módulos externos registrados con API Key"""
+    __tablename__ = "external_modules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, unique=True)  # "proyectos", "asistencia", "tesoreria"
+    display_name = Column(String(200), nullable=False)
+    api_key = Column(String(64), nullable=False, unique=True, index=True)
+    allowed_scopes = Column(Text, nullable=False)  # JSON list: ["auth", "projects", "members"]
+    callback_url = Column(String(500), nullable=True)  # URL base del módulo
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ExternalUserToken(Base):
+    """Tokens temporales para acceso de usuarios a módulos externos"""
+    __tablename__ = "external_user_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String(64), nullable=False, unique=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    module_id = Column(Integer, ForeignKey("external_modules.id"), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+    module = relationship("ExternalModule")
+
+
+# ============================================================
+# REUNIONES INTERNAS
+# ============================================================
+
+class MeetingType(enum.Enum):
+    general = "general"
+    comite = "comite"
+    proyecto = "proyecto"
+    capacitacion = "capacitacion"
+
+
+class Meeting(Base):
+    """Reuniones internas de la rama (separado de Event)"""
+    __tablename__ = "meetings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(300), nullable=False)
+    description = Column(Text, nullable=True)
+    meeting_type = Column(Enum(MeetingType), default=MeetingType.general)
+    meeting_date = Column(DateTime, nullable=False)
+    duration_minutes = Column(Integer, default=60)
+    location = Column(String(300), nullable=True)
+    virtual_link = Column(String(500), nullable=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
+    created_by = Column(Integer, ForeignKey("admin_users.id"), nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    project = relationship("Project")
+    attendances = relationship("MeetingAttendance", back_populates="meeting", cascade="all, delete-orphan")
+
+
+class MeetingAttendance(Base):
+    """Registro de asistencia a reuniones"""
+    __tablename__ = "meeting_attendances"
+
+    id = Column(Integer, primary_key=True, index=True)
+    meeting_id = Column(Integer, ForeignKey("meetings.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    attended = Column(Boolean, default=False)
+    checked_in_at = Column(DateTime, nullable=True)
+    notes = Column(String(300), nullable=True)
+
+    meeting = relationship("Meeting", back_populates="attendances")
+    user = relationship("User")

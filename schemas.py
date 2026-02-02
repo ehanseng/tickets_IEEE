@@ -142,9 +142,10 @@ class SkillResponse(BaseModel):
 
 class UserStudyCreate(BaseModel):
     """Schema para crear estudio de usuario"""
-    study_type: str  # "pregrado", "posgrado", "otro"
+    study_type: str  # "tecnica", "tecnologia", "pregrado", "posgrado", "otro"
     program_name: str
     institution: Optional[str] = None
+    status: str = "cursando"  # "cursando", "sin_terminar", "egresado"
     is_primary: bool = False
 
 
@@ -153,6 +154,7 @@ class UserStudyUpdate(BaseModel):
     study_type: Optional[str] = None
     program_name: Optional[str] = None
     institution: Optional[str] = None
+    status: Optional[str] = None
     is_primary: Optional[bool] = None
 
 
@@ -163,6 +165,7 @@ class UserStudyResponse(BaseModel):
     study_type: str
     program_name: str
     institution: Optional[str] = None
+    status: Optional[str] = "cursando"
     is_primary: bool
     created_at: datetime
 
@@ -294,7 +297,7 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    """Schema para actualizar usuario"""
+    """Schema para actualizar usuario (incluye campos de admin)"""
     name: Optional[str] = None
     nick: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -311,6 +314,23 @@ class UserUpdate(BaseModel):
     is_ieee_member: Optional[bool] = None
     ieee_member_id: Optional[str] = None
     branch_role: Optional[str] = None  # Rol interno en la rama
+    # Campos de perfil académico
+    academic_program_id: Optional[int] = None
+    semester_range_id: Optional[int] = None
+    english_level_id: Optional[int] = None
+    expected_graduation: Optional[datetime] = None
+    # Campos IEEE
+    ieee_membership_status_id: Optional[int] = None
+    ieee_society_ids: Optional[List[int]] = None  # Lista de IDs de sociedades
+    ieee_roles_history: Optional[str] = None
+    # Campos de perfilamiento
+    interest_area_id: Optional[int] = None
+    availability_level_id: Optional[int] = None
+    preferred_channel_id: Optional[int] = None
+    skill_ids: Optional[List[int]] = None  # Lista de IDs de habilidades
+    goals_in_branch: Optional[str] = None
+    # Campo admin only
+    is_active: Optional[bool] = None
 
 
 class UserResponse(BaseModel):
@@ -682,6 +702,191 @@ class ProjectResponse(BaseModel):
     display_order: int
     created_at: datetime
     updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================
+# Schemas de Empresas Aliadas
+# ============================================================
+
+class AlliedCompanyCreate(BaseModel):
+    """Schema para crear empresa aliada"""
+    name: str
+    alliance_type: str
+    logo_path: Optional[str] = None
+    website: Optional[str] = None
+    description: Optional[str] = None
+    is_active: bool = True
+    display_order: int = 0
+
+
+class AlliedCompanyUpdate(BaseModel):
+    """Schema para actualizar empresa aliada"""
+    name: Optional[str] = None
+    alliance_type: Optional[str] = None
+    logo_path: Optional[str] = None
+    website: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+    display_order: Optional[int] = None
+
+
+class AlliedCompanyResponse(BaseModel):
+    """Schema para respuesta de empresa aliada"""
+    id: int
+    name: str
+    alliance_type: str
+    logo_path: Optional[str]
+    website: Optional[str]
+    description: Optional[str]
+    is_active: bool
+    display_order: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================
+# Schemas de API Externa
+# ============================================================
+
+class ExternalModuleCreate(BaseModel):
+    name: str
+    display_name: str
+    allowed_scopes: List[str]
+    callback_url: Optional[str] = None
+
+
+class ExternalModuleResponse(BaseModel):
+    id: int
+    name: str
+    display_name: str
+    api_key: str
+    allowed_scopes: str
+    callback_url: Optional[str]
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ExternalTokenRequest(BaseModel):
+    module_name: str
+
+
+class ExternalTokenResponse(BaseModel):
+    token: str
+    expires_at: datetime
+    redirect_url: Optional[str] = None
+
+
+class ExternalAuthVerifyRequest(BaseModel):
+    user_token: str
+
+
+class ExternalUserInfo(BaseModel):
+    """Info mínima del usuario para módulos externos"""
+    id: int
+    name: str
+    email: str
+    branch_role: Optional[str] = None
+    is_ieee_member: bool
+
+    class Config:
+        from_attributes = True
+
+
+class ExternalAuthVerifyResponse(BaseModel):
+    valid: bool
+    user: Optional[ExternalUserInfo] = None
+    module: Optional[str] = None
+
+
+class ExternalProjectResponse(BaseModel):
+    id: int
+    name: str
+    short_description: Optional[str] = None
+    status: str
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    color: Optional[str] = None
+    icon: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ExternalProjectMemberResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+    role: Optional[str] = None  # rol en el proyecto
+
+    class Config:
+        from_attributes = True
+
+
+class ExternalMemberResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+    branch_role: Optional[str] = None
+    is_ieee_member: bool
+
+    class Config:
+        from_attributes = True
+
+
+class MeetingCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    meeting_type: str = "general"
+    meeting_date: datetime
+    duration_minutes: int = 60
+    location: Optional[str] = None
+    virtual_link: Optional[str] = None
+    project_id: Optional[int] = None
+
+
+class MeetingResponse(BaseModel):
+    id: int
+    title: str
+    description: Optional[str] = None
+    meeting_type: str
+    meeting_date: datetime
+    duration_minutes: int
+    location: Optional[str] = None
+    virtual_link: Optional[str] = None
+    project_id: Optional[int] = None
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AttendanceRecord(BaseModel):
+    user_id: int
+    attended: bool
+    notes: Optional[str] = None
+
+
+class AttendanceBulkRequest(BaseModel):
+    records: List[AttendanceRecord]
+
+
+class AttendanceResponse(BaseModel):
+    id: int
+    meeting_id: int
+    user_id: int
+    user_name: Optional[str] = None
+    attended: bool
+    checked_in_at: Optional[datetime] = None
+    notes: Optional[str] = None
 
     class Config:
         from_attributes = True

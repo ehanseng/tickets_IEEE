@@ -79,8 +79,12 @@ RESEND_API_KEY=tu_api_key_de_resend
 FROM_EMAIL=info@tudominio.org
 FROM_NAME=IEEE Tadeo - Control System
 
-# Base de datos
-DATABASE_URL=sqlite:///./tickets.db
+# Base de datos MySQL
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=ieeetadeo
+MYSQL_PASSWORD=tu_password
+MYSQL_DATABASE=ieeetadeo
 
 # JWT para autenticación
 SECRET_KEY=tu_clave_secreta_aqui
@@ -107,14 +111,14 @@ cd whatsapp-service
 node server.js
 ```
 
-El servidor estará disponible en `http://localhost:8000`
+El servidor estará disponible en `http://localhost:8070`
 
 ## 📚 Módulos del Sistema
 
 ### 🖥️ Panel de Administración
 
 #### Dashboard Principal
-**URL:** `http://localhost:8000/admin`
+**URL:** `http://localhost:8070/admin`
 
 - Estadísticas generales (usuarios, eventos, tickets)
 - Distribución de usuarios por universidad
@@ -122,7 +126,7 @@ El servidor estará disponible en `http://localhost:8000`
 - Accesos rápidos a todas las funcionalidades
 
 #### Gestión de Usuarios
-**URL:** `http://localhost:8000/admin/users`
+**URL:** `http://localhost:8070/admin/users`
 
 **Funcionalidades:**
 - Registrar nuevos usuarios con información completa
@@ -142,7 +146,7 @@ El servidor estará disponible en `http://localhost:8000`
 - Apodo (para emails personalizados)
 
 #### Gestión de Eventos
-**URL:** `http://localhost:8000/admin/events`
+**URL:** `http://localhost:8070/admin/events`
 
 **Funcionalidades:**
 - Crear nuevos eventos con descripción completa
@@ -159,7 +163,7 @@ El servidor estará disponible en `http://localhost:8000`
 - Estado (activo/inactivo)
 
 #### Gestión de Tickets
-**URL:** `http://localhost:8000/admin/tickets`
+**URL:** `http://localhost:8070/admin/tickets`
 
 **Funcionalidades:**
 - Generar tickets para usuarios y eventos
@@ -171,7 +175,7 @@ El servidor estará disponible en `http://localhost:8000`
 - Envío automático por email al generar
 
 #### Validación de Entrada
-**URL:** `http://localhost:8000/admin/validate`
+**URL:** `http://localhost:8070/admin/validate`
 
 **Funcionalidades:**
 - **Escáner QR con cámara:** Valida tickets en tiempo real
@@ -181,7 +185,7 @@ El servidor estará disponible en `http://localhost:8000`
 - Información del usuario y evento al validar
 
 #### Sistema de Mensajería Masiva
-**URL:** `http://localhost:8000/admin/messages`
+**URL:** `http://localhost:8070/admin/messages`
 
 **Funcionalidades:**
 - Enviar mensajes por Email y/o WhatsApp
@@ -202,7 +206,7 @@ Te invitamos al próximo evento de IEEE Tadeo...
 ```
 
 #### Histórico de Campañas
-**URL:** `http://localhost:8000/admin/campaigns`
+**URL:** `http://localhost:8070/admin/campaigns`
 
 **Funcionalidades:**
 - Ver todas las campañas enviadas
@@ -220,7 +224,7 @@ Te invitamos al próximo evento de IEEE Tadeo...
 - Creado por (administrador)
 
 #### Gestión de Universidades
-**URL:** `http://localhost:8000/admin/universities`
+**URL:** `http://localhost:8070/admin/universities`
 
 **Funcionalidades:**
 - Crear nuevas universidades
@@ -230,7 +234,7 @@ Te invitamos al próximo evento de IEEE Tadeo...
 
 ### 👤 Portal de Usuario
 
-**URL:** `http://localhost:8000/portal`
+**URL:** `http://localhost:8070/portal`
 
 **Funcionalidades:**
 - Login seguro con email y contraseña
@@ -313,8 +317,8 @@ Te invitamos al próximo evento de IEEE Tadeo...
 ## 📡 API REST
 
 ### Documentación Interactiva
-- **Swagger UI:** `http://localhost:8000/docs`
-- **ReDoc:** `http://localhost:8000/redoc`
+- **Swagger UI:** `http://localhost:8070/docs`
+- **ReDoc:** `http://localhost:8070/redoc`
 
 ### Endpoints Principales
 
@@ -393,7 +397,6 @@ Ticket/
 │   ├── favicon.svg             # Ícono del sitio
 │   └── message_images/         # Imágenes de campañas
 ├── qr_codes/                    # QR generados
-├── tickets.db                   # Base de datos SQLite
 ├── .env                         # Variables de entorno
 ├── pyproject.toml              # Dependencias Python
 └── README.md                   # Esta documentación
@@ -414,7 +417,7 @@ Ticket/
 - Registro de fecha/hora de validación
 
 ### Datos
-- Base de datos SQLite con integridad referencial
+- Base de datos MySQL con integridad referencial
 - Validación de datos con Pydantic
 - Sanitización de inputs
 
@@ -424,7 +427,7 @@ Ticket/
 - **FastAPI** - Framework web moderno y rápido
 - **SQLAlchemy** - ORM para base de datos
 - **Pydantic** - Validación de datos
-- **SQLite** - Base de datos
+- **MySQL** - Base de datos
 - **JWT** - Autenticación
 - **qrcode** - Generación de QR
 - **Pillow** - Procesamiento de imágenes
@@ -497,12 +500,11 @@ node server.js
 
 ### Base de datos corrupta
 ```bash
-# Backup de la base de datos actual
-cp tickets.db tickets.db.backup
+# Backup de la base de datos MySQL
+mysqldump -u ieeetadeo -p ieeetadeo > backup.sql
 
-# Si necesitas empezar de cero
-rm tickets.db
-# El servidor la recreará automáticamente
+# Si necesitas empezar de cero, recrea las tablas
+python -c "from database import Base, engine; import models; Base.metadata.create_all(bind=engine)"
 ```
 
 ## 📈 Estadísticas y Métricas
@@ -535,7 +537,7 @@ cloudflared tunnel run tu-tunnel
 ```env
 # Cambiar valores por defecto
 SECRET_KEY=clave_super_segura_y_larga_random
-DATABASE_URL=postgresql://...  # Para producción usar PostgreSQL
+MYSQL_PASSWORD=clave_segura_de_produccion
 
 # Configurar dominio real
 FROM_EMAIL=info@tudominio.com

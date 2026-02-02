@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, Stre
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, validator
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc, or_
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -58,7 +58,9 @@ templates = Jinja2Templates(directory="templates")
 
 # Importar rutas del portal de usuarios
 from user_portal_routes import router as user_portal_router
+from external_api import router as external_api_router
 app.include_router(user_portal_router)
+app.include_router(external_api_router)
 
 
 # ========== ENDPOINTS DE AUTENTICACIÓN ==========
@@ -1448,7 +1450,21 @@ def get_user(
     current_user: models.AdminUser = Depends(require_admin)
 ):
     """Obtener un usuario por ID"""
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = db.query(models.User).options(
+        joinedload(models.User.university),
+        joinedload(models.User.organization),
+        joinedload(models.User.tags),
+        joinedload(models.User.academic_program),
+        joinedload(models.User.semester_range),
+        joinedload(models.User.english_level),
+        joinedload(models.User.ieee_membership_status),
+        joinedload(models.User.ieee_societies),
+        joinedload(models.User.interest_area),
+        joinedload(models.User.availability_level),
+        joinedload(models.User.preferred_channel),
+        joinedload(models.User.skills),
+        joinedload(models.User.studies),
+    ).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return user
@@ -1516,6 +1532,48 @@ def update_user(
     elif user.email_ieee:
         user.email = user.email_ieee
 
+    # Campos de perfil académico
+    if user_update.academic_program_id is not None:
+        user.academic_program_id = user_update.academic_program_id if user_update.academic_program_id != 0 else None
+    if user_update.semester_range_id is not None:
+        user.semester_range_id = user_update.semester_range_id if user_update.semester_range_id != 0 else None
+    if user_update.english_level_id is not None:
+        user.english_level_id = user_update.english_level_id if user_update.english_level_id != 0 else None
+    if user_update.expected_graduation is not None:
+        user.expected_graduation = user_update.expected_graduation
+
+    # Campos IEEE
+    if user_update.ieee_member_id is not None:
+        user.ieee_member_id = user_update.ieee_member_id if user_update.ieee_member_id else None
+    if user_update.ieee_membership_status_id is not None:
+        user.ieee_membership_status_id = user_update.ieee_membership_status_id if user_update.ieee_membership_status_id != 0 else None
+    if user_update.ieee_roles_history is not None:
+        user.ieee_roles_history = user_update.ieee_roles_history if user_update.ieee_roles_history else None
+    if user_update.ieee_society_ids is not None:
+        societies = db.query(models.IEEESociety).filter(models.IEEESociety.id.in_(user_update.ieee_society_ids)).all()
+        user.ieee_societies = societies
+
+    # Campos de perfilamiento
+    if user_update.interest_area_id is not None:
+        user.interest_area_id = user_update.interest_area_id if user_update.interest_area_id != 0 else None
+    if user_update.availability_level_id is not None:
+        user.availability_level_id = user_update.availability_level_id if user_update.availability_level_id != 0 else None
+    if user_update.preferred_channel_id is not None:
+        user.preferred_channel_id = user_update.preferred_channel_id if user_update.preferred_channel_id != 0 else None
+    if user_update.goals_in_branch is not None:
+        user.goals_in_branch = user_update.goals_in_branch if user_update.goals_in_branch else None
+    if user_update.skill_ids is not None:
+        skills = db.query(models.Skill).filter(models.Skill.id.in_(user_update.skill_ids)).all()
+        user.skills = skills
+
+    # Campo admin only
+    if user_update.is_active is not None:
+        user.is_active = user_update.is_active
+
+    # Actualizar nick
+    if user_update.nick is not None:
+        user.nick = user_update.nick if user_update.nick else None
+
     db.commit()
     db.refresh(user)
     return user
@@ -1573,6 +1631,7 @@ def get_user_studies(
             "study_type": s.study_type.value if hasattr(s.study_type, 'value') else s.study_type,
             "program_name": s.program_name,
             "institution": s.institution,
+            "status": s.status.value if hasattr(s.status, 'value') else (s.status or "cursando"),
             "is_primary": s.is_primary,
             "created_at": s.created_at.isoformat() if s.created_at else None
         }
@@ -1593,11 +1652,19 @@ def add_user_study(
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     # Validar tipo de estudio
-    valid_types = ['pregrado', 'posgrado', 'otro']
+    valid_types = ['tecnica', 'tecnologia', 'pregrado', 'posgrado', 'otro']
     if study_data.study_type not in valid_types:
         raise HTTPException(
             status_code=400,
             detail=f"Tipo de estudio inválido. Debe ser uno de: {', '.join(valid_types)}"
+        )
+
+    # Validar estado
+    valid_statuses = ['cursando', 'sin_terminar', 'egresado']
+    if study_data.status and study_data.status not in valid_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Estado inválido. Debe ser uno de: {', '.join(valid_statuses)}"
         )
 
     # Si es primario, quitar el flag de primario de los demás
@@ -1612,6 +1679,7 @@ def add_user_study(
         study_type=models.StudyType(study_data.study_type),
         program_name=study_data.program_name,
         institution=study_data.institution,
+        status=models.StudyStatus(study_data.status) if study_data.status else models.StudyStatus.cursando,
         is_primary=study_data.is_primary
     )
     db.add(new_study)
@@ -1626,6 +1694,7 @@ def add_user_study(
             "study_type": new_study.study_type.value,
             "program_name": new_study.program_name,
             "institution": new_study.institution,
+            "status": new_study.status.value if new_study.status else "cursando",
             "is_primary": new_study.is_primary
         }
     }
@@ -1650,7 +1719,7 @@ def update_user_study(
 
     # Validar tipo de estudio si se proporciona
     if study_data.study_type:
-        valid_types = ['pregrado', 'posgrado', 'otro']
+        valid_types = ['tecnica', 'tecnologia', 'pregrado', 'posgrado', 'otro']
         if study_data.study_type not in valid_types:
             raise HTTPException(
                 status_code=400,
@@ -1663,6 +1732,16 @@ def update_user_study(
 
     if study_data.institution is not None:
         study.institution = study_data.institution
+
+    # Validar y actualizar estado
+    if study_data.status is not None:
+        valid_statuses = ['cursando', 'sin_terminar', 'egresado']
+        if study_data.status not in valid_statuses:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Estado inválido. Debe ser uno de: {', '.join(valid_statuses)}"
+            )
+        study.status = models.StudyStatus(study_data.status)
 
     if study_data.is_primary is not None:
         if study_data.is_primary:
@@ -1683,6 +1762,7 @@ def update_user_study(
             "study_type": study.study_type.value,
             "program_name": study.program_name,
             "institution": study.institution,
+            "status": study.status.value if study.status else "cursando",
             "is_primary": study.is_primary
         }
     }
@@ -5486,6 +5566,227 @@ async def delete_project(
     return {"message": "Proyecto eliminado exitosamente"}
 
 
+# ========== EMPRESAS ALIADAS ==========
+
+@app.get("/admin/allied-companies", response_class=HTMLResponse)
+async def admin_allied_companies_page(request: Request, db: Session = Depends(get_db)):
+    """Página de administración de empresas aliadas"""
+    companies = db.query(models.AlliedCompany).order_by(models.AlliedCompany.display_order).all()
+    return templates.TemplateResponse("allied_companies.html", {
+        "request": request,
+        "companies": companies
+    })
+
+
+@app.get("/api/allied-companies")
+async def get_allied_companies(db: Session = Depends(get_db)):
+    """Obtener todas las empresas aliadas"""
+    return db.query(models.AlliedCompany).order_by(models.AlliedCompany.display_order).all()
+
+
+@app.get("/api/allied-companies/{company_id}")
+async def get_allied_company(company_id: int, db: Session = Depends(get_db)):
+    """Obtener una empresa aliada por ID"""
+    company = db.query(models.AlliedCompany).filter(models.AlliedCompany.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Empresa aliada no encontrada")
+    return company
+
+
+@app.post("/api/allied-companies")
+async def create_allied_company(
+    company: schemas.AlliedCompanyCreate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Crear una nueva empresa aliada"""
+    db_company = models.AlliedCompany(**company.model_dump())
+    db.add(db_company)
+    db.commit()
+    db.refresh(db_company)
+    return db_company
+
+
+@app.put("/api/allied-companies/{company_id}")
+async def update_allied_company(
+    company_id: int,
+    company: schemas.AlliedCompanyUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Actualizar una empresa aliada"""
+    db_company = db.query(models.AlliedCompany).filter(models.AlliedCompany.id == company_id).first()
+    if not db_company:
+        raise HTTPException(status_code=404, detail="Empresa aliada no encontrada")
+
+    update_data = company.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_company, key, value)
+
+    db.commit()
+    db.refresh(db_company)
+    return db_company
+
+
+@app.delete("/api/allied-companies/{company_id}")
+async def delete_allied_company(
+    company_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Eliminar una empresa aliada"""
+    db_company = db.query(models.AlliedCompany).filter(models.AlliedCompany.id == company_id).first()
+    if not db_company:
+        raise HTTPException(status_code=404, detail="Empresa aliada no encontrada")
+
+    db.delete(db_company)
+    db.commit()
+    return {"message": "Empresa aliada eliminada exitosamente"}
+
+
+@app.post("/api/allied-companies/{company_id}/upload-logo")
+async def upload_allied_company_logo(
+    company_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Subir logo de empresa aliada"""
+    company = db.query(models.AlliedCompany).filter(models.AlliedCompany.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Empresa aliada no encontrada")
+
+    # Validar tipo de archivo
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="El archivo debe ser una imagen")
+
+    # Crear directorio si no existe
+    upload_dir = "static/allied_logos"
+    os.makedirs(upload_dir, exist_ok=True)
+
+    # Generar nombre de archivo único
+    file_ext = os.path.splitext(file.filename)[1]
+    filename = f"allied_{company_id}_{int(datetime.now().timestamp())}{file_ext}"
+    file_path = os.path.join(upload_dir, filename)
+
+    # Guardar archivo
+    with open(file_path, "wb") as buffer:
+        content = await file.read()
+        buffer.write(content)
+
+    # Actualizar ruta en la base de datos
+    company.logo_path = f"/{file_path}"
+    db.commit()
+    db.refresh(company)
+
+    return {"logo_path": company.logo_path}
+
+
+# ========== MÓDULOS EXTERNOS (Admin CRUD) ==========
+
+@app.get("/api/admin/external-modules")
+def list_external_modules(
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Listar todos los módulos externos registrados"""
+    modules = db.query(models.ExternalModule).order_by(models.ExternalModule.created_at.desc()).all()
+    return modules
+
+
+@app.post("/api/admin/external-modules", response_model=schemas.ExternalModuleResponse)
+def create_external_module(
+    body: schemas.ExternalModuleCreate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Crear un nuevo módulo externo con API Key auto-generada"""
+    import secrets as sec
+    import json
+
+    existing = db.query(models.ExternalModule).filter(
+        models.ExternalModule.name == body.name
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Ya existe un módulo con ese nombre")
+
+    module = models.ExternalModule(
+        name=body.name,
+        display_name=body.display_name,
+        api_key=sec.token_hex(32),
+        allowed_scopes=json.dumps(body.allowed_scopes),
+        callback_url=body.callback_url
+    )
+    db.add(module)
+    db.commit()
+    db.refresh(module)
+    return module
+
+
+@app.put("/api/admin/external-modules/{module_id}", response_model=schemas.ExternalModuleResponse)
+def update_external_module(
+    module_id: int,
+    body: schemas.ExternalModuleCreate,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Actualizar un módulo externo"""
+    import json
+
+    module = db.query(models.ExternalModule).filter(
+        models.ExternalModule.id == module_id
+    ).first()
+    if not module:
+        raise HTTPException(status_code=404, detail="Módulo no encontrado")
+
+    module.name = body.name
+    module.display_name = body.display_name
+    module.allowed_scopes = json.dumps(body.allowed_scopes)
+    module.callback_url = body.callback_url
+    db.commit()
+    db.refresh(module)
+    return module
+
+
+@app.delete("/api/admin/external-modules/{module_id}")
+def delete_external_module(
+    module_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Desactivar un módulo externo"""
+    module = db.query(models.ExternalModule).filter(
+        models.ExternalModule.id == module_id
+    ).first()
+    if not module:
+        raise HTTPException(status_code=404, detail="Módulo no encontrado")
+
+    module.is_active = False
+    db.commit()
+    return {"message": f"Módulo '{module.display_name}' desactivado"}
+
+
+@app.post("/api/admin/external-modules/{module_id}/regenerate-key")
+def regenerate_module_api_key(
+    module_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Regenerar la API Key de un módulo"""
+    import secrets as sec
+
+    module = db.query(models.ExternalModule).filter(
+        models.ExternalModule.id == module_id
+    ).first()
+    if not module:
+        raise HTTPException(status_code=404, detail="Módulo no encontrado")
+
+    module.api_key = sec.token_hex(32)
+    db.commit()
+    db.refresh(module)
+    return {"api_key": module.api_key, "message": "API Key regenerada"}
+
+
 # ========== PÁGINA DE INICIO PÚBLICA ==========
 
 @app.get("/")
@@ -5544,13 +5845,43 @@ async def public_home_page(request: Request, db: Session = Depends(get_db)):
         ).order_by(models.EventGalleryImage.display_order).all()
         past_events.append(event)
 
-    # Obtener miembros con tag "IEEE Tadeo" (solo nombres)
+    # Obtener miembros con tag "IEEE Tadeo" (solo los que han editado perfil - tienen nombre)
     ieee_tadeo_tag = db.query(models.Tag).filter(models.Tag.name == "IEEE Tadeo").first()
     members = []
+    students_count = 0
+    graduates_count = 0
+
     if ieee_tadeo_tag:
-        members = db.query(models.User).join(models.User.tags).filter(
-            models.Tag.id == ieee_tadeo_tag.id
-        ).all()
+        # Solo usuarios con perfil completo (tienen nombre Y al menos un estudio registrado)
+        members = db.query(models.User).join(models.User.tags).join(
+            models.UserStudy, models.User.id == models.UserStudy.user_id
+        ).filter(
+            models.Tag.id == ieee_tadeo_tag.id,
+            models.User.name.isnot(None),
+            models.User.name != ""
+        ).distinct().all()
+
+        # Contar estudiantes activos de la Tadeo (que tienen estudio en Tadeo con status cursando)
+        students_count = db.query(models.User).join(models.User.tags).join(
+            models.UserStudy, models.User.id == models.UserStudy.user_id
+        ).filter(
+            models.Tag.id == ieee_tadeo_tag.id,
+            models.User.name.isnot(None),
+            models.User.name != "",
+            models.UserStudy.institution.ilike('%Tadeo%'),
+            models.UserStudy.status == 'cursando'
+        ).distinct().count()
+
+        # Contar egresados de la Tadeo (que tienen estudio en Tadeo con status egresado)
+        graduates_count = db.query(models.User).join(models.User.tags).join(
+            models.UserStudy, models.User.id == models.UserStudy.user_id
+        ).filter(
+            models.Tag.id == ieee_tadeo_tag.id,
+            models.User.name.isnot(None),
+            models.User.name != "",
+            models.UserStudy.institution.ilike('%Tadeo%'),
+            models.UserStudy.status == 'egresado'
+        ).distinct().count()
 
     # Contar eventos totales realizados
     event_count = db.query(models.Event).count()
@@ -5594,7 +5925,8 @@ async def public_home_page(request: Request, db: Session = Depends(get_db)):
 
         # Combinar y eliminar duplicados
         all_careers = set(old_careers + new_careers)
-        member_careers = list(all_careers)
+        # Ordenar con "Diseño Industrial" primero
+        member_careers = sorted(list(all_careers), key=lambda x: (0 if x == "Diseño Industrial" else 1, x))
 
         # Obtener habilidades técnicas de los miembros
         technical_skills = db.query(models.Skill).join(
@@ -5616,18 +5948,26 @@ async def public_home_page(request: Request, db: Session = Depends(get_db)):
         ).distinct().all()
         member_skills_soft = soft_skills
 
+    # Obtener empresas aliadas activas
+    allied_companies = db.query(models.AlliedCompany).filter(
+        models.AlliedCompany.is_active == True
+    ).order_by(models.AlliedCompany.display_order).all()
+
     return templates.TemplateResponse("home.html", {
         "request": request,
         "upcoming_events": upcoming_events,
         "past_events": past_events,
         "members": members,
         "member_count": len(members),
+        "students_count": students_count,
+        "graduates_count": graduates_count,
         "event_count": event_count,
         "projects": projects,
         "active_projects_count": active_projects_count,
         "member_careers": member_careers,
         "member_skills_technical": member_skills_technical,
-        "member_skills_soft": member_skills_soft
+        "member_skills_soft": member_skills_soft,
+        "allied_companies": allied_companies
     })
 
 
@@ -5666,6 +6006,73 @@ async def submit_contact_form(data: ContactFormData, db: Session = Depends(get_d
         print(f"Error enviando email de contacto: {e}")
         # Aún retornamos success para no bloquear al usuario
         return {"success": True, "message": "Mensaje recibido"}
+
+
+# ========== API PÚBLICA DE PERFIL DE MIEMBRO ==========
+
+@app.get("/api/public/member/{user_id}")
+async def get_public_member_profile(user_id: int, db: Session = Depends(get_db)):
+    """
+    Obtener perfil público de un miembro IEEE Tadeo.
+    Solo devuelve información limitada y pública.
+    """
+    # Verificar que el usuario existe y tiene el tag IEEE Tadeo
+    ieee_tadeo_tag = db.query(models.Tag).filter(models.Tag.name == "IEEE Tadeo").first()
+    if not ieee_tadeo_tag:
+        raise HTTPException(status_code=404, detail="Tag no encontrado")
+
+    user = db.query(models.User).join(models.User.tags).filter(
+        models.User.id == user_id,
+        models.Tag.id == ieee_tadeo_tag.id,
+        models.User.name.isnot(None),
+        models.User.name != ""
+    ).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="Miembro no encontrado")
+
+    # Obtener estudios del usuario
+    studies = db.query(models.UserStudy).filter(
+        models.UserStudy.user_id == user_id
+    ).order_by(models.UserStudy.is_primary.desc()).all()
+
+    studies_data = []
+    for study in studies:
+        studies_data.append({
+            "study_type": study.study_type.value if study.study_type else None,
+            "program_name": study.program_name,
+            "institution": study.institution,
+            "status": study.status.value if study.status else "cursando",
+            "is_primary": study.is_primary
+        })
+
+    # Obtener habilidades del usuario
+    skills_data = []
+    for skill in user.skills:
+        skills_data.append({
+            "name": skill.name,
+            "category": skill.category,
+            "icon": skill.icon,
+            "color": skill.color
+        })
+
+    # Construir respuesta pública (sin datos sensibles como email, teléfono)
+    return {
+        "id": user.id,
+        "name": user.name,
+        "photo": user.photo_path,
+        "branch_role": user.branch_role,
+        "university": user.university.name if user.university else None,
+        "academic_program": user.academic_program.name if user.academic_program else None,
+        "semester": user.semester_range.name if user.semester_range else None,
+        "is_graduate": user.semester_range.min_semester is None if user.semester_range else False,
+        "ieee_member_id": user.ieee_member_id if user.ieee_member_id else None,
+        "ieee_societies": [s.name for s in user.ieee_societies] if user.ieee_societies else [],
+        "interest_area": user.interest_area.name if user.interest_area else None,
+        "studies": studies_data,
+        "skills": skills_data,
+        "bio": user.bio if hasattr(user, 'bio') and user.bio else None
+    }
 
 
 # ========== PÁGINA DE PRESENTACIÓN EJECUTIVA ==========

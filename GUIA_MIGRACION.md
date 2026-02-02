@@ -64,8 +64,9 @@ Los siguientes archivos NO están en GitHub y DEBES copiarlos manualmente desde 
 
 #### Archivos críticos a copiar:
 
-1. **Base de datos**:
-   - `tickets.db` (contiene todos los usuarios, tickets, campañas)
+1. **Base de datos MySQL**:
+   - Exporta la base de datos MySQL con `mysqldump -u ieeetadeo -p ieeetadeo > backup.sql`
+   - Importa en el nuevo servidor con `mysql -u ieeetadeo -p ieeetadeo < backup.sql`
 
 2. **Archivo de configuración**:
    - `.env` (contiene credenciales y configuración)
@@ -95,7 +96,13 @@ Si no tienes el archivo `.env`, créalo con este contenido:
 ```env
 # Configuración de la aplicación
 SECRET_KEY=tu_clave_secreta_aqui_cambiala
-DATABASE_URL=sqlite:///./tickets.db
+
+# Base de datos MySQL
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=ieeetadeo
+MYSQL_PASSWORD=tu_password
+MYSQL_DATABASE=ieeetadeo
 
 # Credenciales de admin por defecto
 ADMIN_USERNAME=admin
@@ -115,11 +122,11 @@ CLOUDFLARE_TUNNEL_TOKEN=tu_token_aqui
 python main.py
 ```
 
-La aplicación estará disponible en: http://localhost:8000
+La aplicación estará disponible en: http://localhost:8070
 
 ### 7. Configurar WhatsApp (Primer uso)
 
-1. Abre: http://localhost:8000/admin/whatsapp
+1. Abre: http://localhost:8070/admin/whatsapp
 2. Haz clic en "Conectar WhatsApp"
 3. Escanea el código QR con tu teléfono
 4. Espera a que se conecte
@@ -135,7 +142,7 @@ Si quieres acceso desde internet:
 # Descarga desde: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/
 
 # Ejecuta el tunnel
-cloudflared tunnel run --url http://localhost:8000
+cloudflared tunnel run --url http://localhost:8070
 ```
 
 O usa `start.bat` si ya tienes la configuración.
@@ -150,8 +157,7 @@ tickets_IEEE/
 ├── whatsapp_client.py      # Cliente de WhatsApp
 ├── schemas.py              # Modelos de datos
 ├── requirements.txt        # Dependencias Python
-├── .env                    # Configuración (NO en git)
-├── tickets.db              # Base de datos (NO en git)
+├── .env                    # Configuración y credenciales MySQL (NO en git)
 ├── templates/              # Plantillas HTML
 ├── static/                 # Archivos estáticos
 └── logs/                   # Logs de la aplicación
@@ -169,9 +175,9 @@ tickets_IEEE/
 - [ ] Entorno virtual creado y activado
 - [ ] Dependencias instaladas (`pip list` muestra paquetes)
 - [ ] Archivo `.env` configurado
-- [ ] Base de datos `tickets.db` copiada
+- [ ] Base de datos MySQL configurada e importada
 - [ ] Servidor inicia sin errores (`python main.py`)
-- [ ] Puedes acceder a http://localhost:8000
+- [ ] Puedes acceder a http://localhost:8070
 - [ ] Login funciona con admin/admin123
 - [ ] WhatsApp conectado (si es necesario)
 
@@ -208,10 +214,6 @@ pip install -r requirements.txt --force-reinstall
 - Activa el entorno virtual: `.venv\Scripts\activate`
 - Reinstala: `pip install -r requirements.txt`
 
-### Error: "Database locked"
-- Cierra todas las instancias de la aplicación
-- Verifica que no haya otro proceso usando `tickets.db`
-
 ### WhatsApp no se conecta
 - Asegúrate de tener Chrome instalado
 - Elimina carpeta `whatsapp-session` y vuelve a escanear QR
@@ -234,7 +236,7 @@ pip install -r requirements.txt --force-reinstall
 ## Notas Importantes
 
 1. **NO compartas** el archivo `.env` públicamente
-2. **Haz backups** regulares de `tickets.db`
+2. **Haz backups** regulares de la base de datos MySQL (`mysqldump -u ieeetadeo -p ieeetadeo > backup.sql`)
 3. **Mantén actualizado** el código con `git pull`
 4. **Usa entorno virtual** siempre que trabajes en el proyecto
 5. **La sesión de WhatsApp** debe configurarse en cada computador

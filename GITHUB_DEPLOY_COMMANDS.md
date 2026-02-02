@@ -125,7 +125,7 @@ tail -f ~/domains/ieeetadeo.org/public_html/ticket/birthday_logs.txt
 - **Haz commit localmente** antes de probar en el servidor
 - **Prueba primero local** antes de push a GitHub
 - El servidor usa **túnel SSH** para acceso desde fuera
-- La base de datos **SQLite (tickets.db)** está en el servidor y no se sube a GitHub (está en .gitignore)
+- La base de datos **MySQL** está en el servidor y se configura mediante variables de entorno en `.env`
 
 ## ❌ Solución de Problemas
 
