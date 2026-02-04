@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Gestion de WhatsApp - IEEE Tadeo Control System{% endblock %}
+{% block title %}Gestión de WhatsApp - IEEE Tadeo Control System{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -648,7 +648,7 @@
 <div class="whatsapp-container">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h1 style="margin: 0;">
-            <i class="fab fa-whatsapp" style="color: #25D366;"></i> Gestion de WhatsApp
+            <i class="fab fa-whatsapp" style="color: #25D366;"></i> Gestión de WhatsApp
         </h1>
         <span class="meta-badge">
             <i class="fab fa-meta"></i> Meta Cloud API
@@ -675,7 +675,7 @@
             <div class="status-header">
                 <div class="status-indicator">
                     <span class="status-dot" id="statusDot"></span>
-                    <span id="statusText">Verificando conexion...</span>
+                    <span id="statusText">Verificando conexión...</span>
                 </div>
                 <button class="btn btn-secondary btn-sm" onclick="refreshStatus()">
                     <i class="fas fa-sync-alt"></i> Actualizar
@@ -684,7 +684,7 @@
 
             <div class="api-info-grid" id="apiInfoGrid" style="display: none;">
                 <div class="api-info-item">
-                    <div class="api-info-label">Numero</div>
+                    <div class="api-info-label">Número</div>
                     <div class="api-info-value" id="phoneNumber">-</div>
                 </div>
                 <div class="api-info-item">
@@ -710,12 +710,12 @@
         </div>
 
         <div class="status-card">
-            <h3 style="margin-top: 0;">Informacion sobre Meta Cloud API</h3>
+            <h3 style="margin-top: 0;">Información sobre Meta Cloud API</h3>
             <ul style="color: #4b5563; line-height: 1.8;">
-                <li>Esta integracion usa la <strong>API oficial de WhatsApp Business</strong> de Meta</li>
-                <li>No requiere mantener un telefono conectado ni escanear codigos QR</li>
+                <li>Esta integración usa la <strong>API oficial de WhatsApp Business</strong> de Meta</li>
+                <li>No requiere mantener un teléfono conectado ni escanear códigos QR</li>
                 <li>Para enviar mensajes a usuarios nuevos, debes usar <strong>Message Templates</strong> aprobados</li>
-                <li>Los mensajes de texto libre solo funcionan si el usuario escribio en las ultimas 24 horas</li>
+                <li>Los mensajes de texto libre solo funcionan si el usuario escribió en las últimas 24 horas</li>
             </ul>
         </div>
     </div>
@@ -738,14 +738,14 @@
             <div class="chat-container">
                 <div class="chat-header" id="chatHeader">
                     <div>
-                        <div style="font-weight: 600;" id="chatContactName">Selecciona una conversacion</div>
+                        <div style="font-weight: 600;" id="chatContactName">Selecciona una conversación</div>
                         <div style="font-size: 12px; color: #6b7280;" id="chatContactPhone"></div>
                     </div>
                 </div>
                 <div class="chat-messages" id="chatMessages">
                     <div class="empty-state">
                         <i class="fab fa-whatsapp"></i>
-                        <p>Selecciona una conversacion para ver los mensajes</p>
+                        <p>Selecciona una conversación para ver los mensajes</p>
                     </div>
                 </div>
                 <div class="chat-input-container">
@@ -787,8 +787,8 @@
 
             <div class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle"></i>
-                <strong>Importante:</strong> Los mensajes de texto libre solo llegaran si el destinatario ha escrito
-                al numero +57 305 4497235 en las ultimas 24 horas. De lo contrario, usa un Template.
+                <strong>Importante:</strong> Los mensajes de texto libre solo llegarán si el destinatario ha escrito
+                al número +57 305 4497235 en las últimas 24 horas. De lo contrario, usa un Template.
             </div>
 
             <div class="form-group">
@@ -802,9 +802,28 @@
             <div id="templateTestForm">
                 <div class="form-group">
                     <label class="form-label">Template</label>
-                    <select class="form-select" id="testTemplate">
+                    <select class="form-select" id="testTemplate" onchange="onTestTemplateChange()">
                         <option value="">Cargando templates...</option>
                     </select>
+                </div>
+
+                <!-- Variables dinámicas según el template -->
+                <div id="templateVariablesSection" style="display: none;">
+                    <div class="alert alert-warning" style="font-size: 13px;">
+                        <i class="fas fa-info-circle"></i>
+                        Este template requiere variables. Completa los campos:
+                    </div>
+                    <div id="templateVariablesFields"></div>
+                </div>
+
+                <!-- Header de imagen (si aplica) -->
+                <div id="templateImageSection" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">Imagen de Header (URL pública)</label>
+                        <input type="text" class="form-control" id="testHeaderImageUrl"
+                               placeholder="https://ejemplo.com/imagen.jpg">
+                        <small style="color: #6b7280;">Opcional: URL pública de la imagen para el header</small>
+                    </div>
                 </div>
             </div>
 
@@ -816,7 +835,7 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Numero de telefono (con codigo de pais)</label>
+                <label class="form-label">Número de teléfono (con código de país)</label>
                 <input type="text" class="form-control" id="testPhone" placeholder="573001234567">
             </div>
 
@@ -840,7 +859,7 @@
                 <div class="form-group">
                     <label class="form-label">Nombre del template *</label>
                     <input type="text" class="form-control" id="templateName" required
-                           pattern="[a-z0-9_]+" title="Solo minusculas, numeros y guion bajo"
+                           pattern="[a-z0-9_]+" title="Solo minúsculas, números y guion bajo"
                            placeholder="mi_template_ejemplo">
                     <small style="color: #6b7280;">Solo minúsculas, números y guion bajo (_)</small>
                 </div>
@@ -889,10 +908,46 @@
                 </div>
 
                 <div id="headerImageInput" style="display: none; margin-top: 10px;">
-                    <div style="background: #f0f9ff; border: 2px dashed #3b82f6; border-radius: 8px; padding: 20px; text-align: center;">
-                        <i class="fas fa-image" style="font-size: 32px; color: #3b82f6; margin-bottom: 10px;"></i>
-                        <p style="margin: 0; color: #1e40af;">La imagen se enviará dinámicamente al usar el template</p>
-                        <small style="color: #6b7280;">Ideal para códigos QR de tickets</small>
+                    <!-- Info: Image headers -->
+                    <div id="imageHeaderWarning" style="margin-bottom: 12px; padding: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
+                        <div style="display: flex; align-items: flex-start; gap: 10px;">
+                            <i class="fas fa-info-circle" style="color: #2563eb; font-size: 18px; margin-top: 2px;"></i>
+                            <div>
+                                <p style="margin: 0 0 6px 0; font-weight: 600; color: #1e40af;">Headers con imagen</p>
+                                <p style="margin: 0; font-size: 13px; color: #1e3a8a;">
+                                    La imagen que subas se usará como <strong>ejemplo</strong> para que Meta apruebe el template.
+                                    Al enviar mensajes, podrás usar cualquier imagen (ej: QR del ticket).
+                                    <br><strong>Recomendado:</strong> Usa una imagen representativa de lo que enviarás.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Image Upload Area -->
+                    <div id="imageUploadArea" style="background: #f0f9ff; border: 2px dashed #3b82f6; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer;" onclick="document.getElementById('headerImageFile').click()">
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 32px; color: #3b82f6; margin-bottom: 10px;"></i>
+                        <p style="margin: 0; color: #1e40af; font-weight: 500;">Haz clic para subir imagen de referencia</p>
+                        <small style="color: #6b7280;">PNG, JPG hasta 5MB - Se optimizará automáticamente</small>
+                        <input type="file" id="headerImageFile" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                    </div>
+
+                    <!-- Image Preview -->
+                    <div id="imagePreviewContainer" style="display: none; margin-top: 10px;">
+                        <div style="position: relative; display: inline-block; max-width: 100%;">
+                            <img id="imagePreview" style="max-width: 300px; max-height: 200px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                            <button type="button" onclick="removeHeaderImage()" style="position: absolute; top: -8px; right: -8px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 12px;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="imageInfo" style="margin-top: 8px; font-size: 12px; color: #6b7280;"></div>
+                    </div>
+
+                    <!-- Image optimization info -->
+                    <div style="margin-top: 10px; padding: 10px; background: #fef3c7; border-radius: 6px; font-size: 12px;">
+                        <i class="fas fa-info-circle" style="color: #d97706;"></i>
+                        <span style="color: #92400e;">
+                            <strong>Nota:</strong> La imagen se guardará como referencia. Al enviar el mensaje,
+                            deberás proporcionar la imagen real (ej: QR del ticket).
+                        </span>
                     </div>
                 </div>
             </div>
@@ -1023,7 +1078,7 @@ async function refreshStatus() {
             qualityBadge.className = 'quality-badge ' + (quality === 'GREEN' ? 'green' : quality === 'YELLOW' ? 'yellow' : 'green');
         } else {
             statusDot.className = 'status-dot error';
-            statusText.textContent = 'Error de Conexion';
+            statusText.textContent = 'Error de Conexión';
             apiInfoGrid.style.display = 'none';
             errorInfo.style.display = 'block';
             document.getElementById('errorMessage').textContent = data.error || 'Error desconocido';
@@ -1148,7 +1203,7 @@ async function sendReply() {
             showAlert(data.error || 'Error al enviar mensaje', 'error');
         }
     } catch (error) {
-        showAlert('Error de conexion', 'error');
+        showAlert('Error de conexión', 'error');
     }
 }
 
@@ -1158,6 +1213,8 @@ document.getElementById('replyInput').addEventListener('keypress', (e) => {
 });
 
 // Templates functions
+let headerImageData = null; // Store the uploaded image data
+
 function toggleTemplatePreview(index) {
     const preview = document.getElementById(`templatePreview${index}`);
     const btn = preview.previousElementSibling;
@@ -1169,6 +1226,172 @@ function toggleTemplatePreview(index) {
         preview.classList.add('show');
         btn.innerHTML = '<i class="fas fa-times"></i> Ocultar preview';
     }
+}
+
+// Image upload and optimization functions
+async function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        showAlert('Por favor selecciona un archivo de imagen', 'error');
+        return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showAlert('La imagen no debe superar 5MB', 'error');
+        return;
+    }
+
+    try {
+        // Show loading state
+        document.getElementById('imageUploadArea').innerHTML = `
+            <i class="fas fa-spinner fa-spin" style="font-size: 32px; color: #3b82f6; margin-bottom: 10px;"></i>
+            <p style="margin: 0; color: #1e40af;">Optimizando imagen...</p>
+        `;
+
+        // Optimize the image
+        const optimizedImage = await optimizeImage(file);
+
+        // Display preview
+        document.getElementById('imagePreview').src = optimizedImage.dataUrl;
+        document.getElementById('imagePreviewContainer').style.display = 'block';
+        document.getElementById('imageUploadArea').style.display = 'none';
+
+        // Store image data
+        headerImageData = {
+            dataUrl: optimizedImage.dataUrl,
+            originalName: file.name,
+            originalSize: file.size,
+            optimizedSize: optimizedImage.size,
+            width: optimizedImage.width,
+            height: optimizedImage.height,
+            type: optimizedImage.type
+        };
+
+        // Show image info
+        const savings = Math.round((1 - optimizedImage.size / file.size) * 100);
+        document.getElementById('imageInfo').innerHTML = `
+            <i class="fas fa-check-circle" style="color: #10b981;"></i>
+            <strong>${optimizedImage.width}x${optimizedImage.height}px</strong> |
+            Original: ${formatFileSize(file.size)} →
+            Optimizado: ${formatFileSize(optimizedImage.size)}
+            ${savings > 0 ? `<span style="color: #10b981;">(${savings}% reducido)</span>` : ''}
+        `;
+
+        // Update preview
+        updatePreview();
+
+    } catch (error) {
+        console.error('Error processing image:', error);
+        showAlert('Error al procesar la imagen', 'error');
+        resetImageUpload();
+    }
+}
+
+async function optimizeImage(file) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            img.onload = () => {
+                // Target dimensions for WhatsApp (max 1024px, recommended 800x418 for headers)
+                const maxWidth = 1024;
+                const maxHeight = 1024;
+
+                let width = img.width;
+                let height = img.height;
+
+                // Scale down if necessary
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+
+                // Create canvas and draw resized image
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, width, height);
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Determine output format and quality
+                let outputType = 'image/jpeg';
+                let quality = 0.85;
+
+                // Keep PNG for images with transparency or if original is PNG
+                if (file.type === 'image/png') {
+                    // Check if image has transparency
+                    const imageData = ctx.getImageData(0, 0, width, height);
+                    const hasTransparency = checkTransparency(imageData);
+                    if (hasTransparency) {
+                        outputType = 'image/png';
+                        quality = undefined;
+                    }
+                }
+
+                // Convert to data URL
+                const dataUrl = canvas.toDataURL(outputType, quality);
+
+                // Calculate size
+                const base64Length = dataUrl.split(',')[1].length;
+                const size = Math.round(base64Length * 0.75);
+
+                resolve({
+                    dataUrl,
+                    width,
+                    height,
+                    size,
+                    type: outputType
+                });
+            };
+
+            img.onerror = () => reject(new Error('Error loading image'));
+            img.src = e.target.result;
+        };
+
+        reader.onerror = () => reject(new Error('Error reading file'));
+        reader.readAsDataURL(file);
+    });
+}
+
+function checkTransparency(imageData) {
+    const data = imageData.data;
+    for (let i = 3; i < data.length; i += 4) {
+        if (data[i] < 255) return true;
+    }
+    return false;
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+}
+
+function removeHeaderImage() {
+    headerImageData = null;
+    document.getElementById('headerImageFile').value = '';
+    document.getElementById('imagePreviewContainer').style.display = 'none';
+    resetImageUpload();
+    updatePreview();
+}
+
+function resetImageUpload() {
+    document.getElementById('imageUploadArea').style.display = 'block';
+    document.getElementById('imageUploadArea').innerHTML = `
+        <i class="fas fa-cloud-upload-alt" style="font-size: 32px; color: #3b82f6; margin-bottom: 10px;"></i>
+        <p style="margin: 0; color: #1e40af; font-weight: 500;">Haz clic para subir imagen de referencia</p>
+        <small style="color: #6b7280;">PNG, JPG hasta 5MB - Se optimizara automaticamente</small>
+        <input type="file" id="headerImageFile" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+    `;
 }
 
 async function loadTemplates() {
@@ -1269,6 +1492,17 @@ async function loadTemplates() {
                     </div>`;
             }
 
+            // Replace variables with example values for preview
+            let previewBodyText = bodyText;
+            uniqueVars.forEach((v, i) => {
+                const varNum = parseInt(v.match(/\d+/)[0]);
+                const example = examples[varNum - 1] || varSuggestions[v] || `[Variable ${varNum}]`;
+                previewBodyText = previewBodyText.replace(
+                    new RegExp(`\\{\\{${varNum}\\}\\}`, 'g'),
+                    `<span style="background: #dcfce7; padding: 0 3px; border-radius: 3px;">${example}</span>`
+                );
+            });
+
             // Category icon
             const categoryIcon = {
                 'UTILITY': 'fa-tools',
@@ -1311,7 +1545,7 @@ async function loadTemplates() {
                         <div class="template-preview-bubble">
                             ${header?.text ? `<div class="header">${header.text}</div>` : ''}
                             ${header?.format === 'IMAGE' ? '<div style="background: #ddd; height: 150px; border-radius: 6px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; color: #666;"><i class="fas fa-image fa-2x"></i></div>' : ''}
-                            <div class="body">${bodyText || 'Tu código de verificación es {{1}}'}</div>
+                            <div class="body">${previewBodyText || 'Tu código de verificación es {{1}}'}</div>
                             ${footer?.text ? `<div class="footer">${footer.text}</div>` : ''}
                             ${buttonsHtml}
                         </div>
@@ -1329,7 +1563,7 @@ async function loadTemplates() {
         // Update test select
         const approvedTemplates = templates.filter(t => t.status === 'APPROVED');
         testSelect.innerHTML = approvedTemplates.length > 0
-            ? approvedTemplates.map(t => `<option value="${t.name}">${t.name} (${t.language})</option>`).join('')
+            ? approvedTemplates.map(t => `<option value="${t.name}" data-language="${t.language}">${t.name} (${t.language})</option>`).join('')
             : '<option value="">No hay templates aprobados</option>';
 
     } catch (error) {
@@ -1348,6 +1582,10 @@ function closeModal() {
     document.getElementById('variablesSection').style.display = 'none';
     document.getElementById('headerTextInput').style.display = 'none';
     document.getElementById('headerImageInput').style.display = 'none';
+    // Reset image upload
+    headerImageData = null;
+    document.getElementById('imagePreviewContainer').style.display = 'none';
+    resetImageUpload();
 }
 
 function onCategoryChange() {
@@ -1381,6 +1619,13 @@ function onHeaderTypeChange() {
     const headerType = document.getElementById('templateHeaderType').value;
     document.getElementById('headerTextInput').style.display = headerType === 'TEXT' ? 'block' : 'none';
     document.getElementById('headerImageInput').style.display = headerType === 'IMAGE' ? 'block' : 'none';
+
+    // Mostrar aviso si seleccionan IMAGE (aún no completamente implementado)
+    const imageWarning = document.getElementById('imageHeaderWarning');
+    if (imageWarning) {
+        imageWarning.style.display = headerType === 'IMAGE' ? 'block' : 'none';
+    }
+
     updatePreview();
 }
 
@@ -1449,7 +1694,11 @@ function updatePreview() {
         previewHeader.textContent = headerText;
     } else if (headerType === 'IMAGE') {
         previewHeader.style.display = 'block';
-        previewHeader.innerHTML = '<div style="background: #f0f0f0; height: 120px; border-radius: 4px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;"><i class="fas fa-image" style="font-size: 32px; color: #9ca3af;"></i></div>';
+        if (headerImageData && headerImageData.dataUrl) {
+            previewHeader.innerHTML = `<img src="${headerImageData.dataUrl}" style="max-width: 100%; max-height: 150px; border-radius: 4px; margin-bottom: 8px;">`;
+        } else {
+            previewHeader.innerHTML = '<div style="background: #f0f0f0; height: 120px; border-radius: 4px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;"><i class="fas fa-image" style="font-size: 32px; color: #9ca3af;"></i></div>';
+        }
     } else {
         previewHeader.style.display = 'none';
     }
@@ -1494,6 +1743,12 @@ async function createTemplate(e) {
         return exampleInput ? exampleInput.value : `Ejemplo ${num}`;
     });
 
+    // Validar que si es IMAGE, haya una imagen cargada
+    if (headerType === 'IMAGE' && !headerImageData) {
+        showAlert('Debes subir una imagen para el header', 'error');
+        return;
+    }
+
     const data = {
         name: document.getElementById('templateName').value,
         display_name: document.getElementById('templateDisplayName').value,
@@ -1503,6 +1758,7 @@ async function createTemplate(e) {
         footer_text: document.getElementById('templateFooter').value || null,
         header_type: headerType !== 'NONE' ? headerType : null,
         header_text: headerType === 'TEXT' ? document.getElementById('templateHeaderText').value : null,
+        header_image_base64: headerType === 'IMAGE' && headerImageData ? headerImageData.dataUrl : null,
         variable_examples: variableExamples.length > 0 ? variableExamples : null
     };
 
@@ -1531,6 +1787,11 @@ async function createTemplate(e) {
             if (result.error_user_msg) {
                 errorMsg += ': ' + result.error_user_msg;
             }
+            if (result.error_code) {
+                errorMsg += ` (Code: ${result.error_code})`;
+            }
+            // Log full error for debugging
+            console.error('Template creation error:', result);
             showAlert(errorMsg, 'error');
         }
     } catch (error) {
@@ -1543,6 +1804,80 @@ function toggleTestForm() {
     const type = document.getElementById('testMessageType').value;
     document.getElementById('templateTestForm').style.display = type === 'template' ? 'block' : 'none';
     document.getElementById('textTestForm').style.display = type === 'text' ? 'block' : 'none';
+}
+
+// Variable suggestions for known templates
+const templateVariableInfo = {
+    'tickets_event': {
+        variables: ['Nombre del usuario', 'Nombre del evento', 'Fecha del evento', 'Lugar del evento'],
+        examples: ['María García', 'Workshop de Python', '15 de Feb 2026 - 10:00 AM', 'Auditorio UTadeo'],
+        hasImage: true
+    },
+    'event_reminder': {
+        variables: ['Nombre', 'Evento', 'Fecha', 'Lugar'],
+        examples: ['Juan', 'Conferencia IEEE', 'Mañana 3:00 PM', 'Sala 301'],
+        hasImage: false
+    }
+};
+
+function onTestTemplateChange() {
+    const templateSelect = document.getElementById('testTemplate');
+    const templateName = templateSelect.value;
+    const variablesSection = document.getElementById('templateVariablesSection');
+    const variablesFields = document.getElementById('templateVariablesFields');
+    const imageSection = document.getElementById('templateImageSection');
+
+    if (!templateName) {
+        variablesSection.style.display = 'none';
+        imageSection.style.display = 'none';
+        return;
+    }
+
+    // Buscar información del template seleccionado
+    const selectedTemplate = templates.find(t => t.name === templateName);
+    if (!selectedTemplate) {
+        variablesSection.style.display = 'none';
+        imageSection.style.display = 'none';
+        return;
+    }
+
+    // Extraer variables del body del template
+    const body = selectedTemplate.components.find(c => c.type === 'BODY');
+    const header = selectedTemplate.components.find(c => c.type === 'HEADER');
+    const bodyText = body?.text || '';
+    const variableMatches = bodyText.match(/\{\{(\d+)\}\}/g) || [];
+    const uniqueVars = [...new Set(variableMatches)].sort((a, b) =>
+        parseInt(a.match(/\d+/)[0]) - parseInt(b.match(/\d+/)[0])
+    );
+
+    // Obtener info predefinida o generar genérica
+    const info = templateVariableInfo[templateName] || {
+        variables: uniqueVars.map((v, i) => `Variable ${i + 1}`),
+        examples: uniqueVars.map((v, i) => `Ejemplo ${i + 1}`),
+        hasImage: header?.format === 'IMAGE'
+    };
+
+    // Mostrar campos de variables
+    if (uniqueVars.length > 0) {
+        variablesSection.style.display = 'block';
+        variablesFields.innerHTML = uniqueVars.map((v, i) => `
+            <div class="form-group">
+                <label class="form-label">${info.variables[i] || 'Variable ' + (i + 1)} <code>${v}</code></label>
+                <input type="text" class="form-control" id="testVar${i}"
+                       placeholder="${info.examples[i] || ''}"
+                       value="${info.examples[i] || ''}">
+            </div>
+        `).join('');
+    } else {
+        variablesSection.style.display = 'none';
+    }
+
+    // Mostrar campo de imagen si el template tiene header IMAGE
+    if (header?.format === 'IMAGE') {
+        imageSection.style.display = 'block';
+    } else {
+        imageSection.style.display = 'none';
+    }
 }
 
 async function sendTestMessage() {
@@ -1558,20 +1893,50 @@ async function sendTestMessage() {
         let response;
 
         if (type === 'template') {
-            const templateName = document.getElementById('testTemplate').value;
+            const templateSelect = document.getElementById('testTemplate');
+            const templateName = templateSelect.value;
             if (!templateName) {
                 showAlert('Selecciona un template', 'error');
                 return;
             }
+            const templateLanguage = templateSelect.selectedOptions[0].dataset.language || 'es_MX';
+
+            // Recoger variables
+            const variables = [];
+            let i = 0;
+            while (document.getElementById(`testVar${i}`)) {
+                const value = document.getElementById(`testVar${i}`).value.trim();
+                if (value) {
+                    variables.push(value);
+                }
+                i++;
+            }
+
+            // Recoger imagen de header si existe
+            const headerImageUrl = document.getElementById('testHeaderImageUrl')?.value.trim() || null;
+
+            const requestBody = {
+                phone,
+                template_name: templateName,
+                language: templateLanguage
+            };
+
+            // Solo agregar variables si hay alguna
+            if (variables.length > 0) {
+                requestBody.variables = variables;
+            }
+
+            // Agregar imagen si se proporcionó
+            if (headerImageUrl) {
+                requestBody.header_image_link = headerImageUrl;
+            }
+
+            console.log('Enviando template:', requestBody);
 
             response = await fetch('/whatsapp/send-template', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    phone,
-                    template_name: templateName,
-                    language: 'es'
-                })
+                body: JSON.stringify(requestBody)
             });
         } else {
             const message = document.getElementById('testMessage').value.trim();
@@ -1595,7 +1960,8 @@ async function sendTestMessage() {
             showAlert(data.error || 'Error al enviar mensaje', 'error');
         }
     } catch (error) {
-        showAlert('Error de conexion', 'error');
+        console.error('Error:', error);
+        showAlert('Error de conexión', 'error');
     }
 }
 

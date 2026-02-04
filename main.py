@@ -5787,6 +5787,61 @@ def regenerate_module_api_key(
     return {"api_key": module.api_key, "message": "API Key regenerada"}
 
 
+@app.post("/api/admin/generate-external-token")
+def admin_generate_external_token(
+    body: schemas.ExternalTokenRequest,
+    db: Session = Depends(get_db),
+    current_admin: models.AdminUser = Depends(require_admin)
+):
+    """
+    Genera un token temporal para que el admin acceda a un módulo externo.
+    Busca el User asociado al email del admin.
+    """
+    import secrets as sec
+
+    # Buscar módulo
+    module = db.query(models.ExternalModule).filter(
+        models.ExternalModule.name == body.module_name,
+        models.ExternalModule.is_active == True
+    ).first()
+    if not module:
+        raise HTTPException(status_code=404, detail="Módulo no encontrado")
+
+    # Buscar User con el mismo email que el admin, o crearlo automáticamente
+    user = db.query(models.User).filter(
+        models.User.email == current_admin.email
+    ).first()
+    if not user:
+        # Crear User automáticamente para el admin
+        user = models.User(
+            name=current_admin.full_name,
+            email=current_admin.email,
+            branch_role="admin"
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    token = sec.token_urlsafe(48)
+    expires = datetime.utcnow() + timedelta(minutes=30)
+
+    db.add(models.ExternalUserToken(
+        token=token,
+        user_id=user.id,
+        module_id=module.id,
+        expires_at=expires
+    ))
+    db.commit()
+
+    redirect_url = f"{module.callback_url}?token={token}" if module.callback_url else None
+
+    return {
+        "token": token,
+        "expires_at": expires.isoformat(),
+        "redirect_url": redirect_url
+    }
+
+
 # ========== PÁGINA DE INICIO PÚBLICA ==========
 
 @app.get("/")
@@ -6615,8 +6670,9 @@ def delete_whatsapp_template(
 class SendTemplateRequest(BaseModel):
     phone: str
     template_name: str
-    language: str = "es"
+    language: str = "es_MX"
     variables: Optional[List[str]] = None
+    header_image_link: Optional[str] = None
 
 
 @app.post("/whatsapp/send-template")
@@ -6633,7 +6689,8 @@ def send_template_message(
             phone=request.phone,
             template_name=request.template_name,
             language=request.language,
-            variables=request.variables
+            variables=request.variables,
+            header_image_link=request.header_image_link
         )
 
         return result
