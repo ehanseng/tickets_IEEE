@@ -39,9 +39,25 @@ whatsapp-session/
 nul
 te.txt
 *.tmp
+temp_*.html
+
+# Test/utility scripts (one-off)
+test_*.py
+test_*.csv
 
 # Message images (regenerated)
 static/message_images/
+
+# Generated static content
+static/qr_codes/
+static/salon/
+static/whatsapp_images/
+
+# Module starters (boilerplate)
+modulo_*_starter/
+
+# SQL examples
+*.sql
 
 # Migration scripts (one-time use)
 import_users_and_tickets.py
