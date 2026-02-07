@@ -379,6 +379,7 @@ def get_admin_permissions_schema(
         "sections": [
             {"key": "dashboard", "name": "Dashboard", "description": "Ver estadisticas generales"},
             {"key": "events", "name": "Eventos", "description": "Gestionar eventos"},
+            {"key": "contests", "name": "Concursos", "description": "Gestionar concursos y convocatorias"},
             {"key": "projects", "name": "Proyectos", "description": "Gestionar proyectos"},
             {"key": "tickets", "name": "Tickets", "description": "Gestionar tickets"},
             {"key": "users", "name": "Contactos", "description": "Gestionar contactos/usuarios"},
