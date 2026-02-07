@@ -388,6 +388,7 @@ def get_admin_permissions_schema(
             {"key": "whatsapp", "name": "WhatsApp", "description": "Administrar WhatsApp"},
             {"key": "universities", "name": "Universidades", "description": "Gestionar universidades"},
             {"key": "organizations", "name": "Organizaciones", "description": "Gestionar organizaciones"},
+            {"key": "allied_companies", "name": "Aliados", "description": "Gestionar empresas aliadas"},
             {"key": "tags", "name": "Etiquetas", "description": "Gestionar etiquetas"},
             {"key": "catalogs", "name": "Catálogos", "description": "Gestionar catálogos de perfilamiento"},
             {"key": "access", "name": "Accesos", "description": "Gestionar usuarios administrativos"},
