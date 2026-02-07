@@ -8,7 +8,7 @@ start.bat
 
 # Paso 2: Elige opción de túnel (1, 2 o 3)
 
-# Paso 3: Abre http://localhost:8000/admin
+# Paso 3: Abre http://localhost:8070/admin
 ```
 
 **¡Eso es todo!** 🎉
@@ -32,9 +32,9 @@ Cuando se abra la ventana de WhatsApp:
 
 | Servicio | URL |
 |----------|-----|
-| **Admin Panel** | http://localhost:8000/admin |
-| **Portal Usuario** | http://localhost:8000/portal |
-| **API Docs** | http://localhost:8000/docs |
+| **Admin Panel** | http://localhost:8070/admin |
+| **Portal Usuario** | http://localhost:8070/portal |
+| **API Docs** | http://localhost:8070/docs |
 | **WhatsApp Status** | http://localhost:3000/status |
 
 **Credenciales:**

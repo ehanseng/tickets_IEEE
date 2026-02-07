@@ -1503,6 +1503,8 @@ def update_user(
         user.birthday = user_update.birthday
     if user_update.is_ieee_member is not None:
         user.is_ieee_member = user_update.is_ieee_member
+    if user_update.is_professor is not None:
+        user.is_professor = user_update.is_professor
     if user_update.branch_role is not None:
         user.branch_role = user_update.branch_role if user_update.branch_role else None
 
@@ -4701,9 +4703,15 @@ async def admin_users(
 
         users_list.append(user_obj)
 
+    # Obtener universidades y tags para los filtros
+    universities = db.query(models.University).order_by(models.University.short_name).all()
+    tags = db.query(models.Tag).order_by(models.Tag.name).all()
+
     return templates.TemplateResponse("users.html", {
         "request": request,
-        "users": users_list
+        "users": users_list,
+        "universities": universities,
+        "tags": tags
     })
 
 
@@ -4868,6 +4876,11 @@ async def bulk_send_messages(
     link_text: str = Form(""),
     send_email: str = Form("false"),
     send_whatsapp: str = Form("false"),
+    whatsapp_message_type: str = Form("free"),
+    whatsapp_template: str = Form(""),
+    template_vars: str = Form("{}"),
+    template_image_url: str = Form(""),
+    template_image_file: UploadFile = File(None),
     image: UploadFile = File(None),
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(require_admin)
@@ -4891,6 +4904,57 @@ async def bulk_send_messages(
 
     if not send_email_bool and not send_whatsapp_bool:
         raise HTTPException(status_code=400, detail="Debes seleccionar al menos un canal de envío")
+
+    # Parsear variables del template si se usa (ahora es un array de valores manuales)
+    template_vars_list = []
+    if whatsapp_message_type == "template" and template_vars:
+        try:
+            parsed = json.loads(template_vars)
+            # Puede ser lista o diccionario (para compatibilidad)
+            if isinstance(parsed, list):
+                template_vars_list = parsed
+            elif isinstance(parsed, dict):
+                # Convertir dict a lista ordenada
+                template_vars_list = [parsed.get("evento", ""), parsed.get("fecha", ""), parsed.get("lugar", "")]
+        except:
+            template_vars_list = []
+
+    print(f"[BULK] WhatsApp message type: {whatsapp_message_type}, template: {whatsapp_template}, manual_vars: {template_vars_list}")
+
+    # Procesar imagen del template si fue subida (para WhatsApp)
+    final_template_image_url = template_image_url  # Por defecto usar la URL proporcionada
+    if template_image_file and template_image_file.filename:
+        import time
+        # Guardar imagen en carpeta pública
+        template_images_dir = "static/whatsapp_images"
+        os.makedirs(template_images_dir, exist_ok=True)
+
+        # Leer y procesar imagen
+        template_img_content = await template_image_file.read()
+        template_img = Image.open(BytesIO(template_img_content))
+
+        # Convertir a RGB si es necesario
+        if template_img.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', template_img.size, (255, 255, 255))
+            if template_img.mode == 'P':
+                template_img = template_img.convert('RGBA')
+            background.paste(template_img, mask=template_img.split()[-1] if template_img.mode in ('RGBA', 'LA') else None)
+            template_img = background
+
+        # Guardar con nombre único
+        timestamp = int(time.time())
+        safe_filename = template_image_file.filename.replace(" ", "_")
+        template_img_filename = f"template_{timestamp}_{safe_filename}"
+        if not template_img_filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+            template_img_filename += '.jpg'
+        template_img_path = os.path.join(template_images_dir, template_img_filename)
+
+        # Guardar como JPEG
+        template_img.save(template_img_path, format='JPEG', quality=90, optimize=True)
+
+        # Generar URL pública
+        final_template_image_url = f"{BASE_URL}/static/whatsapp_images/{template_img_filename}"
+        print(f"[BULK] Template image saved: {template_img_path} -> {final_template_image_url}")
 
     # Procesar imagen si fue proporcionada
     image_url = None
@@ -5012,25 +5076,50 @@ async def bulk_send_messages(
 
                 whatsapp_client = WhatsAppClient()
                 if whatsapp_client.is_ready():
-                    result = send_bulk_whatsapp(
-                        phone=user.phone,
-                        country_code=user.country_code,
-                        user_name=display_name,
-                        subject=subject,
-                        message=personalized_message,
-                        link=link if link else None,
-                        image_base64=image_url if image_url else None
-                    )
+                    result = None
 
-                    if result.get("success"):
+                    # Decidir si usar template o mensaje libre
+                    if whatsapp_message_type == "template" and whatsapp_template:
+                        # Construir variables para el template
+                        # Primera variable: nombre del usuario (auto)
+                        # Siguientes variables: valores manuales de template_vars_list
+                        template_variables = [display_name] + template_vars_list
+
+                        print(f"[TEMPLATE] Sending '{whatsapp_template}' to {user.phone}: {template_variables}")
+
+                        result = whatsapp_client.send_template_message(
+                            phone=user.phone,
+                            template_name=whatsapp_template,
+                            language="es_MX",
+                            variables=template_variables,
+                            country_code=user.country_code,
+                            header_image_link=final_template_image_url if final_template_image_url else None
+                        )
+                    else:
+                        # Mensaje libre
+                        result = send_bulk_whatsapp(
+                            phone=user.phone,
+                            country_code=user.country_code,
+                            user_name=display_name,
+                            subject=subject,
+                            message=personalized_message,
+                            link=link if link else None,
+                            image_base64=image_url if image_url else None
+                        )
+
+                    if result and result.get("success"):
                         recipient.whatsapp_sent = True
                         recipient.whatsapp_sent_at = get_bogota_now_naive()
-                        recipient.whatsapp_message_id = result.get("message_id")
+                        recipient.whatsapp_message_id = result.get("message_id") or result.get("messageId")
                         recipient.whatsapp_status = "pending"
                         campaign.whatsapp_sent += 1
                     else:
                         recipient.whatsapp_sent = False
-                        recipient.whatsapp_error = result.get("error", "Unknown error")
+                        # Asegurar que el error sea string (puede venir como dict)
+                        error_value = result.get("error", "Unknown error") if result else "No result"
+                        if isinstance(error_value, dict):
+                            error_value = json.dumps(error_value)
+                        recipient.whatsapp_error = str(error_value)[:500]  # Limitar longitud
                         campaign.whatsapp_failed += 1
                 else:
                     recipient.whatsapp_sent = False
@@ -5682,6 +5771,100 @@ async def upload_allied_company_logo(
     return {"logo_path": company.logo_path}
 
 
+# ========== CONCURSOS ==========
+
+@app.get("/admin/contests", response_class=HTMLResponse)
+async def admin_contests(request: Request, db: Session = Depends(get_db)):
+    """Pagina de gestion de concursos"""
+    contests = db.query(models.Contest).order_by(models.Contest.display_order, models.Contest.created_at.desc()).all()
+    return templates.TemplateResponse("contests.html", {
+        "request": request,
+        "contests": contests
+    })
+
+
+@app.get("/api/contests")
+def list_contests(active_only: bool = False, db: Session = Depends(get_db)):
+    """Listar concursos (publico para el portal de usuarios)"""
+    query = db.query(models.Contest)
+    if active_only:
+        query = query.filter(models.Contest.is_active == True)
+    contests = query.order_by(models.Contest.display_order, models.Contest.created_at.desc()).all()
+    return [{
+        "id": c.id,
+        "name": c.name,
+        "description": c.description,
+        "category": c.category,
+        "modality": c.modality,
+        "prizes": c.prizes,
+        "deadline": c.deadline,
+        "url": c.url,
+        "is_active": c.is_active,
+        "display_order": c.display_order
+    } for c in contests]
+
+
+@app.post("/api/contests")
+def create_contest(
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Crear un concurso"""
+    contest = models.Contest(
+        name=body["name"],
+        description=body.get("description"),
+        category=body.get("category", "IEEE"),
+        modality=body.get("modality"),
+        prizes=body.get("prizes"),
+        deadline=body.get("deadline"),
+        url=body.get("url"),
+        is_active=body.get("is_active", True),
+        display_order=body.get("display_order", 0)
+    )
+    db.add(contest)
+    db.commit()
+    db.refresh(contest)
+    return {"id": contest.id, "name": contest.name}
+
+
+@app.put("/api/contests/{contest_id}")
+def update_contest(
+    contest_id: int,
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Actualizar un concurso"""
+    contest = db.query(models.Contest).filter(models.Contest.id == contest_id).first()
+    if not contest:
+        raise HTTPException(status_code=404, detail="Concurso no encontrado")
+
+    for field in ["name", "description", "category", "modality", "prizes", "deadline", "url", "is_active", "display_order"]:
+        if field in body:
+            setattr(contest, field, body[field])
+
+    db.commit()
+    db.refresh(contest)
+    return {"id": contest.id, "name": contest.name}
+
+
+@app.delete("/api/contests/{contest_id}")
+def delete_contest(
+    contest_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.AdminUser = Depends(require_admin)
+):
+    """Eliminar un concurso"""
+    contest = db.query(models.Contest).filter(models.Contest.id == contest_id).first()
+    if not contest:
+        raise HTTPException(status_code=404, detail="Concurso no encontrado")
+
+    db.delete(contest)
+    db.commit()
+    return {"message": "Concurso eliminado"}
+
+
 # ========== MÓDULOS EXTERNOS (Admin CRUD) ==========
 
 @app.get("/api/admin/external-modules")
@@ -5905,6 +6088,7 @@ async def public_home_page(request: Request, db: Session = Depends(get_db)):
     members = []
     students_count = 0
     graduates_count = 0
+    professors_count = 0
 
     if ieee_tadeo_tag:
         # Solo usuarios con perfil completo (tienen nombre Y al menos un estudio registrado)
@@ -5936,6 +6120,14 @@ async def public_home_page(request: Request, db: Session = Depends(get_db)):
             models.User.name != "",
             models.UserStudy.institution.ilike('%Tadeo%'),
             models.UserStudy.status == 'egresado'
+        ).distinct().count()
+
+        # Contar profesores/docentes (usuarios con is_professor=True y tag IEEE Tadeo)
+        professors_count = db.query(models.User).join(models.User.tags).filter(
+            models.Tag.id == ieee_tadeo_tag.id,
+            models.User.name.isnot(None),
+            models.User.name != "",
+            models.User.is_professor == True
         ).distinct().count()
 
     # Contar eventos totales realizados
@@ -6016,6 +6208,7 @@ async def public_home_page(request: Request, db: Session = Depends(get_db)):
         "member_count": len(members),
         "students_count": students_count,
         "graduates_count": graduates_count,
+        "professors_count": professors_count,
         "event_count": event_count,
         "projects": projects,
         "active_projects_count": active_projects_count,
@@ -6741,9 +6934,13 @@ def get_conversation_messages(
     db: Session = Depends(get_db),
     current_user: models.AdminUser = Depends(require_admin)
 ):
-    """Obtener mensajes de una conversación específica"""
+    """Obtener mensajes de una conversación específica (entrantes y salientes)"""
+    # Obtener mensajes entrantes (from_number) y salientes (to_number)
     messages = db.query(models.WhatsAppMessage).filter(
-        models.WhatsAppMessage.from_number == phone_number
+        or_(
+            models.WhatsAppMessage.from_number == phone_number,
+            models.WhatsAppMessage.to_number == phone_number
+        )
     ).order_by(desc(models.WhatsAppMessage.timestamp)).offset(skip).limit(limit).all()
 
     # Marcar conversación como leída
@@ -6762,6 +6959,8 @@ def get_conversation_messages(
                 "wa_message_id": msg.wa_message_id,
                 "from_number": msg.from_number,
                 "from_name": msg.from_name,
+                "to_number": getattr(msg, 'to_number', None),
+                "direction": getattr(msg, 'direction', 'incoming'),
                 "message_type": msg.message_type,
                 "text_body": msg.text_body,
                 "media_id": msg.media_id,
@@ -6790,6 +6989,21 @@ def reply_to_conversation(
         result = client.send_message(phone_number, request.message)
 
         if result.get("success"):
+            message_id = result.get("messageId") or result.get("message_id")
+
+            # Guardar el mensaje enviado en la base de datos
+            outgoing_message = models.WhatsAppMessage(
+                wa_message_id=message_id or f"out_{datetime.utcnow().timestamp()}",
+                from_number=phone_number,  # Para agrupar con la conversación
+                to_number=phone_number,
+                direction="outgoing",
+                message_type="text",
+                text_body=request.message,
+                timestamp=datetime.utcnow(),
+                is_read=True  # Los mensajes enviados ya están "leídos"
+            )
+            db.add(outgoing_message)
+
             # Actualizar conversación
             conversation = db.query(models.WhatsAppConversation).filter(
                 models.WhatsAppConversation.phone_number == phone_number
@@ -6797,11 +7011,12 @@ def reply_to_conversation(
 
             if conversation:
                 conversation.last_message_at = datetime.utcnow()
-                db.commit()
+
+            db.commit()
 
             return {
                 "success": True,
-                "message_id": result.get("messageId"),
+                "message_id": message_id,
                 "message": "Respuesta enviada exitosamente"
             }
         else:

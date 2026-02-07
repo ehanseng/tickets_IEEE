@@ -135,3 +135,10 @@ def require_role(allowed_roles: list[RoleEnum]):
 # Aliases para facilitar el uso
 require_admin = require_role([RoleEnum.ADMIN])
 require_validator = require_role([RoleEnum.ADMIN, RoleEnum.VALIDATOR])
+# Meta reviewer: acceso muy limitado, solo para revisión de Meta
+require_meta_reviewer = require_role([RoleEnum.ADMIN, RoleEnum.META_REVIEWER])
+
+
+def is_meta_reviewer(user: AdminUser) -> bool:
+    """Verifica si el usuario es un revisor de Meta con acceso limitado"""
+    return user.role == RoleEnum.META_REVIEWER

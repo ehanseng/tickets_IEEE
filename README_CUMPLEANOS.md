@@ -47,7 +47,7 @@ Si prefieres configurar manualmente o cambiar la hora:
 
 ### Desde la Web:
 
-1. Ve a: http://127.0.0.1:8000/admin/users
+1. Ve a: http://127.0.0.1:8070/admin/users
 2. Mira el **badge junto a "Cumpleaños"**:
    - 🟢 Verde: Última verificación hace menos de 24 horas
    - 🟡 Amarillo: 24-48 horas

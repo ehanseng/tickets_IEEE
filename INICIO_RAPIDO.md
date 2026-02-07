@@ -100,10 +100,10 @@ Una vez iniciado todo, tendrás acceso a:
 
 | Servicio | URL | Descripción |
 |----------|-----|-------------|
-| Panel Admin | http://localhost:8000/admin | Panel de administración |
-| Portal Usuario | http://localhost:8000/portal | Portal de usuarios |
-| Login Admin | http://localhost:8000/login | Login administrativo |
-| API Docs | http://localhost:8000/docs | Documentación Swagger |
+| Panel Admin | http://localhost:8070/admin | Panel de administración |
+| Portal Usuario | http://localhost:8070/portal | Portal de usuarios |
+| Login Admin | http://localhost:8070/login | Login administrativo |
+| API Docs | http://localhost:8070/docs | Documentación Swagger |
 | WhatsApp Status | http://localhost:3000/status | Estado de WhatsApp |
 | Túnel Público | (Ver ventana del túnel) | URL pública temporal |
 
@@ -249,7 +249,7 @@ start-whatsapp.bat
 - [ ] Escanear QR de WhatsApp (primera vez)
 - [ ] Elegir opción de túnel
 - [ ] Copiar URL pública (si usas túnel)
-- [ ] Acceder a http://localhost:8000/admin
+- [ ] Acceder a http://localhost:8070/admin
 - [ ] Probar login con credenciales por defecto
 
 ---

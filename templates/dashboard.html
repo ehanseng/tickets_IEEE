@@ -107,6 +107,51 @@
     </div>
 </div>
 
+<!-- Past Events -->
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm mb-8">
+    <div class="flex flex-col space-y-1.5 p-6">
+        <h3 class="text-2xl font-semibold leading-none tracking-tight">Eventos Pasados</h3>
+        <p class="text-sm text-muted-foreground">Últimos eventos realizados</p>
+    </div>
+    <div class="p-6 pt-0">
+        {% if past_events %}
+        <div class="relative w-full overflow-auto">
+            <table class="w-full caption-bottom text-sm">
+                <thead class="[&_tr]:border-b">
+                    <tr class="border-b transition-colors hover:bg-muted/50">
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nombre</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Ubicación</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Fecha</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Tickets</th>
+                    </tr>
+                </thead>
+                <tbody class="[&_tr:last-child]:border-0">
+                    {% for event in past_events %}
+                    <tr class="border-b transition-colors hover:bg-muted/50">
+                        <td class="p-4 align-middle font-medium text-muted-foreground">{{ event.name }}</td>
+                        <td class="p-4 align-middle text-muted-foreground">{{ event.location }}</td>
+                        <td class="p-4 align-middle text-muted-foreground">{{ event.event_date.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td class="p-4 align-middle">
+                            <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-gray-300 bg-gray-100 text-gray-700">
+                                {{ event.ticket_count }} tickets
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-8 text-center">
+            <svg class="h-12 w-12 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p class="text-muted-foreground">No hay eventos pasados</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
 <!-- Universities Stats -->
 <div class="grid gap-4 md:grid-cols-2 mb-8">
     <!-- Universities Distribution -->

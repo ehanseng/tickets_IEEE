@@ -38,7 +38,7 @@ FROM_EMAIL=tu-email@gmail.com
 FROM_NAME=IEEE Tadeo - Sistema de Tickets
 
 # URL base del sistema
-BASE_URL=http://127.0.0.1:8000
+BASE_URL=http://127.0.0.1:8070
 ```
 
 ---
@@ -80,7 +80,7 @@ FROM_EMAIL=tu-email@ejemplo.com
 FROM_NAME=IEEE Tadeo - Sistema de Tickets
 
 # URL base del sistema
-BASE_URL=http://127.0.0.1:8000
+BASE_URL=http://127.0.0.1:8070
 ```
 
 ---
@@ -98,7 +98,7 @@ SMTP_USER=postmaster@tu-dominio.mailgun.org
 SMTP_PASSWORD=tu-password-de-mailgun
 FROM_EMAIL=noreply@tu-dominio.com
 FROM_NAME=IEEE Tadeo - Sistema de Tickets
-BASE_URL=http://127.0.0.1:8000
+BASE_URL=http://127.0.0.1:8070
 ```
 
 ---
@@ -116,7 +116,7 @@ SMTP_USER=apikey
 SMTP_PASSWORD=tu-api-key-de-sendgrid
 FROM_EMAIL=tu-email@ejemplo.com
 FROM_NAME=IEEE Tadeo - Sistema de Tickets
-BASE_URL=http://127.0.0.1:8000
+BASE_URL=http://127.0.0.1:8070
 ```
 
 ---

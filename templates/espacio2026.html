@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IEEE Tadeo Lab 2026 - Propuesta de Espacio</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .gradient-ieee { background: linear-gradient(135deg, #00629B 0%, #004d73 50%, #003d5c 100%); }
+        .gradient-gold { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .gradient-innovation { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #8b5cf6 100%); }
+        .text-gradient { background: linear-gradient(135deg, #00629B, #00A3E0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .text-gradient-gold { background: linear-gradient(135deg, #f59e0b, #ea580c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .card-hover { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .card-hover:hover { transform: translateY(-8px) scale(1.02); box-shadow: 0 25px 50px rgba(0,0,0,0.15); }
+        .float-animation { animation: float 6s ease-in-out infinite; }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        .pulse-glow { animation: pulseGlow 2s ease-in-out infinite; }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 98, 155, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(0, 98, 155, 0.6); }
+        }
+        .counter { font-variant-numeric: tabular-nums; }
+        .timeline-line { background: linear-gradient(180deg, #00629B 0%, #00A3E0 100%); }
+        .bg-pattern {
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2300629B' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .scroll-indicator {
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0) translateX(-50%); }
+            40% { transform: translateY(-10px) translateX(-50%); }
+            60% { transform: translateY(-5px) translateX(-50%); }
+        }
+        .reveal { opacity: 0; transform: translateY(30px); transition: all 0.8s ease; }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+        /* Lightbox */
+        .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; }
+        .lightbox.active { display: flex; }
+        .lightbox img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 8px; }
+        .lightbox-close { position: absolute; top: 20px; right: 30px; color: white; font-size: 40px; cursor: pointer; transition: transform 0.2s; }
+        .lightbox-close:hover { transform: scale(1.2); }
+        .gallery-img { cursor: zoom-in; }
+        @media print {
+            .no-print { display: none !important; }
+            .page-break { page-break-before: always; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Hero Section - Full Screen -->
+    <section class="min-h-screen gradient-ieee relative overflow-hidden flex items-center">
+        <!-- Background Elements -->
+        <div class="absolute inset-0 overflow-hidden">
+            <div class="absolute top-20 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl float-animation"></div>
+            <div class="absolute bottom-20 right-10 w-96 h-96 bg-cyan-400/10 rounded-full blur-3xl float-animation" style="animation-delay: -3s;"></div>
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-white/5 rounded-full blur-3xl"></div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-6 py-20 relative z-10">
+            <div class="grid lg:grid-cols-2 gap-16 items-center">
+                <div class="text-white">
+                    <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-8">
+                        <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                        <span class="text-sm font-medium">Propuesta Institucional 2026</span>
+                    </div>
+
+                    <h1 class="text-5xl md:text-6xl lg:text-7xl font-black leading-tight mb-6">
+                        Un Espacio<br>
+                        <span class="text-cyan-300">para Innovar</span>
+                    </h1>
+
+                    <p class="text-xl md:text-2xl text-blue-100 mb-8 leading-relaxed">
+                        La Rama Estudiantil IEEE Tadeo necesita crecer.
+                        Presentamos nuestra visión para un nuevo laboratorio
+                        de <strong class="text-white">investigación, desarrollo e innovación</strong>.
+                    </p>
+
+                    <div class="flex flex-wrap gap-4 mb-12">
+                        <div class="bg-white/10 backdrop-blur-sm rounded-2xl px-6 py-4 text-center">
+                            <div class="text-3xl font-bold text-cyan-300 counter">50m²</div>
+                            <div class="text-sm text-blue-200">Espacio Solicitado</div>
+                        </div>
+                        <div class="bg-white/10 backdrop-blur-sm rounded-2xl px-6 py-4 text-center">
+                            <div class="text-3xl font-bold text-cyan-300 counter">20+</div>
+                            <div class="text-sm text-blue-200">Miembros Activos</div>
+                        </div>
+                        <div class="bg-white/10 backdrop-blur-sm rounded-2xl px-6 py-4 text-center">
+                            <div class="text-3xl font-bold text-cyan-300 counter">5</div>
+                            <div class="text-sm text-blue-200">Proyectos Activos</div>
+                        </div>
+                    </div>
+
+                    <a href="#propuesta" class="inline-flex items-center gap-3 bg-white text-gray-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all hover:scale-105 shadow-2xl">
+                        <span>Conocer la Propuesta</span>
+                        <i class="fas fa-arrow-down"></i>
+                    </a>
+                </div>
+
+                <div class="hidden lg:flex justify-center">
+                    <div class="relative">
+                        <!-- 3D-like Lab Illustration -->
+                        <div class="w-96 h-96 relative">
+                            <div class="absolute inset-0 bg-white/10 backdrop-blur-sm rounded-3xl transform rotate-6 pulse-glow"></div>
+                            <div class="absolute inset-4 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                                <div class="text-center">
+                                    <div class="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-2xl float-animation">
+                                        <i class="fas fa-flask text-white text-5xl"></i>
+                                    </div>
+                                    <h3 class="text-white text-2xl font-bold mb-2">IEEE Tadeo Lab</h3>
+                                    <p class="text-blue-200">Centro de I+D+i</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Floating elements -->
+                        <div class="absolute -top-8 -right-8 w-20 h-20 bg-yellow-400/80 rounded-xl flex items-center justify-center shadow-xl float-animation" style="animation-delay: -1s;">
+                            <i class="fas fa-lightbulb text-white text-2xl"></i>
+                        </div>
+                        <div class="absolute -bottom-4 -left-8 w-16 h-16 bg-green-400/80 rounded-xl flex items-center justify-center shadow-xl float-animation" style="animation-delay: -2s;">
+                            <i class="fas fa-robot text-white text-xl"></i>
+                        </div>
+                        <div class="absolute top-1/2 -right-12 w-14 h-14 bg-purple-400/80 rounded-xl flex items-center justify-center shadow-xl float-animation" style="animation-delay: -4s;">
+                            <i class="fas fa-microchip text-white text-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scroll Indicator -->
+        <div class="absolute bottom-8 left-1/2 scroll-indicator text-white/60 no-print">
+            <i class="fas fa-chevron-down text-2xl"></i>
+        </div>
+    </section>
+
+    <!-- Quiénes Somos -->
+    <section id="propuesta" class="py-24 px-6 bg-white bg-pattern">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-16 reveal">
+                <span class="inline-block bg-blue-100 text-blue-700 px-4 py-1 rounded-full text-sm font-semibold mb-4">QUIÉNES SOMOS</span>
+                <h2 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+                    Semillero de <span class="text-gradient">Investigación</span>
+                </h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                    La Rama Estudiantil IEEE Tadeo es un semillero de investigación, desarrollo e innovación tecnológica (I+D+i),
+                    reconocido oficialmente por la Universidad Jorge Tadeo Lozano y <a href="https://www.ieee.org/" target="_blank" class="text-blue-600 hover:underline font-semibold">IEEE</a>,
+                    la organización profesional técnica más grande del mundo dedicada a promover la tecnología en beneficio de la humanidad.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 card-hover reveal">
+                    <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                        <i class="fas fa-users text-white text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-3">Comunidad Activa</h3>
+                    <p class="text-gray-600 mb-4">
+                        20 estudiantes de diferentes programas académicos participando constantemente
+                        en procesos formativos, investigativos y de proyección institucional.
+                    </p>
+                    <div class="flex items-center gap-2 text-blue-600 font-semibold">
+                        <i class="fas fa-graduation-cap"></i>
+                        <span>Multidisciplinario</span>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 card-hover reveal" style="animation-delay: 0.1s;">
+                    <div class="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                        <i class="fas fa-flask text-white text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-3">Investigación Aplicada</h3>
+                    <p class="text-gray-600 mb-4">
+                        Enfocados en robótica, automatización, sistemas, diseño e innovación interdisciplinaria.
+                        Proyectos con impacto real en la comunidad universitaria.
+                    </p>
+                    <div class="flex items-center gap-2 text-purple-600 font-semibold">
+                        <i class="fas fa-cogs"></i>
+                        <span>Tecnología Práctica</span>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 card-hover reveal" style="animation-delay: 0.2s;">
+                    <div class="w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                        <i class="fas fa-network-wired text-white text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-3">Red Nacional</h3>
+                    <p class="text-gray-600 mb-4">
+                        Articulación con otras universidades del país, participación en encuentros académicos
+                        y fortalecimiento de redes de investigación a nivel nacional.
+                    </p>
+                    <div class="flex items-center gap-2 text-green-600 font-semibold">
+                        <i class="fas fa-globe-americas"></i>
+                        <span>Conexión IEEE Colombia</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Agradecimiento Espacio Actual -->
+    <section class="py-24 px-6 bg-gradient-to-br from-amber-50 to-orange-50">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-12 reveal">
+                <span class="inline-block bg-amber-100 text-amber-700 px-4 py-1 rounded-full text-sm font-semibold mb-4">RECONOCIMIENTO</span>
+                <h2 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+                    Nuestro <span class="text-amber-600">Primer Hogar</span>
+                </h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto mb-4">
+                    Agradecemos profundamente a <strong>Juan Manuel España</strong>, director del programa de Diseño Industrial,
+                    por confiar en nosotros y compartir el <strong>Salón 103 del Módulo 6</strong>.
+                </p>
+                <p class="text-lg text-gray-500 max-w-3xl mx-auto">
+                    Si bien no es un espacio exclusivo para la Rama, durante un semestre nos permitió realizar todas nuestras actividades allí.
+                </p>
+            </div>
+
+            <div class="bg-white rounded-3xl p-8 shadow-lg mb-12 reveal">
+                <div class="flex items-start gap-4 mb-6">
+                    <div class="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-quote-left text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-700 text-lg italic leading-relaxed">
+                            "Lo que es de todos es de nadie." Así parecía este lugar cuando llegamos por primera vez.
+                            Igual lo aceptamos y estaremos eternamente agradecidos por confiar en nosotros.
+                        </p>
+                    </div>
+                </div>
+                <p class="text-gray-600">
+                    Durante el tiempo que estuvimos allí lo <strong>reformamos, reorganizamos y logramos hacerlo más ameno y funcional</strong>
+                    para nuestras reuniones y para los otros semilleros ajenos a nuestra rama con los que compartimos espacio.
+                </p>
+            </div>
+
+            <!-- Galería antes/durante/después -->
+            <div class="reveal">
+                <h3 class="text-2xl font-bold text-gray-900 text-center mb-8">
+                    <i class="fas fa-images text-amber-500 mr-2"></i>
+                    Transformación del espacio
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div class="aspect-video rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                        <img src="/static/salon/1.jpg" alt="Salón 103 - Imagen 1" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                    </div>
+                    <div class="aspect-video rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                        <img src="/static/salon/2.jpg" alt="Salón 103 - Imagen 2" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                    </div>
+                    <div class="aspect-video rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                        <img src="/static/salon/3.jpg" alt="Salón 103 - Imagen 3" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                    </div>
+                    <div class="aspect-video rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                        <img src="/static/salon/4.jpg" alt="Salón 103 - Imagen 4" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                    </div>
+                    <div class="aspect-video rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                        <img src="/static/salon/5.jpg" alt="Salón 103 - Imagen 5" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                    </div>
+                    <div class="aspect-video rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                        <img src="/static/salon/6.jpg" alt="Salón 103 - Imagen 6" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- El Problema -->
+    <section class="py-24 px-6 bg-gray-900 text-white relative overflow-hidden">
+        <div class="absolute inset-0 bg-pattern opacity-10"></div>
+        <div class="max-w-6xl mx-auto relative z-10">
+            <div class="grid lg:grid-cols-2 gap-16 items-center">
+                <div class="reveal">
+                    <span class="inline-block bg-red-500/20 text-red-300 px-4 py-1 rounded-full text-sm font-semibold mb-4">EL DESAFÍO ACTUAL</span>
+                    <h2 class="text-4xl md:text-5xl font-bold mb-6">
+                        25m² no son<br><span class="text-red-400">suficientes</span>
+                    </h2>
+                    <p class="text-xl text-gray-300 mb-8">
+                        Nuestro espacio actual limita severamente el potencial de crecimiento del semillero.
+                        Los proyectos se acumulan, las herramientas no tienen dónde almacenarse de forma segura,
+                        y las sesiones de trabajo se ven comprometidas.
+                    </p>
+
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-4 bg-white/5 rounded-xl p-4">
+                            <div class="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-exclamation-triangle text-red-400"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-white">Espacio Insuficiente</h4>
+                                <p class="text-gray-400 text-sm">No caben 20 personas trabajando cómodamente al mismo tiempo</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 bg-white/5 rounded-xl p-4">
+                            <div class="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-users-slash text-red-400"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-white">Espacio Compartido</h4>
+                                <p class="text-gray-400 text-sm">Actualmente compartimos con otros semilleros, generando cruces de sesiones y conflictos de horarios</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 bg-white/5 rounded-xl p-4">
+                            <div class="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-box-open text-red-400"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-white">Sin Almacenamiento</h4>
+                                <p class="text-gray-400 text-sm">Prototipos y herramientas sin lugar seguro para guardarse</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 bg-white/5 rounded-xl p-4">
+                            <div class="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-project-diagram text-red-400"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-white">Proyectos Limitados</h4>
+                                <p class="text-gray-400 text-sm">Imposible desarrollar múltiples proyectos simultáneamente</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="reveal">
+                    <div class="relative">
+                        <!-- Visual comparison -->
+                        <div class="bg-white/10 backdrop-blur-sm rounded-3xl p-4 sm:p-8">
+                            <h3 class="text-center text-lg font-semibold mb-6 sm:mb-8 text-gray-300">Comparación de Espacios</h3>
+                            <div class="flex justify-center items-end gap-4 sm:gap-8">
+                                <div class="text-center flex-1">
+                                    <div class="w-20 h-20 sm:w-24 sm:h-24 bg-red-500/30 border-2 border-red-400 rounded-xl flex items-center justify-center mb-3 sm:mb-4 mx-auto">
+                                        <span class="text-xl sm:text-2xl font-bold text-red-300">25m²</span>
+                                    </div>
+                                    <p class="text-gray-400 text-xs sm:text-sm">Espacio Actual</p>
+                                    <p class="text-red-400 font-semibold text-sm sm:text-base">Limitado</p>
+                                </div>
+                                <div class="text-gray-500 text-2xl sm:text-4xl mb-6 sm:mb-8 flex-shrink-0">
+                                    <i class="fas fa-arrow-right"></i>
+                                </div>
+                                <div class="text-center flex-1">
+                                    <div class="w-28 h-28 sm:w-40 sm:h-40 bg-green-500/30 border-2 border-green-400 rounded-xl flex items-center justify-center mb-3 sm:mb-4 mx-auto pulse-glow">
+                                        <span class="text-2xl sm:text-3xl font-bold text-green-300">+50m²</span>
+                                    </div>
+                                    <p class="text-gray-400 text-xs sm:text-sm">Espacio Solicitado</p>
+                                    <p class="text-green-400 font-semibold text-sm sm:text-base">Óptimo</p>
+                                </div>
+                            </div>
+                            <div class="mt-6 sm:mt-8 text-center">
+                                <span class="inline-flex items-center gap-2 bg-green-500/20 text-green-300 px-3 sm:px-4 py-2 rounded-full text-sm sm:text-base">
+                                    <i class="fas fa-chart-line"></i>
+                                    <span class="font-semibold">2x más capacidad</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Proyectos Activos -->
+    <section class="py-24 px-6 bg-white">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-16 reveal">
+                <span class="inline-block bg-purple-100 text-purple-700 px-4 py-1 rounded-full text-sm font-semibold mb-4">LO QUE HACEMOS</span>
+                <h2 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+                    Proyectos que <span class="text-gradient">Transforman</span>
+                </h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                    Actualmente desarrollamos proyectos de alto impacto que requieren espacio dedicado,
+                    herramientas especializadas y un ambiente propicio para la innovación.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Proyecto Museo del Mar -->
+                <div class="bg-gradient-to-br from-blue-600 to-cyan-600 rounded-3xl p-8 text-white card-hover reveal">
+                    <div class="flex items-start justify-between mb-6">
+                        <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-fish text-3xl"></i>
+                        </div>
+                        <span class="bg-white/20 px-3 py-1 rounded-full text-sm font-semibold">En Desarrollo</span>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Animatrónicos - Museo del Mar</h3>
+                    <p class="text-blue-100 mb-6">
+                        Proyecto en articulación con el Museo del Mar de la Universidad, enfocado en la
+                        <strong>reparación y adecuación de animatrónicos</strong>. Requiere espacio de trabajo
+                        organizado y acceso restringido para proteger los equipos.
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="bg-white/10 px-3 py-1 rounded-full text-sm">Robótica</span>
+                        <span class="bg-white/10 px-3 py-1 rounded-full text-sm">Electrónica</span>
+                        <span class="bg-white/10 px-3 py-1 rounded-full text-sm">Mecánica</span>
+                    </div>
+                </div>
+
+                <!-- Sistema Web -->
+                <a href="https://ieeetadeo.org/brochure" target="_blank" class="block bg-gradient-to-br from-purple-600 to-pink-600 rounded-3xl p-8 text-white card-hover reveal hover:scale-[1.02] transition-transform" style="animation-delay: 0.1s;">
+                    <div class="flex items-start justify-between mb-6">
+                        <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-code text-3xl"></i>
+                        </div>
+                        <span class="bg-white/20 px-3 py-1 rounded-full text-sm font-semibold">Producción</span>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">IEEE Tadeo Control System</h3>
+                    <p class="text-purple-100 mb-6">
+                        Sistema web de gestión organizacional que incluye <strong>servidores, software especializado
+                        y recursos de hardware</strong>. Plataforma completa para gestión de eventos,
+                        tickets con QR y comunicaciones vía WhatsApp Business API.
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="bg-white/10 px-3 py-1 rounded-full text-sm">Desarrollo Web</span>
+                        <span class="bg-white/10 px-3 py-1 rounded-full text-sm">Servidores</span>
+                        <span class="bg-white/10 px-3 py-1 rounded-full text-sm">APIs</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-white/80 hover:text-white">
+                        <span class="text-sm font-semibold">Ver más</span>
+                        <i class="fas fa-external-link-alt text-xs"></i>
+                    </div>
+                </a>
+
+                <!-- Reutilización de Materia Prima -->
+                <div class="bg-gradient-to-br from-green-600 to-emerald-600 rounded-3xl p-8 text-white card-hover reveal" style="animation-delay: 0.2s;">
+                    <div class="flex items-start justify-between mb-6">
+                        <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-recycle text-3xl"></i>
+                        </div>
+                        <span class="bg-white/20 px-3 py-1 rounded-full text-sm font-semibold">Activo</span>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Reutilización de Materia Prima</h3>
+                    <p class="text-green-100 mb-6">
+                        Plataforma para el <strong>intercambio y reutilización de materiales</strong>
+                        entre estudiantes. Fomenta la economía circular y reduce el desperdicio
+                        de recursos en proyectos académicos.
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="bg-white/10 px-3 py-1 rounded-full text-sm">Sostenibilidad</span>
+                        <span class="bg-white/10 px-3 py-1 rounded-full text-sm">Intercambio</span>
+                        <span class="bg-white/10 px-3 py-1 rounded-full text-sm">Economía Circular</span>
+                    </div>
+                </div>
+
+                <!-- ViBo -->
+                <div class="bg-gradient-to-br from-green-500 to-teal-600 rounded-3xl p-8 text-white card-hover reveal" style="animation-delay: 0.3s;">
+                    <div class="flex items-start justify-between mb-6">
+                        <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-sync-alt text-3xl"></i>
+                        </div>
+                        <span class="bg-white/20 px-3 py-1 rounded-full text-sm font-semibold">Activo</span>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">ViBo</h3>
+                    <p class="text-green-100 mb-6">
+                        Plataforma para el <strong>inventario colectivo de fauna y flora</strong>
+                        de la ciudad. Proyecto de ciencia ciudadana que combina tecnología
+                        y conservación ambiental.
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="bg-white/10 px-3 py-1 rounded-full text-sm">Biodiversidad</span>
+                        <span class="bg-white/10 px-3 py-1 rounded-full text-sm">Ciencia Ciudadana</span>
+                        <span class="bg-white/10 px-3 py-1 rounded-full text-sm">Inventario</span>
+                    </div>
+                </div>
+
+                <!-- Más Proyectos -->
+                <div class="md:col-span-2 bg-gradient-to-r from-gray-50 to-gray-100 rounded-3xl p-8 card-hover reveal" style="animation-delay: 0.2s;">
+                    <div class="grid md:grid-cols-3 gap-8">
+                        <div class="text-center">
+                            <div class="w-14 h-14 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-chalkboard-teacher text-orange-600 text-xl"></i>
+                            </div>
+                            <h4 class="font-bold text-gray-900 mb-2">Talleres Técnicos</h4>
+                            <p class="text-gray-600 text-sm">Capacitaciones en herramientas avanzadas, hackatones y sesiones de trabajo colaborativo.</p>
+                        </div>
+                        <div class="text-center">
+                            <div class="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-cube text-green-600 text-xl"></i>
+                            </div>
+                            <h4 class="font-bold text-gray-900 mb-2">Prototipado</h4>
+                            <p class="text-gray-600 text-sm">Desarrollo experimental de prototipos que requieren espacio de trabajo y herramientas.</p>
+                        </div>
+                        <div class="text-center">
+                            <div class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-university text-blue-600 text-xl"></i>
+                            </div>
+                            <h4 class="font-bold text-gray-900 mb-2">Divulgación</h4>
+                            <p class="text-gray-600 text-sm">Eventos de divulgación científica y visitas técnicas para la comunidad.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Logros 2025 -->
+    <section class="py-24 px-6 gradient-ieee text-white">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-16 reveal">
+                <span class="inline-block bg-white/10 text-cyan-200 px-4 py-1 rounded-full text-sm font-semibold mb-4">TRAYECTORIA</span>
+                <h2 class="text-4xl md:text-5xl font-bold mb-6">
+                    Lo que logramos en <span class="text-cyan-300">2025</span>
+                </h2>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center card-hover reveal">
+                    <div class="text-5xl font-black text-cyan-300 mb-2 counter">9</div>
+                    <p class="text-blue-200">Eventos en los que participamos</p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center card-hover reveal" style="animation-delay: 0.1s;">
+                    <div class="text-5xl font-black text-cyan-300 mb-2 counter">2</div>
+                    <p class="text-blue-200">Encuentros Nacionales</p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center card-hover reveal" style="animation-delay: 0.2s;">
+                    <div class="text-5xl font-black text-cyan-300 mb-2 counter">5+</div>
+                    <p class="text-blue-200">Universidades articuladas</p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center card-hover reveal" style="animation-delay: 0.3s;">
+                    <div class="text-5xl font-black text-cyan-300 mb-2 counter">20</div>
+                    <p class="text-blue-200">Miembros activos consolidados</p>
+                </div>
+            </div>
+
+            <div class="mt-12 grid md:grid-cols-2 gap-6">
+                <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-8 reveal">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-trophy text-yellow-900 text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold">Reunión Nacional de Ramas (RNR 2025)</h3>
+                    </div>
+                    <p class="text-blue-100">
+                        Participamos en el evento estudiantil más importante de IEEE Colombia, realizado en Bucaramanga.
+                        Un espacio de conexión, aprendizaje y crecimiento profesional enfocado en formar líderes integrales
+                        en ingeniería, conectando el talento joven con los desafíos tecnológicos y sociales actuales.
+                    </p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-8 reveal" style="animation-delay: 0.1s;">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-cyan-400 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-globe text-cyan-900 text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold">1st IEEE Affinity and Special Interest Groups Meeting</h3>
+                    </div>
+                    <p class="text-blue-100">
+                        Participación en el primer encuentro de grupos de afinidad e interés especial de IEEE,
+                        fortaleciendo lazos con capítulos técnicos y grupos especializados a nivel nacional e internacional.
+                    </p>
+                </div>
+                <div class="bg-gradient-to-br from-pink-500/20 to-purple-500/20 backdrop-blur-sm rounded-2xl p-8 reveal border border-pink-400/30" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-pink-400 to-purple-500 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-music text-white text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold">FIEEESTA</h3>
+                    </div>
+                    <p class="text-blue-100">
+                        Un <strong class="text-pink-300">evento ícono y nunca antes visto</strong> en la comunidad IEEE, que nos convirtió en
+                        referente de organización, presentación, innovación y fraternidad. Una celebración que marcó un antes y un después
+                        en la forma de crear comunidad dentro de IEEE.
+                    </p>
+                </div>
+                <div class="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 backdrop-blur-sm rounded-2xl p-8 reveal border border-emerald-400/30" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-code text-white text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold">IEEE Tadeo Control System</h3>
+                    </div>
+                    <p class="text-blue-100">
+                        Plataforma de gestión desarrollada <strong class="text-emerald-300">100% al interior de la Rama</strong> con el apoyo de
+                        Erick Hansen como consejero y su empresa <em>Elaborando Futuro</em>, que remonta sus orígenes a una tesis en la Tadeo.
+                        Esta plataforma comenzaremos a exportar como servicio a otras ramas del país y del mundo.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- La Propuesta -->
+    <section class="py-24 px-6 bg-gray-50">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-16 reveal">
+                <span class="inline-block bg-green-100 text-green-700 px-4 py-1 rounded-full text-sm font-semibold mb-4">LA PROPUESTA</span>
+                <h2 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+                    El Espacio que <span class="text-gradient">Necesitamos</span>
+                </h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                    Solicitamos formalmente un espacio de uso prioritario para el semillero,
+                    con acceso restringido a sus miembros, para garantizar la seguridad de proyectos y equipos.
+                </p>
+            </div>
+
+            <!-- Espacios Opcionados -->
+            <div class="mb-16">
+                <h3 class="text-2xl font-bold text-gray-900 mb-8 text-center reveal">Espacios Opcionados</h3>
+
+                <!-- Salones 704 y 706 - Módulo 1 -->
+                <div class="bg-white rounded-2xl shadow-lg border-2 border-purple-200 card-hover reveal overflow-hidden mb-8">
+                    <div class="p-6">
+                        <h4 class="text-2xl font-bold text-gray-900 mb-2">Salones 704 y 706 - Módulo 1</h4>
+                        <p class="text-gray-600 mb-4">Especial para tener separadas la zona privada y de reuniones de la de actividades de trabajo del equipo e invitados. Ventaja adicional: cercanía a los laboratorios CAD/CAM.</p>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            <div class="aspect-video rounded-lg overflow-hidden">
+                                <img src="/static/salon/m1/1.jpg" alt="Módulo 1 - Imagen 1" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                            </div>
+                            <div class="aspect-video rounded-lg overflow-hidden">
+                                <img src="/static/salon/m1/2.jpg" alt="Módulo 1 - Imagen 2" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                            </div>
+                            <div class="aspect-video rounded-lg overflow-hidden">
+                                <img src="/static/salon/m1/3.jpg" alt="Módulo 1 - Imagen 3" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                            </div>
+                            <div class="aspect-video rounded-lg overflow-hidden">
+                                <img src="/static/salon/m1/4.jpg" alt="Módulo 1 - Imagen 4" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                            </div>
+                            <div class="aspect-video rounded-lg overflow-hidden">
+                                <img src="/static/salon/m1/5.jpg" alt="Módulo 1 - Imagen 5" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Espacio Módulo 12 -->
+                <div class="bg-white rounded-2xl shadow-lg border-2 border-green-200 card-hover reveal overflow-hidden mb-8">
+                    <div class="p-6">
+                        <h4 class="text-2xl font-bold text-gray-900 mb-2">Espacio Módulo 12</h4>
+                        <p class="text-gray-600 mb-4">Probablemente el módulo más interesante para un proyecto con el potencial de la Rama. Conocemos que el espacio presenta una variedad de espacios internos que perfectamente se pueden acomodar para nuestras actividades.</p>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            <div class="aspect-video rounded-lg overflow-hidden">
+                                <img src="/static/salon/m12/1.jpg" alt="Módulo 12 - Imagen 1" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                            </div>
+                            <div class="aspect-video rounded-lg overflow-hidden">
+                                <img src="/static/salon/m12/4.jpeg" alt="Módulo 12 - Imagen 4" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                            </div>
+                            <div class="aspect-video rounded-lg overflow-hidden">
+                                <img src="/static/salon/m12/5.jpeg" alt="Módulo 12 - Imagen 5" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                            </div>
+                            <div class="aspect-video rounded-lg overflow-hidden">
+                                <img src="/static/salon/m12/6.jpeg" alt="Módulo 12 - Imagen 6" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                            </div>
+                            <div class="aspect-video rounded-lg overflow-hidden">
+                                <img src="/static/salon/m12/7.jpeg" alt="Módulo 12 - Imagen 7" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Of. PB 02 Módulo 18 -->
+                <div class="bg-white rounded-2xl shadow-lg border-2 border-blue-200 card-hover reveal overflow-hidden">
+                    <div class="p-6">
+                        <h4 class="text-2xl font-bold text-gray-900 mb-2">Of. PB 02 Módulo 18</h4>
+                        <p class="text-gray-600 mb-4">Espacio elegante con excelente presentación para trabajar con directivos y estudiantes IEEE de otras universidades, tanto locales como internacionales. Una sala de juntas especial para actividades formales y un espacio de trabajo para estudiantes, cerca de los talleres de diseño. Además, este espacio ya cuenta con algunos recursos como cableado estructurado y algunos otros elementos.</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="aspect-video rounded-lg overflow-hidden">
+                                <img src="/static/salon/m18/1.jpeg" alt="Módulo 18 - Imagen 1" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                            </div>
+                            <div class="aspect-video rounded-lg overflow-hidden">
+                                <img src="/static/salon/m18/2.png" alt="Módulo 18 - Imagen 2" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                            </div>
+                            <div class="aspect-video rounded-lg overflow-hidden">
+                                <img src="/static/salon/m18/3.png" alt="Módulo 18 - Imagen 3" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                            </div>
+                            <div class="aspect-video rounded-lg overflow-hidden">
+                                <img src="/static/salon/m18/4.png" alt="Módulo 18 - Imagen 4" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 gallery-img">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nota sobre financiación -->
+            <div class="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6 mb-8 reveal border-l-4 border-blue-500">
+                <div class="flex items-start gap-4">
+                    <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-hand-holding-usd text-white"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-gray-900 mb-2">Sobre adecuaciones y financiación</h4>
+                        <p class="text-gray-700 text-sm mb-2">
+                            En caso de requerir algunas adecuaciones, la Rama puede buscar <strong>financiación externa privada y del IEEE</strong>
+                            para reparar, mejorar y mantener estos lugares (previo balance). Contamos con la capacidad de gestionar recursos
+                            que contribuyan al bienestar del espacio asignado.
+                        </p>
+                        <p class="text-gray-700 text-sm">
+                            La fuerza de trabajo de nuestro equipo es grande y sigue creciendo. Permitir la personalización y adecuación de un espacio
+                            <strong>apersonará aún más a todo el equipo</strong>, tal como ya lo hemos hecho con nuestro pequeño espacio actualmente.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Elementos Requeridos -->
+            <div class="bg-white rounded-3xl p-8 shadow-lg reveal">
+                <h3 class="text-2xl font-bold text-gray-900 mb-4 text-center">Elementos Sugeridos</h3>
+                <p class="text-center text-gray-600 mb-8 text-sm">
+                    Los siguientes elementos son sugeridos pero no excluyentes. Si no se dispone de ellos,
+                    podemos comenzar con nuestros propios aportes. Los miembros pueden contribuir con sillas, puffs
+                    y demás elementos para hacer especial el lugar.
+                </p>
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-chair text-blue-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-900">Sillas</p>
+                            <p class="text-sm text-gray-500">20 unidades</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-desktop text-purple-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-900">Mesas/Escritorios</p>
+                            <p class="text-sm text-gray-500">6 unidades</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-tv text-green-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-900">Televisor</p>
+                            <p class="text-sm text-gray-500">1 unidad (apoyo audiovisual)</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                        <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-chalkboard text-orange-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-900">Tableros</p>
+                            <p class="text-sm text-gray-500">2 unidades</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                        <div class="w-10 h-10 bg-cyan-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-laptop text-cyan-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-900">Computadores</p>
+                            <p class="text-sm text-gray-500">2 unidades</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                        <div class="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-archive text-pink-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-900">Casilleros</p>
+                            <p class="text-sm text-gray-500">Almacenamiento seguro</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                        <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-toolbox text-yellow-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-900">Caja de herramientas</p>
+                            <p class="text-sm text-gray-500">Prototipado y robótica</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                        <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-first-aid text-red-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-900">Botiquín</p>
+                            <p class="text-sm text-gray-500">Seguridad básica</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Donación de libros -->
+            <div class="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-2xl p-6 mt-8 reveal border-l-4 border-amber-500">
+                <div class="flex items-start gap-4">
+                    <div class="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-book text-white"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-gray-900 mb-2">Donación de libros en camino</h4>
+                        <p class="text-gray-700 text-sm">
+                            Adicionalmente, estamos esperando la <strong>donación de una serie de libros técnicos y especializados</strong>
+                            que dotarán nuestro espacio, creando una pequeña biblioteca de referencia para los miembros
+                            y visitantes del laboratorio IEEE Tadeo.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Horarios -->
+    <section class="py-24 px-6 bg-white">
+        <div class="max-w-6xl mx-auto">
+            <div class="grid lg:grid-cols-2 gap-16 items-center">
+                <div class="reveal">
+                    <span class="inline-block bg-orange-100 text-orange-700 px-4 py-1 rounded-full text-sm font-semibold mb-4">DISPONIBILIDAD</span>
+                    <h2 class="text-4xl font-bold text-gray-900 mb-6">
+                        Horarios de uso
+                    </h2>
+                    <p class="text-xl text-gray-600 mb-8">
+                        Las actividades se realizan en horarios que no interfieren con las clases regulares,
+                        maximizando la participación estudiantil.
+                    </p>
+
+                    <div class="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-2xl p-6 mb-6">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-clock text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-2xl font-bold text-gray-900">10:00 a.m. - 1:00 p.m.</p>
+                                <p class="text-gray-600">Horario principal de actividades</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-3">
+                        <span class="bg-blue-100 text-blue-700 px-4 py-2 rounded-full font-semibold">Lunes</span>
+                        <span class="bg-blue-100 text-blue-700 px-4 py-2 rounded-full font-semibold">Miércoles</span>
+                        <span class="bg-blue-100 text-blue-700 px-4 py-2 rounded-full font-semibold">Jueves</span>
+                        <span class="bg-blue-100 text-blue-700 px-4 py-2 rounded-full font-semibold">Viernes</span>
+                    </div>
+                </div>
+
+                <div class="reveal">
+                    <div class="bg-gray-900 rounded-3xl p-8 text-white">
+                        <h3 class="text-xl font-bold mb-6 flex items-center gap-3">
+                            <i class="fas fa-handshake text-cyan-400"></i>
+                            Nuestro Compromiso
+                        </h3>
+                        <ul class="space-y-4">
+                            <li class="flex items-start gap-3">
+                                <i class="fas fa-check-circle text-green-400 mt-1"></i>
+                                <span>Cuidar, mantener y apropiarnos responsablemente del espacio asignado</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i class="fas fa-check-circle text-green-400 mt-1"></i>
+                                <span>Cumplir con los reglamentos institucionales vigentes</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i class="fas fa-check-circle text-green-400 mt-1"></i>
+                                <span>Garantizar el orden y la limpieza permanente</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i class="fas fa-check-circle text-green-400 mt-1"></i>
+                                <span>Contribuir con elementos complementarios de bienestar</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i class="fas fa-check-circle text-green-400 mt-1"></i>
+                                <span>Preservar la infraestructura universitaria</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Nuestro Equipo -->
+    {% if members %}
+    <section class="py-24 px-6 bg-gray-50">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-16 reveal">
+                <span class="inline-block bg-blue-100 text-blue-700 px-4 py-1 rounded-full text-sm font-semibold mb-4">NUESTRO EQUIPO</span>
+                <h2 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+                    Las Personas detrás de <span class="text-gradient">IEEE Tadeo</span>
+                </h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                    Algunos de los estudiantes y profesores comprometidos con la innovación, el aprendizaje y el crecimiento profesional.
+                    Cada miembro aporta su talento único a nuestra comunidad.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                {% for member in members %}
+                <div class="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-shadow text-center card-hover reveal" style="animation-delay: {{ loop.index0 * 0.05 }}s;">
+                    <div class="w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                        {% if member.photo %}
+                        <img src="{{ member.photo }}" alt="{{ member.name }}" class="w-full h-full object-cover">
+                        {% else %}
+                        <span class="text-white text-2xl font-bold">{{ member.name[0] }}</span>
+                        {% endif %}
+                    </div>
+                    <h4 class="font-bold text-gray-900 text-sm">{{ member.name.split()[0] }}</h4>
+                    {% if member.name.split()|length > 1 %}
+                    <p class="text-gray-400 text-xs mb-1">{{ member.name.split()[1:] | join(' ') }}</p>
+                    {% endif %}
+                    {% if member.role %}
+                    <span class="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium mb-1">{{ member.role }}</span>
+                    {% endif %}
+                    {% if member.program %}
+                    <p class="text-gray-500 text-xs">{{ member.program }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="text-center mt-12 reveal">
+                <p class="text-gray-600">
+                    <span class="text-3xl font-bold text-gradient">20</span>
+                    <span class="text-lg ml-2">miembros activos registrados</span>
+                </p>
+                <p class="text-gray-500 mt-2">
+                    + <span class="font-semibold">40 personas</span> con interés general en la Rama
+                </p>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Impacto -->
+    <section class="py-24 px-6 gradient-innovation text-white">
+        <div class="max-w-6xl mx-auto text-center">
+            <div class="reveal">
+                <span class="inline-block bg-white/10 px-4 py-1 rounded-full text-sm font-semibold mb-4">IMPACTO</span>
+                <h2 class="text-4xl md:text-5xl font-bold mb-6">
+                    Beneficios para la Universidad
+                </h2>
+                <p class="text-xl text-white/80 max-w-3xl mx-auto mb-16">
+                    Un espacio adecuado para IEEE Tadeo significa mayor visibilidad institucional,
+                    más proyectos de impacto y estudiantes mejor preparados.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-8 card-hover reveal">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-award text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Excelencia Académica</h3>
+                    <p class="text-white/70">
+                        Fortalecimiento del perfil profesional de los estudiantes y fomento de la cultura investigativa.
+                    </p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-8 card-hover reveal" style="animation-delay: 0.1s;">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-eye text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Visibilidad Nacional</h3>
+                    <p class="text-white/70">
+                        Participación activa en la red IEEE Colombia, posicionando a la Universidad como referente.
+                    </p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-8 card-hover reveal" style="animation-delay: 0.2s;">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-rocket text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Innovación Continua</h3>
+                    <p class="text-white/70">
+                        Proyectos de I+D+i que contribuyen al ecosistema de innovación de la Universidad.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="py-24 px-6 bg-white">
+        <div class="max-w-4xl mx-auto text-center reveal">
+            <div class="mb-8">
+                <img src="/static/logo_ieee_tadeo.png" alt="IEEE Tadeo" class="h-24 mx-auto mb-6">
+            </div>
+            <h2 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+                Juntos construimos el <span class="text-gradient">futuro</span>
+            </h2>
+            <p class="text-xl text-gray-600 mb-12 max-w-2xl mx-auto">
+                Agradecemos su atención y el apoyo brindado a esta iniciativa estudiantil,
+                que contribuye al fortalecimiento del ecosistema de investigación, desarrollo,
+                innovación y excelencia académica de la Universidad Jorge Tadeo Lozano.
+            </p>
+
+            <div class="bg-gray-50 rounded-3xl p-8 mb-8">
+                <p class="text-lg text-gray-700 mb-4">
+                    <strong>Quedamos atentos</strong> a cualquier información adicional, verificación de disponibilidad
+                    o a la realización de una reunión que consideren necesaria para la viabilización de esta solicitud.
+                </p>
+                <div class="flex flex-wrap justify-center gap-4 mt-6">
+                    <a href="https://ieeetadeo.org" target="_blank" class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-globe"></i>
+                        Visitar ieeetadeo.org
+                    </a>
+                    <a href="mailto:ieee@utadeo.edu.co" class="inline-flex items-center gap-2 bg-gray-200 text-gray-800 px-6 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-colors">
+                        <i class="fas fa-envelope"></i>
+                        ieee@utadeo.edu.co
+                    </a>
+                </div>
+            </div>
+
+            <div class="text-gray-500 text-sm">
+                <p>Rama Estudiantil IEEE Tadeo | Universidad de Bogotá Jorge Tadeo Lozano</p>
+                <p class="mt-2">Bogotá D.C., Enero 2026</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-8 px-6 bg-gray-900 text-gray-400 text-center text-sm no-print">
+        <div class="max-w-6xl mx-auto">
+            <p>&copy; 2026 IEEE Tadeo Student Branch. Todos los derechos reservados.</p>
+            <p class="mt-2">
+                <a href="/home" class="text-cyan-400 hover:text-cyan-300">← Volver al inicio</a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="lightbox">
+        <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+        <img id="lightbox-img" src="" alt="Imagen ampliada">
+    </div>
+
+    <!-- Scroll Reveal Script -->
+    <script>
+        // Reveal on scroll
+        function reveal() {
+            const reveals = document.querySelectorAll('.reveal');
+            reveals.forEach(element => {
+                const windowHeight = window.innerHeight;
+                const elementTop = element.getBoundingClientRect().top;
+                const elementVisible = 150;
+
+                if (elementTop < windowHeight - elementVisible) {
+                    element.classList.add('active');
+                }
+            });
+        }
+
+        window.addEventListener('scroll', reveal);
+        window.addEventListener('load', reveal);
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Counter animation
+        function animateCounters() {
+            const counters = document.querySelectorAll('.counter');
+            counters.forEach(counter => {
+                const text = counter.innerText;
+                const hasPlus = text.includes('+');
+                const hasM = text.includes('m²');
+                const num = parseInt(text.replace(/[^0-9]/g, ''));
+
+                if (isNaN(num)) return;
+
+                let current = 0;
+                const increment = num / 50;
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= num) {
+                        current = num;
+                        clearInterval(timer);
+                    }
+                    let display = Math.floor(current);
+                    if (hasM) display += 'm²';
+                    if (hasPlus) display += '+';
+                    counter.innerText = display;
+                }, 30);
+            });
+        }
+
+        // Trigger counter animation when in view
+        const counterSection = document.querySelector('.counter');
+        if (counterSection) {
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    animateCounters();
+                    observer.disconnect();
+                }
+            });
+            observer.observe(counterSection);
+        }
+
+        // Lightbox functionality
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+
+        document.querySelectorAll('.gallery-img').forEach(img => {
+            img.addEventListener('click', () => {
+                lightboxImg.src = img.src;
+                lightbox.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            });
+        });
+
+        function closeLightbox() {
+            lightbox.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox || e.target.classList.contains('lightbox-close')) {
+                closeLightbox();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeLightbox();
+        });
+    </script>
+</body>
+</html>

@@ -62,10 +62,10 @@ start-whatsapp.bat
 
 | Servicio | Puerto | URL |
 |----------|--------|-----|
-| FastAPI | 8000 | http://localhost:8000 |
+| FastAPI | 8000 | http://localhost:8070 |
 | WhatsApp Service | 3000 | http://localhost:3000 |
-| Admin Panel | 8000 | http://localhost:8000/admin |
-| Login | 8000 | http://localhost:8000/login |
+| Admin Panel | 8000 | http://localhost:8070/admin |
+| Login | 8000 | http://localhost:8070/login |
 
 ---
 
@@ -90,7 +90,7 @@ Crea un archivo `.env` en la raíz del proyecto:
 
 ```env
 # Base URL para tickets
-BASE_URL=http://localhost:8000
+BASE_URL=http://localhost:8070
 
 # Email (Resend)
 RESEND_API_KEY=tu_clave_resend

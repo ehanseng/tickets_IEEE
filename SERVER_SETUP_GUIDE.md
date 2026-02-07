@@ -1,16 +1,78 @@
-# 🖥️ Guía de Configuración del Servidor
+# Guía de Configuración del Servidor
 
-## 🎯 Problema Actual
+## Servidor de Producción Actual
 
-Los archivos están en el servidor, pero muestra una lista de archivos en lugar de la aplicación.
+El sistema IEEE Tadeo está desplegado en un servidor Fedora 43 local con túnel Cloudflare.
 
-**Causa**: El servidor web no está configurado para ejecutar aplicaciones Python/FastAPI.
+### Información del Servidor
+
+| Parámetro | Valor |
+|-----------|-------|
+| **IP Local** | 192.168.1.85 |
+| **Usuario SSH** | shareloc |
+| **Contraseña SSH** | lesiga15 |
+| **Sistema Operativo** | Fedora 43 Server |
+| **Python** | 3.14.0 |
+| **Carpeta del proyecto** | `/home/shareloc/ieeetadeo/` |
+| **Puerto de la aplicación** | 8070 |
+| **URL Pública** | https://ticket.ieeetadeo.org |
+
+### Servicios Systemd
+
+```bash
+# Aplicación FastAPI
+sudo systemctl status ieeetadeo
+sudo systemctl restart ieeetadeo
+sudo systemctl stop ieeetadeo
+
+# Túnel Cloudflare para IEEE Tadeo
+sudo systemctl status cloudflared-ieeetadeo
+sudo systemctl restart cloudflared-ieeetadeo
+```
+
+### Ver Logs
+
+```bash
+# Logs de la aplicación
+sudo journalctl -u ieeetadeo -f
+
+# Logs del túnel
+sudo journalctl -u cloudflared-ieeetadeo -f
+```
+
+### Actualizar la Aplicación
+
+```bash
+# Conectar al servidor
+ssh shareloc@192.168.1.85
+
+# Ir al directorio
+cd ~/ieeetadeo
+
+# Activar entorno virtual
+source .venv/bin/activate
+
+# Copiar archivos actualizados (desde la máquina local)
+# scp archivo.py shareloc@192.168.1.85:~/ieeetadeo/
+
+# Reiniciar servicio
+sudo systemctl restart ieeetadeo
+```
+
+### Usuarios Administradores
+
+| Usuario | Rol |
+|---------|-----|
+| admin | Administrador principal |
+| IEEEYPCO | Administrador YP Colombia |
+| validador | Validador de tickets |
+| validador1 | Validador de tickets |
 
 ---
 
-## 📋 Solución según Tu Tipo de Hosting
+## Configuraciones Alternativas
 
-### ✅ OPCIÓN 1: cPanel (Hosting Compartido)
+### OPCIÓN 1: cPanel (Hosting Compartido)
 
 Si tu hosting tiene cPanel:
 
@@ -128,7 +190,7 @@ server {
     server_name ticket.ieeetadeo.org;
 
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:8070;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -231,7 +293,3 @@ Para facilitar la configuración, se han creado:
 Una vez configurado correctamente, la aplicación responderá en:
 - **https://ticket.ieeetadeo.org/admin** - Panel de administración
 - **https://ticket.ieeetadeo.org/docs** - Documentación API
-
----
-
-**¿Qué opción se ajusta a tu servidor?** Dime y te guío paso a paso. 🎯

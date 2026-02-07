@@ -984,7 +984,7 @@ def send_ticket_with_template(
     ticket_url: str,
     access_pin: str,
     companions: int = 0,
-    template_name: str = "ticket_evento",
+    template_name: str = "tickets_event",
     qr_image_base64: Optional[str] = None
 ) -> Dict:
     """
@@ -993,6 +993,11 @@ def send_ticket_with_template(
     Esta función usa templates pre-aprobados por Meta en lugar de mensajes de texto libre.
     Los templates permiten enviar mensajes fuera de la ventana de 24 horas.
 
+    Templates disponibles (aprobados por Meta):
+    - tickets_event: Template principal con header IMAGE para QR
+      Variables: {{1}}=nombre, {{2}}=evento, {{3}}=fecha, {{4}}=lugar
+      Header: IMAGE (QR code del ticket)
+
     Args:
         phone: Número de teléfono
         country_code: Código de país
@@ -1000,12 +1005,12 @@ def send_ticket_with_template(
         event_name: Nombre del evento
         event_location: Ubicación del evento
         event_date: Fecha y hora del evento (formateada)
-        ticket_code: Código del ticket
-        ticket_url: URL del ticket
-        access_pin: PIN de acceso al ticket
-        companions: Número de acompañantes (default 0)
-        template_name: Nombre del template a usar (default "ticket_evento")
-        qr_image_base64: Imagen QR en base64 (opcional, para templates con header IMAGE)
+        ticket_code: Código del ticket (no usado en template actual pero mantenido para compatibilidad)
+        ticket_url: URL del ticket (no usado en template actual pero mantenido para compatibilidad)
+        access_pin: PIN de acceso al ticket (no usado en template actual pero mantenido para compatibilidad)
+        companions: Número de acompañantes (no usado actualmente)
+        template_name: Nombre del template a usar (default "tickets_event")
+        qr_image_base64: Imagen QR en base64 (REQUERIDO para templates con header IMAGE)
 
     Returns:
         Dict con success, messageId o error
@@ -1016,36 +1021,44 @@ def send_ticket_with_template(
         print("[ERROR] WhatsApp no está listo")
         return {"success": False, "error": "WhatsApp no está disponible"}
 
-    # Determinar qué template usar según si hay acompañantes
-    if companions > 0 and template_name == "ticket_evento":
-        template_name = "ticket_evento_acompanantes"
-
     # Construir variables según el template
-    # ticket_evento: {{1}}=nombre, {{2}}=evento, {{3}}=fecha, {{4}}=lugar, {{5}}=codigo, {{6}}=pin, {{7}}=url
-    # ticket_evento_acompanantes: {{1}}=nombre, {{2}}=evento, {{3}}=fecha, {{4}}=lugar, {{5}}=codigo, {{6}}=pin, {{7}}=acompañantes, {{8}}=url
+    # tickets_event (APROBADO): {{1}}=nombre, {{2}}=evento, {{3}}=fecha, {{4}}=lugar
+    # Header: IMAGE (QR code)
 
-    if template_name == "ticket_evento_acompanantes":
+    if template_name == "tickets_event":
+        variables = [
+            user_name,      # {{1}}
+            event_name,     # {{2}}
+            event_date,     # {{3}}
+            event_location  # {{4}}
+        ]
+    elif template_name == "confirmacion_evento_v2":
+        # Template alternativo sin imagen
+        # Variables: {{1}}=nombre, {{2}}=evento, {{3}}=fecha, {{4}}=lugar
         variables = [
             user_name,
             event_name,
             event_date,
-            event_location,
-            ticket_code,
-            access_pin,
-            str(companions),
-            ticket_url
+            event_location
+        ]
+    elif template_name == "recordatorio_evento":
+        # Template de recordatorio
+        # Variables: {{1}}=nombre, {{2}}=evento, {{3}}=fecha, {{4}}=lugar
+        variables = [
+            user_name,
+            event_name,
+            event_date,
+            event_location
         ]
     else:
-        # ticket_evento u otro template genérico
+        # Template genérico - asumimos estructura similar
         variables = [
             user_name,
             event_name,
             event_date,
-            event_location,
-            ticket_code,
-            access_pin,
-            ticket_url
+            event_location
         ]
+        print(f"[WARNING] Template '{template_name}' no reconocido, usando variables genéricas")
 
     # Preparar header de imagen si se proporciona QR
     header_image_id = None
@@ -1058,10 +1071,27 @@ def send_ticket_with_template(
             print(f"[TEMPLATE] Imagen QR subida con ID: {media_id}")
         else:
             print(f"[WARNING] No se pudo subir el QR, enviando template sin imagen")
+            # Para tickets_event el header IMAGE es requerido
+            if template_name == "tickets_event":
+                return {
+                    "success": False,
+                    "error": "El template 'tickets_event' requiere una imagen QR que no se pudo subir",
+                    "template_attempted": template_name
+                }
+    elif template_name == "tickets_event":
+        # tickets_event requiere imagen
+        print(f"[ERROR] Template 'tickets_event' requiere imagen QR pero no se proporcionó")
+        return {
+            "success": False,
+            "error": "El template 'tickets_event' requiere una imagen QR",
+            "template_attempted": template_name
+        }
 
     # Enviar usando template
     print(f"[TEMPLATE] Enviando template '{template_name}' a {country_code}{phone}")
     print(f"[TEMPLATE] Variables: {variables}")
+    if header_image_id:
+        print(f"[TEMPLATE] Header image ID: {header_image_id}")
 
     result = client.send_template_message(
         phone=phone,
@@ -1132,42 +1162,18 @@ Hola {user_name},
 
     wa_message += "\n\n---\nIEEE Tadeo Student Branch"
 
-    # Si hay imagen, usar el endpoint /send-media
+    # Si hay imagen, usar el método send_message_with_image de la Cloud API
     if image_base64:
-        full_phone = format_phone_number(country_code, phone)
+        print(f"[BULK] Enviando mensaje con imagen a {user_name} ({country_code}{phone})")
+        result = client.send_message_with_image(phone, wa_message, image_base64, country_code)
 
-        try:
-            response = requests.post(
-                f"{client.base_url}/send-media",
-                json={
-                    "phone": full_phone,
-                    "message": wa_message,
-                    "imageBase64": image_base64
-                },
-                timeout=60
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("success"):
-                    message_id = result.get("messageId")
-                    print(f"[OK] Mensaje con imagen enviado a {user_name} ({country_code}{phone})")
-                    if "imageCompression" in result:
-                        print(f"     Compresion: {result['imageCompression']['originalSize']} -> {result['imageCompression']['compressedSize']}")
-                    return {"success": True, "message_id": message_id}
-                else:
-                    error_msg = result.get('error', 'Error desconocido')
-                    print(f"[ERROR] No se pudo enviar mensaje con imagen a {user_name}: {error_msg}")
-                    return {"success": False, "error": error_msg}
-            else:
-                error_data = response.json() if response.text else {}
-                error_msg = error_data.get('error', 'Error desconocido')
-                print(f"[ERROR] No se pudo enviar mensaje con imagen a {user_name}: {error_msg}")
-                return {"success": False, "error": error_msg}
-
-        except requests.exceptions.RequestException as e:
-            error_msg = f"Error de conexión: {str(e)}"
-            print(f"[ERROR] {error_msg} al enviar imagen a {user_name}")
+        if result.get("success"):
+            message_id = result.get("messageId")
+            print(f"[OK] Mensaje con imagen enviado a {user_name} ({country_code}{phone})")
+            return {"success": True, "message_id": message_id}
+        else:
+            error_msg = result.get('error', 'Error desconocido')
+            print(f"[ERROR] No se pudo enviar mensaje con imagen a {user_name}: {error_msg}")
             return {"success": False, "error": error_msg}
 
     # Si no hay imagen, usar el método normal

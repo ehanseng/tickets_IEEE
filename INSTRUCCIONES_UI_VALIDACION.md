@@ -139,7 +139,7 @@ Cuando termines, tendrás:
 
 ## 🧪 Cómo Probar
 
-1. Abre la página de tickets: `http://localhost:8000/admin/tickets`
+1. Abre la página de tickets: `http://localhost:8070/admin/tickets`
 2. Haz clic en "Modo de Validación"
 3. Selecciona un evento
 4. Ve las estadísticas actualizarse automáticamente

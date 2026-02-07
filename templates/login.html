@@ -124,13 +124,15 @@
                     // Guardar token en localStorage
                     localStorage.setItem('access_token', data.access_token);
 
-                    // Decodificar el token para obtener el rol
+                    // Decodificar el token para obtener el rol y permisos
                     const tokenParts = data.access_token.split('.');
                     const payload = JSON.parse(atob(tokenParts[1]));
                     const userRole = payload.role;
+                    const userPermissions = payload.permissions || {};
 
-                    // Guardar el rol
+                    // Guardar el rol y permisos
                     localStorage.setItem('user_role', userRole);
+                    localStorage.setItem('user_permissions', JSON.stringify(userPermissions));
 
                     // Mostrar mensaje de éxito
                     message.innerHTML = '<div class="rounded-lg border bg-green-50 px-4 py-3 text-sm text-green-900">Inicio de sesión exitoso. Redirigiendo...</div>';
@@ -140,6 +142,8 @@
                     setTimeout(() => {
                         if (userRole === 'validator') {
                             window.location.href = '/admin/validate';
+                        } else if (userRole === 'meta_reviewer') {
+                            window.location.href = '/meta-demo';
                         } else {
                             window.location.href = '/admin';
                         }

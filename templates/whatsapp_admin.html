@@ -1156,12 +1156,16 @@ async function selectConversation(phone, name) {
         // Reverse to show oldest first
         const messages = data.messages.reverse();
 
-        container.innerHTML = messages.map(msg => `
-            <div class="message-bubble received">
-                <div>${msg.text_body || msg.caption || `[${msg.message_type}]`}</div>
-                <div class="message-time">${new Date(msg.timestamp).toLocaleString()}</div>
-            </div>
-        `).join('');
+        container.innerHTML = messages.map(msg => {
+            const isOutgoing = msg.direction === 'outgoing';
+            const bubbleClass = isOutgoing ? 'sent' : 'received';
+            return `
+                <div class="message-bubble ${bubbleClass}">
+                    <div>${msg.text_body || msg.caption || `[${msg.message_type}]`}</div>
+                    <div class="message-time">${new Date(msg.timestamp).toLocaleString()}</div>
+                </div>
+            `;
+        }).join('');
 
         container.scrollTop = container.scrollHeight;
 

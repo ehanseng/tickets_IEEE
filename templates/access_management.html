@@ -1,24 +1,56 @@
 {% extends "base.html" %}
 
-{% block title %}Gestión de Accesos - Sistema de Tickets{% endblock %}
+{% block title %}Gestion de Accesos - IEEE Tadeo Control System{% endblock %}
 
 {% block content %}
 <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
     <div class="flex flex-col space-y-1.5 p-6">
         <div class="flex items-center justify-between">
             <div>
-                <h3 class="text-2xl font-semibold leading-none tracking-tight">Gestión de Accesos</h3>
-                <p class="text-sm text-muted-foreground mt-1">Administra los usuarios administradores y validadores del sistema</p>
+                <h3 class="text-2xl font-semibold leading-none tracking-tight">Gestion de Accesos</h3>
+                <p class="text-sm text-muted-foreground mt-1">Administra los usuarios administrativos y promueve contactos del portal</p>
             </div>
-            <button onclick="openModal()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                </svg>
-                Crear Usuario
-            </button>
+            <div class="flex gap-2">
+                <button onclick="openSearchContactModal()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:bg-green-700 h-10 px-4 py-2">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Promover Contacto
+                </button>
+                <button onclick="openModal()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Crear Usuario
+                </button>
+            </div>
         </div>
     </div>
-    <div class="p-6 pt-0">
+
+    <!-- Tabs -->
+    <div class="px-6">
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <button onclick="showTab('admins')" id="tab-admins" class="tab-btn border-primary text-primary whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
+                    <svg class="inline-block w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                    Usuarios Administrativos
+                    <span class="ml-2 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800" id="admin-count">{{ validators|length }}</span>
+                </button>
+                <button onclick="showTab('portal')" id="tab-portal" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
+                    <svg class="inline-block w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                    Contactos con Acceso al Portal
+                    <span class="ml-2 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600" id="portal-count">-</span>
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Tab: Usuarios Administrativos -->
+    <div id="content-admins" class="p-6 pt-4">
         {% if validators %}
         <div class="relative w-full overflow-auto">
             <table class="w-full caption-bottom text-sm">
@@ -29,6 +61,7 @@
                         <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nombre</th>
                         <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
                         <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Rol</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Permisos</th>
                         <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Acceso</th>
                         <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Estado</th>
                         <th class="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Acciones</th>
@@ -38,18 +71,40 @@
                     {% for validator in validators %}
                     <tr class="border-b transition-colors hover:bg-muted/50">
                         <td class="p-4 align-middle">{{ validator.id }}</td>
-                        <td class="p-4 align-middle font-medium">{{ validator.username }}</td>
+                        <td class="p-4 align-middle font-medium">
+                            {{ validator.username }}
+                            {% if validator.linked_user_id %}
+                            <span class="ml-1 text-xs text-green-600" title="Vinculado a contacto #{{ validator.linked_user_id }}">
+                                <svg class="inline w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path>
+                                </svg>
+                            </span>
+                            {% endif %}
+                        </td>
                         <td class="p-4 align-middle">{{ validator.full_name }}</td>
                         <td class="p-4 align-middle text-muted-foreground">{{ validator.email }}</td>
                         <td class="p-4 align-middle">
-                            {% if validator.role == 'admin' %}
+                            {% if validator.role.value == 'admin' %}
                             <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold border-blue-200 bg-blue-100 text-blue-700">
                                 Admin
+                            </span>
+                            {% elif validator.role.value == 'meta_reviewer' %}
+                            <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold border-orange-200 bg-orange-100 text-orange-700">
+                                Meta Reviewer
                             </span>
                             {% else %}
                             <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold border-purple-200 bg-purple-100 text-purple-700">
                                 Validador
                             </span>
+                            {% endif %}
+                        </td>
+                        <td class="p-4 align-middle">
+                            {% if validator.permissions %}
+                            <button onclick='showPermissions({{ validator.permissions | safe }})' class="text-xs text-blue-600 hover:underline">
+                                Ver permisos
+                            </button>
+                            {% else %}
+                            <span class="text-xs text-muted-foreground">Sin restriccion</span>
                             {% endif %}
                         </td>
                         <td class="p-4 align-middle">
@@ -59,7 +114,7 @@
                                 <div>Hasta: {{ validator.access_end.strftime('%d/%m/%Y %H:%M') }}</div>
                             </div>
                             {% else %}
-                            <span class="text-muted-foreground text-xs">Sin restricción</span>
+                            <span class="text-muted-foreground text-xs">Sin restriccion</span>
                             {% endif %}
                         </td>
                         <td class="p-4 align-middle">
@@ -75,7 +130,7 @@
                         </td>
                         <td class="p-4 align-middle text-right">
                             <div class="flex justify-end gap-2">
-                                <button onclick="editValidator({{ validator.id }}, '{{ validator.username }}', '{{ validator.full_name }}', '{{ validator.email }}', '{{ validator.role }}', {{ validator.is_active|lower }}, '{{ validator.access_start.isoformat() if validator.access_start else '' }}', '{{ validator.access_end.isoformat() if validator.access_end else '' }}')" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3">
+                                <button onclick='editValidator({{ validator.id }}, "{{ validator.username }}", "{{ validator.full_name }}", "{{ validator.email }}", "{{ validator.role.value }}", {{ validator.is_active|lower }}, "{{ validator.access_start.isoformat() if validator.access_start else "" }}", "{{ validator.access_end.isoformat() if validator.access_end else "" }}", {{ validator.permissions | default("{}", true) | safe }}, {{ validator.linked_user_id or "null" }})' class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3">
                                     Editar
                                 </button>
                                 <button onclick="toggleValidator({{ validator.id }}, {{ validator.is_active|lower }})" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 {% if validator.is_active %}bg-amber-600 text-white hover:bg-amber-700{% else %}bg-emerald-600 text-white hover:bg-emerald-700{% endif %} h-8 px-3">
@@ -93,15 +148,61 @@
             <svg class="h-12 w-12 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
             </svg>
-            <p class="text-muted-foreground">No hay validadores registrados</p>
+            <p class="text-muted-foreground">No hay usuarios administrativos registrados</p>
         </div>
         {% endif %}
     </div>
+
+    <!-- Tab: Contactos del Portal -->
+    <div id="content-portal" class="p-6 pt-4 hidden">
+        <div class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p class="text-sm text-blue-800">
+                <svg class="inline w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                </svg>
+                Estos son los contactos que han iniciado sesion en el portal de usuarios. Puedes promoverlos a usuarios administrativos para darles acceso al panel de administracion.
+            </p>
+        </div>
+
+        <div id="portal-users-loading" class="flex justify-center py-8">
+            <svg class="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        </div>
+
+        <div id="portal-users-table" class="hidden relative w-full overflow-auto">
+            <table class="w-full caption-bottom text-sm">
+                <thead class="[&_tr]:border-b">
+                    <tr class="border-b transition-colors hover:bg-muted/50">
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">ID</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nombre</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Email</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Telefono</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Primer Login</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Ultimo Login</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Total Logins</th>
+                        <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Estado</th>
+                        <th class="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="portal-users-body" class="[&_tr:last-child]:border-0">
+                </tbody>
+            </table>
+        </div>
+
+        <div id="portal-users-empty" class="hidden flex flex-col items-center justify-center py-8 text-center">
+            <svg class="h-12 w-12 text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            <p class="text-muted-foreground">Ningun contacto ha iniciado sesion en el portal aun</p>
+        </div>
+    </div>
 </div>
 
-<!-- Modal para crear usuario -->
+<!-- Modal para crear/editar usuario -->
 <div id="validatorModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div class="flex flex-col space-y-1.5 p-6 border-b">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold leading-none tracking-tight" id="modalTitle">Crear Usuario</h3>
@@ -116,20 +217,26 @@
             <form id="validatorForm" class="space-y-4">
                 <input type="hidden" id="validator_id">
                 <input type="hidden" id="is_edit" value="false">
+                <input type="hidden" id="linked_user_id">
 
-                <div class="space-y-2">
-                    <label for="username" class="text-sm font-medium leading-none">Usuario *</label>
-                    <input type="text" id="username" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label for="username" class="text-sm font-medium leading-none">Usuario *</label>
+                        <input type="text" id="username" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    </div>
 
-                <div class="space-y-2">
-                    <label for="email" class="text-sm font-medium leading-none">Email *</label>
-                    <input type="email" id="email" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <div class="space-y-2">
+                        <label for="email" class="text-sm font-medium leading-none">Email *</label>
+                        <input type="email" id="email" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    </div>
                 </div>
 
                 <div class="space-y-2" id="passwordField">
-                    <label for="password" class="text-sm font-medium leading-none">Contraseña *</label>
+                    <label for="password" class="text-sm font-medium leading-none">
+                        <span id="passwordLabel">Contrasena *</span>
+                    </label>
                     <input type="password" id="password" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <p class="text-xs text-muted-foreground" id="passwordHelp"></p>
                 </div>
 
                 <div class="space-y-2">
@@ -139,31 +246,186 @@
 
                 <div class="space-y-2">
                     <label for="role" class="text-sm font-medium leading-none">Rol *</label>
-                    <select id="role" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                        <option value="admin">Administrador</option>
-                        <option value="validator">Validador</option>
+                    <select id="role" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" onchange="handleRoleChange(this.value)">
+                        <option value="admin">Administrador (acceso completo)</option>
+                        <option value="partial">Acceso parcial</option>
+                        <option value="meta_reviewer">Meta Reviewer</option>
+                        <option value="validator">Validador (solo validar tickets)</option>
                     </select>
-                    <p class="text-xs text-muted-foreground">Los administradores tienen acceso completo, los validadores solo pueden validar tickets</p>
                 </div>
 
-                <div class="space-y-2">
-                    <label for="access_start" class="text-sm font-medium leading-none">Inicio de Acceso</label>
-                    <input type="datetime-local" id="access_start" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                    <p class="text-xs text-muted-foreground">Dejar vacío para acceso inmediato</p>
+                <!-- Permisos por seccion -->
+                <div class="space-y-2" id="permissionsSection">
+                    <label class="text-sm font-medium leading-none">Permisos por Seccion</label>
+                    <p class="text-xs text-muted-foreground mb-2" id="permissionsHelp">Si no seleccionas ninguno, tendra acceso segun su rol</p>
+                    <div class="grid grid-cols-2 gap-2 p-3 border rounded-md bg-gray-50" id="permissionsGrid">
+                        <!-- Se llena dinamicamente -->
+                    </div>
                 </div>
 
-                <div class="space-y-2">
-                    <label for="access_end" class="text-sm font-medium leading-none">Fin de Acceso</label>
-                    <input type="datetime-local" id="access_end" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                    <p class="text-xs text-muted-foreground">Dejar vacío para acceso sin límite</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label for="access_start" class="text-sm font-medium leading-none">Inicio de Acceso</label>
+                        <input type="datetime-local" id="access_start" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                        <p class="text-xs text-muted-foreground">Vacio = inmediato</p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="access_end" class="text-sm font-medium leading-none">Fin de Acceso</label>
+                        <input type="datetime-local" id="access_end" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                        <p class="text-xs text-muted-foreground">Vacio = sin limite</p>
+                    </div>
                 </div>
 
                 <button type="submit" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full">
-                    Guardar Validador
+                    Guardar
                 </button>
             </form>
 
             <div id="message" class="mt-4"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para promover contacto -->
+<div id="promoteModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold leading-none tracking-tight">Promover a Usuario Administrativo</h3>
+                <button onclick="closePromoteModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p class="text-sm text-green-800">
+                    <strong>Contacto:</strong> <span id="promote-user-name"></span><br>
+                    <strong>Email:</strong> <span id="promote-user-email"></span>
+                </p>
+            </div>
+
+            <form id="promoteForm" class="space-y-4">
+                <input type="hidden" id="promote_user_id">
+
+                <div class="space-y-2">
+                    <label for="promote_username" class="text-sm font-medium leading-none">Usuario de Acceso *</label>
+                    <input type="text" id="promote_username" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" placeholder="nombre.usuario">
+                </div>
+
+                <div class="space-y-2">
+                    <label for="promote_password" class="text-sm font-medium leading-none">Contrasena *</label>
+                    <input type="password" id="promote_password" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                </div>
+
+                <div class="space-y-2">
+                    <label for="promote_role" class="text-sm font-medium leading-none">Rol *</label>
+                    <select id="promote_role" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" onchange="handlePromoteRoleChange(this.value)">
+                        <option value="validator">Validador (solo validar tickets)</option>
+                        <option value="partial">Acceso parcial</option>
+                        <option value="meta_reviewer">Meta Reviewer</option>
+                        <option value="admin">Administrador (acceso completo)</option>
+                    </select>
+                </div>
+
+                <!-- Permisos por seccion -->
+                <div class="space-y-2" id="promotePermissionsSection">
+                    <label class="text-sm font-medium leading-none">Permisos por Seccion</label>
+                    <p class="text-xs text-muted-foreground mb-2" id="promotePermissionsHelp">Si no seleccionas ninguno, tendra acceso segun su rol</p>
+                    <div class="grid grid-cols-2 gap-2 p-3 border rounded-md bg-gray-50" id="promotePermissionsGrid">
+                        <!-- Se llena dinamicamente -->
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label for="promote_access_start" class="text-sm font-medium leading-none">Inicio de Acceso</label>
+                        <input type="datetime-local" id="promote_access_start" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="promote_access_end" class="text-sm font-medium leading-none">Fin de Acceso</label>
+                        <input type="datetime-local" id="promote_access_end" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    </div>
+                </div>
+
+                <button type="submit" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:bg-green-700 h-10 px-4 py-2 w-full">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Crear Acceso Administrativo
+                </button>
+            </form>
+
+            <div id="promoteMessage" class="mt-4"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para ver permisos -->
+<div id="permissionsViewModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold leading-none tracking-tight">Permisos del Usuario</h3>
+                <button onclick="closePermissionsViewModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="p-6">
+            <div id="permissionsViewContent" class="space-y-2">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para buscar y seleccionar contacto -->
+<div id="searchContactModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="flex flex-col space-y-1.5 p-6 border-b">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold leading-none tracking-tight">Buscar Contacto para Promover</h3>
+                <button onclick="closeSearchContactModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="p-6 flex-1 overflow-hidden flex flex-col">
+            <div class="mb-4">
+                <div class="relative">
+                    <input type="text" id="contactSearchInput" placeholder="Buscar por nombre, email o telefono..."
+                        class="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        oninput="searchContacts(this.value)">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <p class="text-xs text-muted-foreground mt-2">Escribe al menos 2 caracteres para buscar</p>
+            </div>
+
+            <div id="contactSearchLoading" class="hidden flex justify-center py-8">
+                <svg class="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+
+            <div id="contactSearchResults" class="flex-1 overflow-y-auto space-y-2">
+                <div class="text-center py-8 text-muted-foreground">
+                    <svg class="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <p>Busca un contacto para promoverlo a usuario administrativo</p>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -172,15 +434,321 @@
 {% block extra_js %}
 <script>
     const token = localStorage.getItem('access_token');
+    let permissionsSchema = [];
+    let portalUsersLoaded = false;
 
+    // Cargar schema de permisos al iniciar
+    async function loadPermissionsSchema() {
+        try {
+            const response = await fetch('/api/admin-permissions-schema', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                permissionsSchema = data.sections;
+                renderPermissionsGrid();
+            }
+        } catch (error) {
+            console.error('Error loading permissions schema:', error);
+        }
+    }
+
+    function renderPermissionsGrid() {
+        const grid = document.getElementById('permissionsGrid');
+        const promoteGrid = document.getElementById('promotePermissionsGrid');
+
+        const html = permissionsSchema.map(section => `
+            <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" name="permission" value="${section.key}" class="rounded border-gray-300" onchange="handlePermissionChange('permissionsGrid')">
+                <span title="${section.description}">${section.name}</span>
+            </label>
+        `).join('');
+
+        const promoteHtml = permissionsSchema.map(section => `
+            <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" name="permission" value="${section.key}" class="rounded border-gray-300" onchange="handlePermissionChange('promotePermissionsGrid')">
+                <span title="${section.description}">${section.name}</span>
+            </label>
+        `).join('');
+
+        if (grid) grid.innerHTML = html;
+        if (promoteGrid) promoteGrid.innerHTML = promoteHtml;
+    }
+
+    // Manejar cambio de rol en modal de editar/crear
+    // modifyCheckboxes: si es true, modifica los checkboxes; si es false, solo actualiza la UI
+    function handleRoleChange(role, modifyCheckboxes = true) {
+        const grid = document.getElementById('permissionsGrid');
+        const section = document.getElementById('permissionsSection');
+        const help = document.getElementById('permissionsHelp');
+        const checkboxes = grid.querySelectorAll('input[name="permission"]');
+
+        if (role === 'admin') {
+            // Seleccionar todos los checkboxes solo si se permite modificar
+            if (modifyCheckboxes) {
+                checkboxes.forEach(cb => cb.checked = true);
+            }
+            help.textContent = 'Acceso completo: todas las secciones habilitadas';
+            help.classList.add('text-green-600');
+            help.classList.remove('text-muted-foreground', 'text-blue-600', 'text-orange-600');
+        } else if (role === 'validator') {
+            // Desmarcar todos - el validador solo valida
+            if (modifyCheckboxes) {
+                checkboxes.forEach(cb => cb.checked = false);
+            }
+            help.textContent = 'Solo podra validar tickets';
+            help.classList.add('text-blue-600');
+            help.classList.remove('text-muted-foreground', 'text-green-600', 'text-orange-600');
+        } else if (role === 'meta_reviewer') {
+            // Meta reviewer - tiene permisos especiales de revision
+            if (modifyCheckboxes) {
+                checkboxes.forEach(cb => cb.checked = false);
+            }
+            help.textContent = 'Puede revisar y aprobar validaciones';
+            help.classList.add('text-orange-600');
+            help.classList.remove('text-muted-foreground', 'text-green-600', 'text-blue-600');
+        } else {
+            // Acceso parcial - mantener seleccion actual (nunca modifica checkboxes)
+            help.textContent = 'Selecciona las secciones a las que tendra acceso';
+            help.classList.add('text-muted-foreground');
+            help.classList.remove('text-green-600', 'text-blue-600', 'text-orange-600');
+        }
+    }
+
+    // Manejar cambio de rol en modal de promover
+    function handlePromoteRoleChange(role) {
+        const grid = document.getElementById('promotePermissionsGrid');
+        const help = document.getElementById('promotePermissionsHelp');
+        const checkboxes = grid.querySelectorAll('input[name="permission"]');
+
+        if (role === 'admin') {
+            // Seleccionar todos los checkboxes
+            checkboxes.forEach(cb => cb.checked = true);
+            help.textContent = 'Acceso completo: todas las secciones habilitadas';
+            help.classList.add('text-green-600');
+            help.classList.remove('text-muted-foreground', 'text-blue-600', 'text-orange-600');
+        } else if (role === 'validator') {
+            // Desmarcar todos - el validador solo valida
+            checkboxes.forEach(cb => cb.checked = false);
+            help.textContent = 'Solo podra validar tickets';
+            help.classList.add('text-blue-600');
+            help.classList.remove('text-muted-foreground', 'text-green-600', 'text-orange-600');
+        } else if (role === 'meta_reviewer') {
+            // Meta reviewer - tiene permisos especiales de revision
+            checkboxes.forEach(cb => cb.checked = false);
+            help.textContent = 'Puede revisar y aprobar validaciones';
+            help.classList.add('text-orange-600');
+            help.classList.remove('text-muted-foreground', 'text-green-600', 'text-blue-600');
+        } else {
+            // Acceso parcial - mantener seleccion actual
+            help.textContent = 'Selecciona las secciones a las que tendra acceso';
+            help.classList.add('text-muted-foreground');
+            help.classList.remove('text-green-600', 'text-blue-600', 'text-orange-600');
+        }
+    }
+
+    // Manejar cambio de checkbox de permisos
+    function handlePermissionChange(gridId) {
+        const grid = document.getElementById(gridId);
+        const checkboxes = grid.querySelectorAll('input[name="permission"]');
+        const checkedCount = grid.querySelectorAll('input[name="permission"]:checked').length;
+        const totalCount = checkboxes.length;
+
+        // Determinar cual selector de rol usar
+        const isPromoteGrid = gridId === 'promotePermissionsGrid';
+        const roleSelect = document.getElementById(isPromoteGrid ? 'promote_role' : 'role');
+        const help = document.getElementById(isPromoteGrid ? 'promotePermissionsHelp' : 'permissionsHelp');
+
+        if (checkedCount === totalCount) {
+            // Todos seleccionados -> admin
+            roleSelect.value = 'admin';
+            help.textContent = 'Acceso completo: todas las secciones habilitadas';
+            help.classList.add('text-green-600');
+            help.classList.remove('text-muted-foreground', 'text-blue-600');
+        } else if (checkedCount === 0) {
+            // Ninguno seleccionado -> mantener validator si esta, sino partial
+            if (roleSelect.value === 'admin') {
+                roleSelect.value = 'partial';
+            }
+            if (roleSelect.value === 'validator') {
+                help.textContent = 'Solo podra validar tickets';
+                help.classList.add('text-blue-600');
+                help.classList.remove('text-muted-foreground', 'text-green-600');
+            } else {
+                help.textContent = 'Selecciona las secciones a las que tendra acceso';
+                help.classList.add('text-muted-foreground');
+                help.classList.remove('text-green-600', 'text-blue-600');
+            }
+        } else {
+            // Algunos seleccionados -> partial
+            if (roleSelect.value === 'admin') {
+                roleSelect.value = 'partial';
+            }
+            help.textContent = 'Selecciona las secciones a las que tendra acceso';
+            help.classList.add('text-muted-foreground');
+            help.classList.remove('text-green-600', 'text-blue-600');
+        }
+    }
+
+    function getSelectedPermissions(gridId) {
+        const grid = document.getElementById(gridId);
+        const checkboxes = grid.querySelectorAll('input[name="permission"]:checked');
+        if (checkboxes.length === 0) return null;
+
+        const permissions = {};
+        checkboxes.forEach(cb => {
+            permissions[cb.value] = true;
+        });
+        // Devolver objeto, no string - el backend espera un diccionario
+        return permissions;
+    }
+
+    function setSelectedPermissions(gridId, permissionsData) {
+        const grid = document.getElementById(gridId);
+        const checkboxes = grid.querySelectorAll('input[name="permission"]');
+
+        console.log('setSelectedPermissions called:', gridId, permissionsData);
+        console.log('Checkboxes found:', checkboxes.length);
+
+        // Desmarcar todos
+        checkboxes.forEach(cb => cb.checked = false);
+
+        if (!permissionsData) {
+            console.log('No permissions data provided');
+            return;
+        }
+
+        try {
+            // Soportar tanto string JSON como objeto directo
+            const permissions = typeof permissionsData === 'string' ? JSON.parse(permissionsData) : permissionsData;
+            console.log('Parsed permissions:', permissions);
+
+            Object.keys(permissions).forEach(key => {
+                if (permissions[key]) {
+                    const cb = grid.querySelector(`input[value="${key}"]`);
+                    console.log(`Looking for checkbox with value="${key}":`, cb ? 'found' : 'NOT FOUND');
+                    if (cb) cb.checked = true;
+                }
+            });
+
+            // Log final state
+            const checkedAfter = grid.querySelectorAll('input[name="permission"]:checked').length;
+            console.log('Checkboxes checked after:', checkedAfter);
+        } catch (e) {
+            console.error('Error parsing permissions:', e);
+        }
+    }
+
+    // Tabs
+    function showTab(tabName) {
+        // Ocultar todos los contenidos
+        document.getElementById('content-admins').classList.add('hidden');
+        document.getElementById('content-portal').classList.add('hidden');
+
+        // Desactivar todos los tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('border-primary', 'text-primary');
+            btn.classList.add('border-transparent', 'text-gray-500');
+        });
+
+        // Mostrar contenido seleccionado
+        document.getElementById(`content-${tabName}`).classList.remove('hidden');
+
+        // Activar tab seleccionado
+        const activeTab = document.getElementById(`tab-${tabName}`);
+        activeTab.classList.remove('border-transparent', 'text-gray-500');
+        activeTab.classList.add('border-primary', 'text-primary');
+
+        // Cargar usuarios del portal si es necesario
+        if (tabName === 'portal' && !portalUsersLoaded) {
+            loadPortalUsers();
+        }
+    }
+
+    async function loadPortalUsers() {
+        const loading = document.getElementById('portal-users-loading');
+        const table = document.getElementById('portal-users-table');
+        const empty = document.getElementById('portal-users-empty');
+        const body = document.getElementById('portal-users-body');
+        const count = document.getElementById('portal-count');
+
+        try {
+            const response = await fetch('/api/portal-users-with-login', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                const users = await response.json();
+                portalUsersLoaded = true;
+                count.textContent = users.length;
+
+                loading.classList.add('hidden');
+
+                if (users.length === 0) {
+                    empty.classList.remove('hidden');
+                    return;
+                }
+
+                body.innerHTML = users.map(user => `
+                    <tr class="border-b transition-colors hover:bg-muted/50">
+                        <td class="p-4 align-middle">${user.id}</td>
+                        <td class="p-4 align-middle font-medium">${user.name}</td>
+                        <td class="p-4 align-middle text-muted-foreground">${user.email}</td>
+                        <td class="p-4 align-middle">${user.phone || '-'}</td>
+                        <td class="p-4 align-middle text-xs">${user.first_login ? new Date(user.first_login).toLocaleString('es-CO') : '-'}</td>
+                        <td class="p-4 align-middle text-xs">${user.last_login ? new Date(user.last_login).toLocaleString('es-CO') : '-'}</td>
+                        <td class="p-4 align-middle text-center">${user.login_count}</td>
+                        <td class="p-4 align-middle">
+                            ${user.has_admin_account
+                                ? `<span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold border-green-200 bg-green-100 text-green-700">
+                                    <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    Con acceso admin
+                                   </span>`
+                                : `<span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold border-gray-200 bg-gray-100 text-gray-600">
+                                    Solo portal
+                                   </span>`
+                            }
+                        </td>
+                        <td class="p-4 align-middle text-right">
+                            ${user.has_admin_account
+                                ? `<span class="text-xs text-muted-foreground">Admin #${user.admin_account_id}</span>`
+                                : `<button onclick="openPromoteModal(${user.id}, '${user.name.replace(/'/g, "\\'")}', '${user.email}')" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:bg-green-700 h-8 px-3">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Promover
+                                   </button>`
+                            }
+                        </td>
+                    </tr>
+                `).join('');
+
+                table.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('Error loading portal users:', error);
+            loading.innerHTML = '<p class="text-red-600">Error al cargar usuarios</p>';
+        }
+    }
+
+    // Modal crear/editar
     function openModal() {
         document.getElementById('validatorModal').classList.remove('hidden');
         document.getElementById('is_edit').value = 'false';
         document.getElementById('modalTitle').textContent = 'Crear Usuario';
         document.getElementById('passwordField').style.display = 'block';
         document.getElementById('password').required = true;
+        document.getElementById('password').value = '';
+        document.getElementById('passwordLabel').textContent = 'Contrasena *';
+        document.getElementById('passwordHelp').textContent = '';
         document.getElementById('username').disabled = false;
-        document.getElementById('role').value = 'validator'; // Default to validator
+        document.getElementById('role').value = 'validator';
+        document.getElementById('linked_user_id').value = '';
+        setSelectedPermissions('permissionsGrid', null);
+        // Inicializar estado de permisos
+        handleRoleChange('validator');
     }
 
     function closeModal() {
@@ -189,32 +757,134 @@
         document.getElementById('message').innerHTML = '';
     }
 
-    function editValidator(id, username, full_name, email, role, is_active, access_start, access_end) {
+    function editValidator(id, username, full_name, email, role, is_active, access_start, access_end, permissions, linked_user_id) {
         document.getElementById('validatorModal').classList.remove('hidden');
         document.getElementById('is_edit').value = 'true';
         document.getElementById('validator_id').value = id;
         document.getElementById('modalTitle').textContent = 'Editar Usuario';
         document.getElementById('username').value = username;
-        document.getElementById('username').disabled = false; // Permitir editar username
+        document.getElementById('username').disabled = false;
         document.getElementById('full_name').value = full_name;
         document.getElementById('email').value = email;
-        document.getElementById('role').value = role;
-        document.getElementById('passwordField').style.display = 'none';
+        document.getElementById('linked_user_id').value = linked_user_id || '';
+
+        // Mostrar campo de contraseña pero opcional
+        document.getElementById('passwordField').style.display = 'block';
         document.getElementById('password').required = false;
+        document.getElementById('password').value = '';
+        document.getElementById('passwordLabel').textContent = 'Nueva Contrasena (opcional)';
+        document.getElementById('passwordHelp').textContent = 'Dejar vacio para mantener la actual';
 
         if (access_start) {
             const startDate = new Date(access_start);
             document.getElementById('access_start').value = startDate.toISOString().slice(0, 16);
+        } else {
+            document.getElementById('access_start').value = '';
         }
         if (access_end) {
             const endDate = new Date(access_end);
             document.getElementById('access_end').value = endDate.toISOString().slice(0, 16);
+        } else {
+            document.getElementById('access_end').value = '';
         }
+
+        // Primero establecer permisos
+        setSelectedPermissions('permissionsGrid', permissions);
+
+        // Determinar el rol correcto basado en permisos
+        const grid = document.getElementById('permissionsGrid');
+        const checkboxes = grid.querySelectorAll('input[name="permission"]');
+        const checkedCount = grid.querySelectorAll('input[name="permission"]:checked').length;
+        const totalCount = checkboxes.length;
+
+        // Guardar el rol original para casos especiales
+        const roleSelect = document.getElementById('role');
+        const originalRole = role;
+
+        // Si tiene todos los permisos, es admin; si tiene algunos, es partial; si no tiene, mantener rol original
+        if (checkedCount === totalCount && totalCount > 0) {
+            roleSelect.value = 'admin';
+        } else if (checkedCount > 0) {
+            roleSelect.value = 'partial';
+        } else {
+            // Sin permisos especificos - usar el rol guardado
+            // Verificar que el rol exista en las opciones
+            const roleExists = Array.from(roleSelect.options).some(opt => opt.value === originalRole);
+            if (roleExists) {
+                roleSelect.value = originalRole;
+            } else {
+                // Si el rol no existe en las opciones, usar 'admin' como default
+                console.warn('Rol no encontrado en opciones:', originalRole);
+                roleSelect.value = 'admin';
+            }
+        }
+
+        // Actualizar UI segun el rol (sin modificar checkboxes, ya estan cargados)
+        handleRoleChange(roleSelect.value, false);
+    }
+
+    // Modal promover
+    function openPromoteModal(userId, userName, userEmail) {
+        document.getElementById('promoteModal').classList.remove('hidden');
+        document.getElementById('promote_user_id').value = userId;
+        document.getElementById('promote-user-name').textContent = userName;
+        document.getElementById('promote-user-email').textContent = userEmail;
+
+        // Sugerir username basado en email
+        const suggestedUsername = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '.');
+        document.getElementById('promote_username').value = suggestedUsername;
+
+        // Establecer rol por defecto
+        document.getElementById('promote_role').value = 'validator';
+        setSelectedPermissions('promotePermissionsGrid', null);
+        // Inicializar estado de permisos
+        handlePromoteRoleChange('validator');
+    }
+
+    function closePromoteModal() {
+        document.getElementById('promoteModal').classList.add('hidden');
+        document.getElementById('promoteForm').reset();
+        document.getElementById('promoteMessage').innerHTML = '';
+    }
+
+    // Ver permisos
+    function showPermissions(permissionsData) {
+        const content = document.getElementById('permissionsViewContent');
+        document.getElementById('permissionsViewModal').classList.remove('hidden');
+
+        try {
+            // Soportar tanto string JSON como objeto directo
+            const permissions = typeof permissionsData === 'string' ? JSON.parse(permissionsData) : permissionsData;
+            const allowedSections = Object.keys(permissions).filter(k => permissions[k]);
+
+            if (allowedSections.length === 0) {
+                content.innerHTML = '<p class="text-muted-foreground">Sin permisos especificos configurados</p>';
+                return;
+            }
+
+            content.innerHTML = allowedSections.map(key => {
+                const section = permissionsSchema.find(s => s.key === key);
+                return `
+                    <div class="flex items-center gap-2 p-2 bg-green-50 rounded">
+                        <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="font-medium">${section ? section.name : key}</span>
+                    </div>
+                `;
+            }).join('');
+        } catch (e) {
+            content.innerHTML = '<p class="text-red-600">Error al leer permisos</p>';
+        }
+    }
+
+    function closePermissionsViewModal() {
+        document.getElementById('permissionsViewModal').classList.add('hidden');
     }
 
     async function toggleValidator(id, currentStatus) {
         const action = currentStatus ? 'desactivar' : 'activar';
-        if (!confirm(`¿Estás seguro de que quieres ${action} este validador?`)) {
+        if (!confirm(`Estas seguro de que quieres ${action} este usuario?`)) {
             return;
         }
 
@@ -232,13 +902,14 @@
                 window.location.reload();
             } else {
                 const data = await response.json();
-                alert(`Error: ${data.detail || 'No se pudo actualizar el validador'}`);
+                alert(`Error: ${data.detail || 'No se pudo actualizar el usuario'}`);
             }
         } catch (error) {
-            alert('Error de conexión');
+            alert('Error de conexion');
         }
     }
 
+    // Submit crear/editar
     document.getElementById('validatorForm').addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -246,17 +917,30 @@
         const validatorId = document.getElementById('validator_id').value;
         const message = document.getElementById('message');
 
+        // Si el rol es "partial", enviarlo como "admin" (el control esta en permissions)
+        let roleToSend = document.getElementById('role').value;
+        if (roleToSend === 'partial') {
+            roleToSend = 'admin';
+        }
+
         const formData = {
             username: document.getElementById('username').value,
             email: document.getElementById('email').value,
             full_name: document.getElementById('full_name').value,
-            role: document.getElementById('role').value,
+            role: roleToSend,
             access_start: document.getElementById('access_start').value || null,
-            access_end: document.getElementById('access_end').value || null
+            access_end: document.getElementById('access_end').value || null,
+            permissions: getSelectedPermissions('permissionsGrid')
         };
 
-        if (!isEdit) {
-            formData.password = document.getElementById('password').value;
+        const linkedUserId = document.getElementById('linked_user_id').value;
+        if (linkedUserId) {
+            formData.linked_user_id = parseInt(linkedUserId);
+        }
+
+        const password = document.getElementById('password').value;
+        if (password) {
+            formData.password = password;
         }
 
         try {
@@ -273,18 +957,194 @@
             });
 
             const data = await response.json();
+            console.log('Response:', response.status, data);
 
             if (response.ok) {
-                message.innerHTML = '<div class="rounded-lg border bg-green-50 px-4 py-3 text-sm text-green-900">Validador guardado exitosamente</div>';
+                message.innerHTML = '<div class="rounded-lg border bg-green-50 px-4 py-3 text-sm text-green-900">Usuario guardado exitosamente</div>';
                 setTimeout(() => {
                     window.location.reload();
                 }, 1500);
             } else {
-                message.innerHTML = `<div class="rounded-lg border bg-red-50 px-4 py-3 text-sm text-red-900">Error: ${data.detail}</div>`;
+                // Manejar errores de validación de Pydantic (array de errores)
+                let errorMsg = 'Error desconocido';
+                if (typeof data.detail === 'string') {
+                    errorMsg = data.detail;
+                } else if (Array.isArray(data.detail)) {
+                    errorMsg = data.detail.map(e => e.msg || e.message || JSON.stringify(e)).join(', ');
+                } else if (data.detail) {
+                    errorMsg = JSON.stringify(data.detail);
+                }
+                message.innerHTML = `<div class="rounded-lg border bg-red-50 px-4 py-3 text-sm text-red-900">Error: ${errorMsg}</div>`;
             }
         } catch (error) {
-            message.innerHTML = '<div class="rounded-lg border bg-red-50 px-4 py-3 text-sm text-red-900">Error de conexión</div>';
+            console.error('Error:', error);
+            message.innerHTML = '<div class="rounded-lg border bg-red-50 px-4 py-3 text-sm text-red-900">Error de conexion</div>';
         }
     });
+
+    // Submit promover
+    document.getElementById('promoteForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const message = document.getElementById('promoteMessage');
+
+        // Si el rol es "partial", enviarlo como "admin" (el control esta en permissions)
+        let roleToSend = document.getElementById('promote_role').value;
+        if (roleToSend === 'partial') {
+            roleToSend = 'admin';
+        }
+
+        const formData = {
+            user_id: parseInt(document.getElementById('promote_user_id').value),
+            username: document.getElementById('promote_username').value,
+            password: document.getElementById('promote_password').value,
+            role: roleToSend,
+            permissions: getSelectedPermissions('promotePermissionsGrid'),
+            access_start: document.getElementById('promote_access_start').value || null,
+            access_end: document.getElementById('promote_access_end').value || null
+        };
+
+        try {
+            const response = await fetch('/api/promote-to-admin', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                message.innerHTML = '<div class="rounded-lg border bg-green-50 px-4 py-3 text-sm text-green-900">Usuario promovido exitosamente</div>';
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                // Manejar errores de validación de Pydantic (array de errores)
+                let errorMsg = 'Error desconocido';
+                if (typeof data.detail === 'string') {
+                    errorMsg = data.detail;
+                } else if (Array.isArray(data.detail)) {
+                    errorMsg = data.detail.map(e => e.msg || e.message || JSON.stringify(e)).join(', ');
+                } else if (data.detail) {
+                    errorMsg = JSON.stringify(data.detail);
+                }
+                message.innerHTML = `<div class="rounded-lg border bg-red-50 px-4 py-3 text-sm text-red-900">Error: ${errorMsg}</div>`;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            message.innerHTML = '<div class="rounded-lg border bg-red-50 px-4 py-3 text-sm text-red-900">Error de conexion</div>';
+        }
+    });
+
+    // ========== BUSCAR CONTACTO PARA PROMOVER ==========
+    let searchTimeout = null;
+
+    function openSearchContactModal() {
+        document.getElementById('searchContactModal').classList.remove('hidden');
+        document.getElementById('contactSearchInput').value = '';
+        document.getElementById('contactSearchResults').innerHTML = `
+            <div class="text-center py-8 text-muted-foreground">
+                <svg class="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <p>Busca un contacto para promoverlo a usuario administrativo</p>
+            </div>
+        `;
+        setTimeout(() => document.getElementById('contactSearchInput').focus(), 100);
+    }
+
+    function closeSearchContactModal() {
+        document.getElementById('searchContactModal').classList.add('hidden');
+    }
+
+    function searchContacts(query) {
+        // Limpiar timeout anterior
+        if (searchTimeout) clearTimeout(searchTimeout);
+
+        if (query.length < 2) {
+            document.getElementById('contactSearchResults').innerHTML = `
+                <div class="text-center py-8 text-muted-foreground">
+                    <svg class="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <p>Escribe al menos 2 caracteres para buscar</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Debounce de 300ms
+        searchTimeout = setTimeout(() => executeSearch(query), 300);
+    }
+
+    async function executeSearch(query) {
+        const loading = document.getElementById('contactSearchLoading');
+        const results = document.getElementById('contactSearchResults');
+
+        loading.classList.remove('hidden');
+        results.innerHTML = '';
+
+        try {
+            const response = await fetch(`/users/search?q=${encodeURIComponent(query)}&limit=20`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            loading.classList.add('hidden');
+
+            if (response.ok) {
+                const users = await response.json();
+
+                if (users.length === 0) {
+                    results.innerHTML = `
+                        <div class="text-center py-8 text-muted-foreground">
+                            <svg class="mx-auto h-12 w-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 2a10 10 0 100 20 10 10 0 000-20z"></path>
+                            </svg>
+                            <p>No se encontraron contactos con "${query}"</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                results.innerHTML = users.map(user => `
+                    <div class="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors flex items-center justify-between" onclick="selectContactToPromote(${user.id}, '${user.name.replace(/'/g, "\\'")}', '${user.email}')">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                <span class="text-primary font-medium">${user.name.charAt(0).toUpperCase()}</span>
+                            </div>
+                            <div>
+                                <p class="font-medium">${user.name}</p>
+                                <p class="text-sm text-muted-foreground">${user.email}</p>
+                                ${user.phone ? `<p class="text-xs text-muted-foreground">${user.country_code || ''} ${user.phone}</p>` : ''}
+                            </div>
+                        </div>
+                        <button class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-green-600 text-white hover:bg-green-700 h-8 px-3">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Promover
+                        </button>
+                    </div>
+                `).join('');
+            } else {
+                results.innerHTML = '<p class="text-center text-red-600 py-4">Error al buscar contactos</p>';
+            }
+        } catch (error) {
+            loading.classList.add('hidden');
+            results.innerHTML = '<p class="text-center text-red-600 py-4">Error de conexion</p>';
+        }
+    }
+
+    function selectContactToPromote(userId, userName, userEmail) {
+        // Cerrar modal de busqueda
+        closeSearchContactModal();
+        // Abrir modal de promocion
+        openPromoteModal(userId, userName, userEmail);
+    }
+
+    // Inicializar
+    loadPermissionsSchema();
 </script>
 {% endblock %}

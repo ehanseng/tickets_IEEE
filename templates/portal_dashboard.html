@@ -75,6 +75,16 @@
                     <button onclick="switchTab('profile')" id="profileTab" class="tab-button flex-1 sm:flex-none px-4 sm:px-6 py-3 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700 text-sm">
                         <i class="fas fa-user-edit mr-2"></i>Mi Perfil
                     </button>
+                    <button onclick="switchTab('birthdays')" id="birthdaysTab" class="tab-button flex-1 sm:flex-none px-4 sm:px-6 py-3 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700 text-sm">
+                        <i class="fas fa-calendar-alt mr-2"></i>Calendario
+                    </button>
+                    <button onclick="switchTab('contests')" id="contestsTab" class="tab-button flex-1 sm:flex-none px-4 sm:px-6 py-3 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700 text-sm">
+                        <i class="fas fa-trophy mr-2"></i>Concursos
+                    </button>
+                    <button onclick="goToModule('asistencia')" class="tab-button flex-1 sm:flex-none px-4 sm:px-6 py-3 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700 text-sm">
+                        <i class="fas fa-clipboard-check mr-2"></i>Asistencias
+                        <i class="fas fa-external-link-alt ml-1 text-xs opacity-60"></i>
+                    </button>
                 </nav>
             </div>
         </div>
@@ -270,6 +280,15 @@
                                     <option value="">Seleccionar...</option>
                                 </select>
                             </div>
+                            <div class="md:col-span-2">
+                                <label class="flex items-center gap-3 p-3 border border-purple-200 rounded-lg cursor-pointer hover:bg-purple-50 transition">
+                                    <input type="checkbox" id="is_professor" class="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-2 focus:ring-purple-500">
+                                    <div>
+                                        <span class="font-medium text-gray-800">Soy Profesor / Docente</span>
+                                        <p class="text-xs text-gray-500">Marcar si eres docente universitario</p>
+                                    </div>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -302,16 +321,26 @@
                                     <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de estudio *</label>
                                     <select id="new_study_type" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                                         <option value="">Seleccionar...</option>
+                                        <option value="tecnica">Técnica</option>
+                                        <option value="tecnologia">Tecnología</option>
                                         <option value="pregrado">Pregrado</option>
                                         <option value="posgrado">Posgrado</option>
                                         <option value="otro">Otro (diplomado, certificación, etc.)</option>
                                     </select>
                                 </div>
                                 <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Estado *</label>
+                                    <select id="new_study_status" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                        <option value="cursando">Cursando</option>
+                                        <option value="egresado">Egresado</option>
+                                        <option value="sin_terminar">Sin terminar</option>
+                                    </select>
+                                </div>
+                                <div>
                                     <label class="block text-xs font-medium text-gray-600 mb-1">Nombre del programa *</label>
                                     <input type="text" id="new_study_program" placeholder="Ej: Maestría en Ciencia de Datos" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                                 </div>
-                                <div class="md:col-span-2">
+                                <div>
                                     <label class="block text-xs font-medium text-gray-600 mb-1">Institución</label>
                                     <input type="text" id="new_study_institution" placeholder="Universidad de Bogotá Jorge Tadeo Lozano" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                                 </div>
@@ -440,6 +469,93 @@
                     </button>
                 </div>
             </form>
+        </div>
+
+        <!-- Calendar Tab -->
+        <div id="birthdaysContent" class="tab-content hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-ieee to-indigo-600 rounded-lg shadow-sm p-5 mb-6 text-white">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas fa-calendar-alt text-3xl mr-4"></i>
+                        <div>
+                            <h2 class="text-xl font-bold">Calendario <span id="calYearTitle"></span></h2>
+                            <p class="text-blue-100 text-sm">Cumplea&ntilde;os y eventos de la rama</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <span class="inline-flex items-center text-xs"><span class="w-2 h-2 rounded-full bg-pink-400 mr-1"></span>Cumplea&ntilde;os</span>
+                        <span class="inline-flex items-center text-xs ml-3"><span class="w-2 h-2 rounded-full bg-yellow-400 mr-1"></span>Eventos</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today alert -->
+            <div id="todayAlert" class="hidden mb-4">
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <div id="todayAlertContent" class="flex flex-wrap gap-2 items-center text-sm"></div>
+                </div>
+            </div>
+
+            <!-- Year calendar grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6" id="yearCalendarGrid"></div>
+
+            <!-- Upcoming section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Upcoming events -->
+                <div class="bg-white rounded-lg shadow-sm p-4">
+                    <h3 class="font-bold text-gray-800 mb-3"><i class="fas fa-calendar-check text-ieee mr-2"></i>Pr&oacute;ximos Eventos</h3>
+                    <div id="upcomingEvents" class="space-y-2"></div>
+                </div>
+                <!-- Upcoming birthdays -->
+                <div class="bg-white rounded-lg shadow-sm p-4">
+                    <h3 class="font-bold text-gray-800 mb-3"><i class="fas fa-birthday-cake text-pink-500 mr-2"></i>Pr&oacute;ximos Cumplea&ntilde;os</h3>
+                    <div id="upcomingBirthdays" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <!-- Day detail popup -->
+            <div id="dayDetailPopup" class="hidden fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center p-4 z-50" onclick="if(event.target===this)closeDayDetail()">
+                <div class="bg-white rounded-lg shadow-xl max-w-sm w-full p-5">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 id="dayDetailTitle" class="font-bold text-gray-900"></h3>
+                        <button onclick="closeDayDetail()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div id="dayDetailContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contests Tab -->
+        <div id="contestsContent" class="tab-content hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-amber-500 to-orange-600 rounded-lg shadow-sm p-5 mb-6 text-white">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas fa-trophy text-3xl mr-4"></i>
+                        <div>
+                            <h2 class="text-xl font-bold">Concursos y Convocatorias 2026</h2>
+                            <p class="text-amber-100 text-sm">Oportunidades de premios, financiacion y crecimiento profesional</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtro de categoria -->
+            <div class="flex items-center gap-2 mb-4 flex-wrap">
+                <button onclick="filterPortalContests('')" class="portal-contest-filter text-xs px-3 py-1.5 rounded-full border font-medium bg-ieee text-white border-ieee">Todos</button>
+                <button onclick="filterPortalContests('IEEE')" class="portal-contest-filter text-xs px-3 py-1.5 rounded-full border font-medium bg-white text-gray-600 border-gray-300 hover:bg-gray-50">IEEE</button>
+                <button onclick="filterPortalContests('Gobierno')" class="portal-contest-filter text-xs px-3 py-1.5 rounded-full border font-medium bg-white text-gray-600 border-gray-300 hover:bg-gray-50">Gobierno</button>
+                <button onclick="filterPortalContests('Empresa')" class="portal-contest-filter text-xs px-3 py-1.5 rounded-full border font-medium bg-white text-gray-600 border-gray-300 hover:bg-gray-50">Empresa</button>
+                <button onclick="filterPortalContests('Universidad')" class="portal-contest-filter text-xs px-3 py-1.5 rounded-full border font-medium bg-white text-gray-600 border-gray-300 hover:bg-gray-50">Universidad</button>
+            </div>
+
+            <!-- Lista de concursos -->
+            <div id="portalContestsList" class="space-y-3">
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>Cargando concursos...
+                </div>
+            </div>
         </div>
     </main>
 
@@ -683,6 +799,7 @@
             document.getElementById('academic_program_id').value = currentProfile.academic_program_id || '';
             document.getElementById('semester_range_id').value = currentProfile.semester_range_id || '';
             document.getElementById('english_level_id').value = currentProfile.english_level_id || '';
+            document.getElementById('is_professor').checked = currentProfile.is_professor || false;
 
             if (currentProfile.expected_graduation) {
                 const date = new Date(currentProfile.expected_graduation);
@@ -782,7 +899,39 @@
             `).join('');
         }
 
+        // Ir a módulo externo
+        async function goToModule(moduleName) {
+            try {
+                const response = await fetch('/portal/generate-external-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('user_access_token')}`
+                    },
+                    body: JSON.stringify({ module_name: moduleName })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    showNotification(err.detail || 'Error al acceder al módulo', 'error');
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    showNotification('Módulo no configurado correctamente', 'error');
+                }
+            } catch (error) {
+                showNotification('Error de conexión', 'error');
+            }
+        }
+
         // Tabs
+        let contestsLoaded = false;
+        let portalContestsData = [];
+
         function switchTab(tab) {
             document.querySelectorAll('.tab-button').forEach(btn => {
                 btn.classList.remove('border-ieee', 'text-ieee');
@@ -790,12 +939,93 @@
             });
             document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
 
-            if (tab === 'dashboard') {
-                document.getElementById('dashboardTab').classList.add('border-ieee', 'text-ieee');
-                document.getElementById('dashboardContent').classList.remove('hidden');
+            const tabEl = document.getElementById(tab + 'Tab');
+            const contentEl = document.getElementById(tab + 'Content');
+            if (tabEl) tabEl.classList.add('border-ieee', 'text-ieee');
+            if (contentEl) contentEl.classList.remove('hidden');
+            if (tab === 'birthdays' && !birthdaysLoaded) loadBirthdays();
+            if (tab === 'contests' && !contestsLoaded) loadPortalContests();
+        }
+
+        // Concursos del portal
+        async function loadPortalContests() {
+            try {
+                const response = await fetch('/api/contests?active_only=true');
+                if (!response.ok) throw new Error('Error');
+                portalContestsData = await response.json();
+                contestsLoaded = true;
+                renderPortalContests(portalContestsData);
+            } catch (error) {
+                document.getElementById('portalContestsList').innerHTML =
+                    '<div class="text-center py-8 text-red-500"><i class="fas fa-exclamation-circle mr-2"></i>Error al cargar concursos</div>';
+            }
+        }
+
+        function renderPortalContests(contests) {
+            const container = document.getElementById('portalContestsList');
+            if (contests.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-info-circle mr-2"></i>No hay concursos disponibles en este momento</div>';
+                return;
+            }
+
+            const categoryColors = {
+                'IEEE': 'bg-blue-100 text-blue-700 border-blue-200',
+                'Gobierno': 'bg-green-100 text-green-700 border-green-200',
+                'Empresa': 'bg-purple-100 text-purple-700 border-purple-200',
+                'Universidad': 'bg-amber-100 text-amber-700 border-amber-200',
+                'ONG': 'bg-teal-100 text-teal-700 border-teal-200',
+                'Otro': 'bg-gray-100 text-gray-700 border-gray-200'
+            };
+
+            const modalityIcons = {
+                'Virtual': '<i class="fas fa-laptop text-blue-500"></i>',
+                'Presencial': '<i class="fas fa-map-marker-alt text-red-500"></i>',
+                'Hibrida': '<i class="fas fa-sync-alt text-green-500"></i>'
+            };
+
+            let html = '';
+            contests.forEach(c => {
+                const catClass = categoryColors[c.category] || categoryColors['Otro'];
+                const modIcon = c.modality ? (modalityIcons[c.modality] || '') : '';
+
+                html += `
+                <div class="portal-contest-card bg-white rounded-lg shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow" data-category="${c.category || ''}">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="fas fa-trophy text-amber-500"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap mb-1">
+                                <h3 class="font-semibold text-gray-900 text-sm">${c.name}</h3>
+                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${catClass}">${c.category || 'Otro'}</span>
+                                ${c.modality ? `<span class="inline-flex items-center gap-1 text-xs text-gray-500">${modIcon} ${c.modality}</span>` : ''}
+                            </div>
+                            ${c.description ? `<p class="text-sm text-gray-600 mb-2">${c.description}</p>` : ''}
+                            <div class="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+                                ${c.prizes ? `<span class="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-1 rounded-md"><i class="fas fa-award"></i> ${c.prizes}</span>` : ''}
+                                ${c.deadline ? `<span class="inline-flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded-md"><i class="fas fa-clock"></i> ${c.deadline}</span>` : ''}
+                                ${c.url ? `<a href="${c.url}" target="_blank" class="inline-flex items-center gap-1 text-ieee hover:underline px-2 py-1 rounded-md bg-blue-50"><i class="fas fa-external-link-alt"></i> Ver convocatoria</a>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function filterPortalContests(category) {
+            // Update filter buttons style
+            document.querySelectorAll('.portal-contest-filter').forEach(btn => {
+                btn.classList.remove('bg-ieee', 'text-white', 'border-ieee');
+                btn.classList.add('bg-white', 'text-gray-600', 'border-gray-300');
+            });
+            event.target.classList.remove('bg-white', 'text-gray-600', 'border-gray-300');
+            event.target.classList.add('bg-ieee', 'text-white', 'border-ieee');
+
+            if (!category) {
+                renderPortalContests(portalContestsData);
             } else {
-                document.getElementById('profileTab').classList.add('border-ieee', 'text-ieee');
-                document.getElementById('profileContent').classList.remove('hidden');
+                renderPortalContests(portalContestsData.filter(c => c.category === category));
             }
         }
 
@@ -843,6 +1073,7 @@
                 semester_range_id: parseInt(document.getElementById('semester_range_id').value) || 0,
                 expected_graduation: expectedGraduation,
                 english_level_id: parseInt(document.getElementById('english_level_id').value) || 0,
+                is_professor: document.getElementById('is_professor').checked,
                 ieee_membership_status_id: parseInt(document.getElementById('ieee_membership_status_id').value) || 0,
                 ieee_member_id: document.getElementById('ieee_member_id').value || null,
                 ieee_roles_history: document.getElementById('ieee_roles_history').value || null,
@@ -1035,26 +1266,41 @@
             }
 
             const studyTypeLabels = {
+                'tecnica': { label: 'Técnica', color: 'teal' },
+                'tecnologia': { label: 'Tecnología', color: 'cyan' },
                 'pregrado': { label: 'Pregrado', color: 'blue' },
                 'posgrado': { label: 'Posgrado', color: 'purple' },
                 'otro': { label: 'Otro', color: 'gray' }
             };
 
+            const statusLabels = {
+                'cursando': { label: 'Cursando', color: 'yellow', icon: 'fa-book-open' },
+                'egresado': { label: 'Egresado', color: 'green', icon: 'fa-graduation-cap' },
+                'sin_terminar': { label: 'Sin terminar', color: 'orange', icon: 'fa-pause-circle' }
+            };
+
             container.innerHTML = userStudies.map(study => {
                 const typeInfo = studyTypeLabels[study.study_type] || studyTypeLabels['otro'];
+                const statusInfo = statusLabels[study.status] || statusLabels['cursando'];
                 return `
                     <div class="flex items-start justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <div class="flex-1">
-                            <div class="flex items-center gap-2 mb-1">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
                                 <span class="text-xs px-2 py-0.5 rounded-full bg-${typeInfo.color}-100 text-${typeInfo.color}-700">${typeInfo.label}</span>
+                                <span class="text-xs px-2 py-0.5 rounded-full bg-${statusInfo.color}-100 text-${statusInfo.color}-700"><i class="fas ${statusInfo.icon} mr-1"></i>${statusInfo.label}</span>
                                 ${study.is_primary ? '<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700"><i class="fas fa-star mr-1"></i>Principal</span>' : ''}
                             </div>
                             <p class="font-medium text-gray-800">${study.program_name}</p>
                             ${study.institution ? `<p class="text-sm text-gray-500"><i class="fas fa-university mr-1"></i>${study.institution}</p>` : ''}
                         </div>
-                        <button onclick="deleteStudy(${study.id})" class="text-red-500 hover:text-red-700 p-1" title="Eliminar estudio">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <div class="flex gap-1">
+                            <button onclick="openEditStudyModal(${study.id}, '${study.study_type}', '${study.program_name.replace(/'/g, "\\'")}', '${(study.institution || '').replace(/'/g, "\\'")}', '${study.status || 'cursando'}', ${study.is_primary})" class="text-blue-500 hover:text-blue-700 p-1" title="Editar estudio">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteStudy(${study.id})" class="text-red-500 hover:text-red-700 p-1" title="Eliminar estudio">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -1064,6 +1310,7 @@
             const studyType = document.getElementById('new_study_type').value;
             const programName = document.getElementById('new_study_program').value.trim();
             const institution = document.getElementById('new_study_institution').value.trim();
+            const status = document.getElementById('new_study_status').value;
 
             if (!studyType) {
                 showNotification('Selecciona el tipo de estudio', 'error');
@@ -1085,6 +1332,7 @@
                         study_type: studyType,
                         program_name: programName,
                         institution: institution || null,
+                        status: status || 'cursando',
                         is_primary: false
                     })
                 });
@@ -1095,6 +1343,7 @@
                     document.getElementById('new_study_type').value = '';
                     document.getElementById('new_study_program').value = '';
                     document.getElementById('new_study_institution').value = '';
+                    document.getElementById('new_study_status').value = 'cursando';
                     // Recargar lista
                     await loadStudies();
                 } else {
@@ -1120,6 +1369,71 @@
                     await loadStudies();
                 } else {
                     showNotification('Error al eliminar estudio', 'error');
+                }
+            } catch (error) {
+                showNotification('Error de conexión', 'error');
+            }
+        }
+
+        // ========== EDITAR ESTUDIO ==========
+        let editingStudyId = null;
+
+        function openEditStudyModal(studyId, studyType, programName, institution, status, isPrimary) {
+            editingStudyId = studyId;
+            document.getElementById('edit_study_type').value = studyType;
+            document.getElementById('edit_study_program').value = programName;
+            document.getElementById('edit_study_institution').value = institution || '';
+            document.getElementById('edit_study_status').value = status || 'cursando';
+            document.getElementById('edit_study_primary').checked = isPrimary;
+            document.getElementById('editStudyModal').classList.remove('hidden');
+        }
+
+        function closeEditStudyModal() {
+            document.getElementById('editStudyModal').classList.add('hidden');
+            editingStudyId = null;
+        }
+
+        async function updateStudy() {
+            if (!editingStudyId) return;
+
+            const studyType = document.getElementById('edit_study_type').value;
+            const programName = document.getElementById('edit_study_program').value.trim();
+            const institution = document.getElementById('edit_study_institution').value.trim();
+            const status = document.getElementById('edit_study_status').value;
+            const isPrimary = document.getElementById('edit_study_primary').checked;
+
+            if (!studyType) {
+                showNotification('Selecciona el tipo de estudio', 'error');
+                return;
+            }
+            if (!programName) {
+                showNotification('Ingresa el nombre del programa', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/portal/profile/studies/${editingStudyId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        study_type: studyType,
+                        program_name: programName,
+                        institution: institution || null,
+                        status: status,
+                        is_primary: isPrimary
+                    })
+                });
+
+                if (response.ok) {
+                    showNotification('Estudio actualizado exitosamente', 'success');
+                    closeEditStudyModal();
+                    await loadStudies();
+                } else {
+                    const error = await response.json();
+                    showNotification(error.detail || 'Error al actualizar estudio', 'error');
                 }
             } catch (error) {
                 showNotification('Error de conexión', 'error');
@@ -1246,6 +1560,259 @@
                 showNotification('Error de conexión', 'error');
             }
         }
+
+        // ============================================
+        // Calendar (Birthdays + Events)
+        // ============================================
+        const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        const DAY_NAMES = ['Lu','Ma','Mi','Ju','Vi','Sa','Do'];
+        let allBirthdays = [];
+        let allEvents = [];
+        let birthdaysLoaded = false;
+
+        async function loadBirthdays() {
+            try {
+                const headers = { 'Authorization': `Bearer ${localStorage.getItem('user_access_token')}` };
+                const [bRes, eRes] = await Promise.all([
+                    fetch('/portal/birthdays', { headers }),
+                    fetch('/portal/events', { headers })
+                ]);
+                if (bRes.ok) allBirthdays = await bRes.json();
+                if (eRes.ok) allEvents = await eRes.json();
+                birthdaysLoaded = true;
+                renderCalendar();
+            } catch (error) {
+                console.error('Error cargando calendario:', error);
+            }
+        }
+
+        function renderCalendar() {
+            const today = new Date();
+            const year = today.getFullYear();
+            document.getElementById('calYearTitle').textContent = year;
+
+            // Today alert
+            const todayMonth = today.getMonth() + 1;
+            const todayDay = today.getDate();
+            const todayBdays = allBirthdays.filter(b => b.month === todayMonth && b.day === todayDay);
+            const todayEvts = allEvents.filter(e => {
+                const d = new Date(e.event_date);
+                return d.getFullYear() === year && d.getMonth() + 1 === todayMonth && d.getDate() === todayDay;
+            });
+            const alertEl = document.getElementById('todayAlert');
+            if (todayBdays.length > 0 || todayEvts.length > 0) {
+                alertEl.classList.remove('hidden');
+                let html = '<i class="fas fa-star text-yellow-500 mr-1"></i><strong>Hoy:</strong> ';
+                if (todayBdays.length > 0) html += '<i class="fas fa-birthday-cake text-pink-500 mx-1"></i>' + todayBdays.map(b => b.name).join(', ');
+                if (todayEvts.length > 0) html += (todayBdays.length ? ' &bull; ' : '') + '<i class="fas fa-calendar-check text-ieee mx-1"></i>' + todayEvts.map(e => e.name).join(', ');
+                document.getElementById('todayAlertContent').innerHTML = html;
+            }
+
+            // Render 12 months
+            const grid = document.getElementById('yearCalendarGrid');
+            grid.innerHTML = '';
+            for (let m = 0; m < 12; m++) {
+                grid.innerHTML += renderMiniMonth(year, m, today);
+            }
+
+            renderUpcoming(today);
+        }
+
+        function renderMiniMonth(year, monthIdx, today) {
+            const month = monthIdx + 1;
+            const isCurrentMonth = (today.getFullYear() === year && today.getMonth() === monthIdx);
+            const firstDay = new Date(year, monthIdx, 1);
+            let startDay = firstDay.getDay() - 1;
+            if (startDay < 0) startDay = 6; // Monday-based
+            const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+
+            const headerBg = isCurrentMonth ? 'bg-ieee text-white' : 'bg-gray-100 text-gray-700';
+
+            let html = `<div class="bg-white rounded-lg shadow-sm overflow-hidden border ${isCurrentMonth ? 'border-ieee' : 'border-gray-200'}">`;
+            html += `<div class="${headerBg} px-3 py-2 text-center font-bold text-sm">${MONTH_NAMES[monthIdx]}</div>`;
+            html += '<div class="p-2">';
+            // Day headers
+            html += '<div class="grid grid-cols-7 gap-0 mb-1">';
+            DAY_NAMES.forEach(d => { html += `<div class="text-center text-xs text-gray-400 font-medium">${d}</div>`; });
+            html += '</div>';
+            // Days grid
+            html += '<div class="grid grid-cols-7 gap-0">';
+            for (let i = 0; i < startDay; i++) html += '<div></div>';
+            for (let d = 1; d <= daysInMonth; d++) {
+                const isToday = isCurrentMonth && d === today.getDate();
+                const hasBday = allBirthdays.some(b => b.month === month && b.day === d);
+                const hasEvent = allEvents.some(e => {
+                    const ed = new Date(e.event_date);
+                    return ed.getFullYear() === year && ed.getMonth() + 1 === month && ed.getDate() === d;
+                });
+                const hasData = hasBday || hasEvent;
+
+                let cls = 'relative flex flex-col items-center justify-center text-xs h-7 rounded';
+                if (isToday) cls += ' bg-ieee text-white font-bold';
+                else if (hasData) cls += ' cursor-pointer hover:bg-gray-100';
+                else cls += ' text-gray-600';
+
+                const onclick = hasData ? `onclick="showDayDetail(${year},${month},${d})"` : '';
+
+                html += `<div class="${cls}" ${onclick}>${d}`;
+                if (hasBday || hasEvent) {
+                    html += '<div class="flex gap-0.5 absolute -bottom-0.5">';
+                    if (hasBday) html += '<span class="w-1 h-1 rounded-full bg-pink-400"></span>';
+                    if (hasEvent) html += '<span class="w-1 h-1 rounded-full bg-yellow-500"></span>';
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+            html += '</div></div></div>';
+            return html;
+        }
+
+        function showDayDetail(year, month, day) {
+            const monthName = MONTH_NAMES[month - 1];
+            document.getElementById('dayDetailTitle').textContent = `${day} de ${monthName}`;
+            const bdays = allBirthdays.filter(b => b.month === month && b.day === day);
+            const evts = allEvents.filter(e => {
+                const d = new Date(e.event_date);
+                return d.getFullYear() === year && d.getMonth() + 1 === month && d.getDate() === day;
+            });
+            let html = '';
+            if (bdays.length > 0) {
+                html += '<div class="mb-3"><p class="text-xs font-bold text-pink-600 mb-1"><i class="fas fa-birthday-cake mr-1"></i>Cumplea&ntilde;os</p>';
+                bdays.forEach(b => {
+                    html += `<div class="flex items-center gap-2 mb-1">${renderAvatar(b, 'w-7 h-7 text-xs')}<div><p class="text-sm font-medium">${b.name}</p><p class="text-xs text-gray-500">${b.academic_program || ''}</p></div></div>`;
+                });
+                html += '</div>';
+            }
+            if (evts.length > 0) {
+                html += '<div><p class="text-xs font-bold text-ieee mb-1"><i class="fas fa-calendar-check mr-1"></i>Eventos</p>';
+                evts.forEach(e => {
+                    const typeIcon = e.event_type === 'organized' ? 'fa-users' : 'fa-handshake';
+                    html += `<div class="mb-1 p-2 bg-blue-50 rounded"><p class="text-sm font-medium"><i class="fas ${typeIcon} text-ieee mr-1"></i>${e.name}</p>${e.location ? `<p class="text-xs text-gray-500"><i class="fas fa-map-marker-alt mr-1"></i>${e.location}</p>` : ''}</div>`;
+                });
+                html += '</div>';
+            }
+            document.getElementById('dayDetailContent').innerHTML = html;
+            document.getElementById('dayDetailPopup').classList.remove('hidden');
+        }
+
+        function closeDayDetail() {
+            document.getElementById('dayDetailPopup').classList.add('hidden');
+        }
+
+        function renderAvatar(b, sizeClass) {
+            if (b.photo_path) {
+                const src = b.photo_path.startsWith('/') ? b.photo_path : '/' + b.photo_path;
+                return `<img src="${src}" class="${sizeClass} rounded-full object-cover" alt="${b.name}">`;
+            }
+            const initial = b.name.charAt(0).toUpperCase();
+            const colors = ['bg-blue-500','bg-green-500','bg-purple-500','bg-pink-500','bg-indigo-500','bg-teal-500','bg-orange-500','bg-red-500'];
+            const color = colors[initial.charCodeAt(0) % colors.length];
+            return `<div class="${sizeClass} rounded-full ${color} text-white flex items-center justify-center font-bold">${initial}</div>`;
+        }
+
+        function renderUpcoming(today) {
+            const todayMonth = today.getMonth() + 1;
+            const todayDay = today.getDate();
+
+            // Upcoming birthdays (next 30 days, circular)
+            const upBdays = [...allBirthdays].sort((a, b) => {
+                const da = ((a.month - todayMonth + 12) % 12) * 31 + (a.day - todayDay);
+                const db = ((b.month - todayMonth + 12) % 12) * 31 + (b.day - todayDay);
+                return (da <= 0 ? da + 365 : da) - (db <= 0 ? db + 365 : db);
+            }).slice(0, 5);
+
+            document.getElementById('upcomingBirthdays').innerHTML = upBdays.length === 0
+                ? '<p class="text-gray-400 text-sm text-center py-4">Sin datos</p>'
+                : upBdays.map(b => `
+                    <div class="flex items-center gap-2 p-2 rounded hover:bg-pink-50">
+                        ${renderAvatar(b, 'w-8 h-8 text-xs')}
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium truncate">${b.name}</p>
+                            <p class="text-xs text-gray-500">${b.day} de ${MONTH_NAMES[b.month - 1]}</p>
+                        </div>
+                    </div>`).join('');
+
+            // Upcoming events
+            const now = today.getTime();
+            const upEvts = allEvents
+                .filter(e => new Date(e.event_date).getTime() >= now - 86400000)
+                .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+                .slice(0, 5);
+
+            document.getElementById('upcomingEvents').innerHTML = upEvts.length === 0
+                ? '<p class="text-gray-400 text-sm text-center py-4">No hay eventos pr&oacute;ximos</p>'
+                : upEvts.map(e => {
+                    const d = new Date(e.event_date);
+                    const isPast = d.getTime() < now;
+                    const typeIcon = e.event_type === 'organized' ? 'fa-users' : 'fa-handshake';
+                    return `
+                    <div class="flex items-center gap-2 p-2 rounded hover:bg-blue-50 ${isPast ? 'opacity-60' : ''}">
+                        <div class="w-10 h-10 rounded-lg ${isPast ? 'bg-gray-100' : 'bg-ieee bg-opacity-10'} flex flex-col items-center justify-center text-xs">
+                            <span class="font-bold ${isPast ? 'text-gray-500' : 'text-ieee'}">${d.getDate()}</span>
+                            <span class="text-gray-500" style="font-size:9px">${MONTH_NAMES[d.getMonth()].substring(0,3)}</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium truncate"><i class="fas ${typeIcon} text-ieee mr-1"></i>${e.name}</p>
+                            <p class="text-xs text-gray-500 truncate">${e.location || ''}</p>
+                        </div>
+                    </div>`;
+                }).join('');
+        }
     </script>
+
+    <!-- Modal Editar Estudio -->
+    <div id="editStudyModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-semibold text-gray-800">
+                    <i class="fas fa-edit text-purple-600 mr-2"></i>Editar Estudio
+                </h3>
+                <button onclick="closeEditStudyModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-4 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Estudio *</label>
+                    <select id="edit_study_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        <option value="">Seleccionar...</option>
+                        <option value="tecnica">Técnica</option>
+                        <option value="tecnologia">Tecnología</option>
+                        <option value="pregrado">Pregrado</option>
+                        <option value="posgrado">Posgrado</option>
+                        <option value="otro">Otro (diplomado, certificación, etc.)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Programa *</label>
+                    <input type="text" id="edit_study_program" placeholder="Ej: Ingeniería de Sistemas" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Estado *</label>
+                    <select id="edit_study_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                        <option value="cursando">Cursando</option>
+                        <option value="egresado">Egresado</option>
+                        <option value="sin_terminar">Sin terminar</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Institución</label>
+                    <input type="text" id="edit_study_institution" placeholder="Universidad de Bogotá Jorge Tadeo Lozano" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="edit_study_primary" class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
+                    <label for="edit_study_primary" class="ml-2 text-sm text-gray-700">Marcar como estudio principal</label>
+                </div>
+            </div>
+            <div class="flex gap-3 p-4 border-t bg-gray-50 rounded-b-xl">
+                <button onclick="closeEditStudyModal()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition">
+                    Cancelar
+                </button>
+                <button onclick="updateStudy()" class="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                    <i class="fas fa-save mr-2"></i>Guardar
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

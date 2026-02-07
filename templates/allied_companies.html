@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block title %}Empresas Aliadas - IEEE Tadeo{% endblock %}
+
+{% block content %}
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div class="flex flex-col space-y-1.5 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-2xl font-semibold leading-none tracking-tight">Empresas Aliadas</h3>
+                <p class="text-sm text-muted-foreground mt-1">Gestiona las empresas y organizaciones aliadas de IEEE Tadeo</p>
+            </div>
+            <button onclick="openAddModal()" class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Nueva Empresa
+            </button>
+        </div>
+    </div>
+
+    <div class="p-6 pt-0">
+        <!-- Grid de empresas -->
+        <div id="companiesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for company in companies %}
+            <div class="border rounded-lg p-4 hover:shadow-md transition-shadow" id="company-{{ company.id }}">
+                <div class="flex items-start gap-4">
+                    <!-- Logo -->
+                    <div class="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {% if company.logo_path %}
+                        <img src="{{ company.logo_path }}" alt="{{ company.name }}" class="w-full h-full object-contain">
+                        {% else %}
+                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                        {% endif %}
+                    </div>
+                    <!-- Info -->
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-semibold text-lg truncate">{{ company.name }}</h4>
+                        <p class="text-sm text-primary font-medium">{{ company.alliance_type }}</p>
+                        {% if company.website %}
+                        <a href="{{ company.website }}" target="_blank" class="text-xs text-blue-500 hover:underline truncate block">{{ company.website }}</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if company.description %}
+                <p class="text-sm text-muted-foreground mt-3 line-clamp-2">{{ company.description }}</p>
+                {% endif %}
+                <div class="flex items-center justify-between mt-4 pt-3 border-t">
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ 'bg-green-100 text-green-800' if company.is_active else 'bg-red-100 text-red-800' }}">
+                            {{ 'Activo' if company.is_active else 'Inactivo' }}
+                        </span>
+                        <span class="text-xs text-muted-foreground">Orden: {{ company.display_order }}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editCompany({{ company.id }})" class="p-2 hover:bg-accent rounded-md" title="Editar">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </button>
+                        <button onclick="deleteCompany({{ company.id }}, '{{ company.name }}')" class="p-2 hover:bg-red-100 text-red-600 rounded-md" title="Eliminar">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-span-full text-center py-12 text-muted-foreground">
+                <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                <p>No hay empresas aliadas registradas</p>
+                <button onclick="openAddModal()" class="mt-4 text-primary hover:underline">Agregar primera empresa</button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal para crear/editar empresa -->
+<div id="companyModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="flex flex-col space-y-1.5 p-6 border-b sticky top-0 bg-white">
+            <div class="flex items-center justify-between">
+                <h3 id="modalTitle" class="text-lg font-semibold">Nueva Empresa Aliada</h3>
+                <button onclick="closeModal()" class="rounded-sm opacity-70 hover:opacity-100">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="p-6">
+            <form id="companyForm" class="space-y-4">
+                <input type="hidden" id="companyId">
+
+                <div>
+                    <label class="text-sm font-medium">Nombre de la Empresa *</label>
+                    <input type="text" id="companyName" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1" placeholder="Ej: Elaborando Futuro">
+                </div>
+
+                <div>
+                    <label class="text-sm font-medium">Tipo de Alianza *</label>
+                    <input type="text" id="companyAllianceType" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1" placeholder="Ej: Aliado tecnologico">
+                </div>
+
+                <div>
+                    <label class="text-sm font-medium">Sitio Web</label>
+                    <input type="url" id="companyWebsite" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1" placeholder="https://example.com">
+                </div>
+
+                <div>
+                    <label class="text-sm font-medium">Descripcion</label>
+                    <textarea id="companyDescription" rows="3" class="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1" placeholder="Descripcion breve de la empresa..."></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-medium">Orden</label>
+                        <input type="number" id="companyOrder" value="0" min="0" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1">
+                    </div>
+                    <div class="flex items-end pb-2">
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" id="companyActive" checked class="h-4 w-4 rounded border-gray-300">
+                            <span class="text-sm font-medium">Activo</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Logo upload (solo en edicion) -->
+                <div id="logoUploadSection" class="hidden">
+                    <label class="text-sm font-medium">Logo</label>
+                    <div class="mt-2 flex items-center gap-4">
+                        <div id="logoPreview" class="w-20 h-20 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
+                            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <input type="file" id="logoFile" accept="image/*" class="hidden" onchange="uploadLogo()">
+                            <button type="button" onclick="document.getElementById('logoFile').click()" class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                </svg>
+                                Subir Logo
+                            </button>
+                            <p class="text-xs text-muted-foreground mt-1">PNG, JPG hasta 2MB</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeModal()" class="flex-1 h-10 px-4 py-2 border border-input rounded-md text-sm font-medium hover:bg-accent">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 h-10 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90">
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="hidden fixed bottom-4 right-4 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2">
+    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    </svg>
+    <span id="toastMessage">Guardado exitosamente</span>
+</div>
+
+<script>
+    let currentCompanyId = null;
+
+    function openAddModal() {
+        document.getElementById('modalTitle').textContent = 'Nueva Empresa Aliada';
+        document.getElementById('companyForm').reset();
+        document.getElementById('companyId').value = '';
+        document.getElementById('companyActive').checked = true;
+        document.getElementById('logoUploadSection').classList.add('hidden');
+        document.getElementById('logoPreview').innerHTML = `
+            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+        `;
+        currentCompanyId = null;
+        document.getElementById('companyModal').classList.remove('hidden');
+    }
+
+    async function editCompany(id) {
+        try {
+            const response = await fetch(`/api/allied-companies/${id}`);
+            if (!response.ok) throw new Error('No se pudo cargar la empresa');
+            const company = await response.json();
+
+            document.getElementById('modalTitle').textContent = 'Editar Empresa Aliada';
+            document.getElementById('companyId').value = company.id;
+            document.getElementById('companyName').value = company.name;
+            document.getElementById('companyAllianceType').value = company.alliance_type;
+            document.getElementById('companyWebsite').value = company.website || '';
+            document.getElementById('companyDescription').value = company.description || '';
+            document.getElementById('companyOrder').value = company.display_order;
+            document.getElementById('companyActive').checked = company.is_active;
+
+            // Mostrar seccion de logo
+            document.getElementById('logoUploadSection').classList.remove('hidden');
+            currentCompanyId = company.id;
+
+            // Mostrar logo actual
+            if (company.logo_path) {
+                document.getElementById('logoPreview').innerHTML = `<img src="${company.logo_path}" class="w-full h-full object-contain">`;
+            } else {
+                document.getElementById('logoPreview').innerHTML = `
+                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                `;
+            }
+
+            document.getElementById('companyModal').classList.remove('hidden');
+        } catch (error) {
+            showToast('Error al cargar empresa', 'error');
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('companyModal').classList.add('hidden');
+        currentCompanyId = null;
+    }
+
+    async function uploadLogo() {
+        if (!currentCompanyId) {
+            showToast('Guarda la empresa primero para subir el logo', 'error');
+            return;
+        }
+
+        const fileInput = document.getElementById('logoFile');
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch(`/api/allied-companies/${currentCompanyId}/upload-logo`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) throw new Error('Error al subir logo');
+
+            const result = await response.json();
+            document.getElementById('logoPreview').innerHTML = `<img src="${result.logo_path}" class="w-full h-full object-contain">`;
+            showToast('Logo actualizado');
+        } catch (error) {
+            showToast('Error al subir logo', 'error');
+        }
+    }
+
+    document.getElementById('companyForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const id = document.getElementById('companyId').value;
+        const data = {
+            name: document.getElementById('companyName').value,
+            alliance_type: document.getElementById('companyAllianceType').value,
+            website: document.getElementById('companyWebsite').value || null,
+            description: document.getElementById('companyDescription').value || null,
+            display_order: parseInt(document.getElementById('companyOrder').value) || 0,
+            is_active: document.getElementById('companyActive').checked
+        };
+
+        try {
+            const url = id ? `/api/allied-companies/${id}` : '/api/allied-companies';
+            const method = id ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Error al guardar');
+            }
+
+            showToast(id ? 'Empresa actualizada' : 'Empresa creada');
+            closeModal();
+            location.reload();
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    });
+
+    async function deleteCompany(id, name) {
+        if (!confirm(`¿Eliminar "${name}"?`)) return;
+
+        try {
+            const response = await fetch(`/api/allied-companies/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) throw new Error('Error al eliminar');
+
+            showToast('Empresa eliminada');
+            document.getElementById(`company-${id}`).remove();
+        } catch (error) {
+            showToast('Error al eliminar', 'error');
+        }
+    }
+
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        toastMessage.textContent = message;
+
+        if (type === 'error') {
+            toast.classList.remove('bg-green-600');
+            toast.classList.add('bg-red-600');
+        } else {
+            toast.classList.remove('bg-red-600');
+            toast.classList.add('bg-green-600');
+        }
+
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+</script>
+{% endblock %}

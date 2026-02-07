@@ -18,7 +18,7 @@ chmod +x start_production.sh
 ./start_production.sh
 ```
 
-La aplicación estará disponible en `http://localhost:8000`
+La aplicación estará disponible en `http://localhost:8070`
 
 ---
 
@@ -40,7 +40,7 @@ docker-compose up -d
 docker-compose logs -f
 ```
 
-La aplicación estará disponible en `http://localhost:8000`
+La aplicación estará disponible en `http://localhost:8070`
 
 ---
 
@@ -91,17 +91,17 @@ Verifica que todo funcione correctamente:
 
 ### 1. API
 ```bash
-curl http://localhost:8000/docs
+curl http://localhost:8070/docs
 ```
 Deberías ver la documentación Swagger.
 
 ### 2. Panel de Administración
 Abre en navegador:
-- Dashboard: http://localhost:8000/admin
-- Usuarios: http://localhost:8000/admin/users
-- Eventos: http://localhost:8000/admin/events
-- Tickets: http://localhost:8000/admin/tickets
-- Validación: http://localhost:8000/admin/validate
+- Dashboard: http://localhost:8070/admin
+- Usuarios: http://localhost:8070/admin/users
+- Eventos: http://localhost:8070/admin/events
+- Tickets: http://localhost:8070/admin/tickets
+- Validación: http://localhost:8070/admin/validate
 
 ### 3. Logs
 ```bash

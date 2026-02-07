@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, File, Up
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_
+from sqlalchemy import or_, extract
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, timedelta
 from typing import Optional, List
@@ -1514,3 +1514,53 @@ def generate_external_token(
         expires_at=expires,
         redirect_url=redirect_url
     )
+
+
+@router.get("/birthdays")
+async def get_member_birthdays(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Retorna los cumpleaños de todos los miembros con fecha registrada"""
+    users = db.query(models.User).options(
+        joinedload(models.User.academic_program)
+    ).filter(
+        models.User.birthday.isnot(None)
+    ).all()
+
+    birthdays = []
+    for user in users:
+        bday = user.birthday
+        birthdays.append({
+            "name": user.name,
+            "photo_path": user.photo_path,
+            "month": bday.month,
+            "day": bday.day,
+            "academic_program": user.academic_program.name if user.academic_program else None,
+        })
+
+    birthdays.sort(key=lambda x: (x["month"], x["day"]))
+    return birthdays
+
+
+@router.get("/events")
+async def get_portal_events(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Retorna eventos para el calendario del portal"""
+    events = db.query(models.Event).filter(
+        models.Event.is_active == True
+    ).order_by(models.Event.event_date.asc()).all()
+
+    return [
+        {
+            "id": e.id,
+            "name": e.name,
+            "location": e.location,
+            "event_date": e.event_date.isoformat() if e.event_date else None,
+            "event_end_date": e.event_end_date.isoformat() if e.event_end_date else None,
+            "event_type": e.event_type,
+        }
+        for e in events
+    ]

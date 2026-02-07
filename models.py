@@ -304,6 +304,7 @@ class User(Base):
     semester_range_id = Column(Integer, ForeignKey("semester_ranges.id"), nullable=True)
     expected_graduation = Column(DateTime, nullable=True)  # Fecha estimada de grado
     english_level_id = Column(Integer, ForeignKey("english_levels.id"), nullable=True)
+    is_professor = Column(Boolean, default=False)  # Es profesor/docente
 
     # ============================================================
     # INFORMACIÓN IEEE
@@ -644,6 +645,10 @@ class WhatsAppMessage(Base):
     context_message_id = Column(String(100), nullable=True)  # ID del mensaje al que responde
     is_forwarded = Column(Boolean, default=False)
 
+    # Dirección del mensaje (incoming = recibido, outgoing = enviado)
+    direction = Column(String(10), default="incoming")  # "incoming" o "outgoing"
+    to_number = Column(String(50), nullable=True)  # Número destino (para mensajes salientes)
+
     # Estado
     is_read = Column(Boolean, default=False)
     read_at = Column(DateTime, nullable=True)
@@ -833,3 +838,24 @@ class MeetingAttendance(Base):
 
     meeting = relationship("Meeting", back_populates="attendances")
     user = relationship("User")
+
+
+# ============================================================
+# CONCURSOS
+# ============================================================
+
+class Contest(Base):
+    """Concursos y convocatorias disponibles"""
+    __tablename__ = "contests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(300), nullable=False)
+    description = Column(Text, nullable=True)
+    category = Column(String(100), default="IEEE")  # IEEE, Gobierno, Empresa, Universidad, etc.
+    modality = Column(String(50), nullable=True)  # Virtual, Presencial, Hibrida
+    prizes = Column(Text, nullable=True)  # Descripcion de premios
+    deadline = Column(String(200), nullable=True)  # Fechas clave (texto libre)
+    url = Column(String(500), nullable=True)  # Link para aplicar
+    is_active = Column(Boolean, default=True)
+    display_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)

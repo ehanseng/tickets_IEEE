@@ -103,6 +103,15 @@ class TicketService:
 
         img = qr.make_image(fill_color="black", back_color="white")
 
+        # Convertir a RGB (WhatsApp requiere RGB/RGBA 8-bit, no imagen 1-bit)
+        if hasattr(img, 'convert'):
+            img = img.convert('RGB')
+        else:
+            # Para versiones antiguas de qrcode, obtener la imagen PIL
+            from PIL import Image
+            if hasattr(img, 'get_image'):
+                img = img.get_image().convert('RGB')
+
         # Convertir a base64
         buffered = BytesIO()
         img.save(buffered, format="PNG")

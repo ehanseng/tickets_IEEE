@@ -101,7 +101,7 @@ Si prefieres crear la tarea manualmente:
   - Verás el historial completo de ejecuciones
 
 - **En la base de datos**:
-  - Ve a http://127.0.0.1:8000/admin/users
+  - Ve a http://127.0.0.1:8070/admin/users
   - Click en el badge junto a "Cumpleaños"
   - Verás todas las ejecuciones con estadísticas
 

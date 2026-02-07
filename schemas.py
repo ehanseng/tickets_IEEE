@@ -294,6 +294,7 @@ class UserCreate(BaseModel):
     birthday: Optional[datetime] = None  # Fecha de cumpleaños
     is_ieee_member: bool = False  # Miembro activo de IEEE
     ieee_member_id: Optional[str] = None  # ID de membresía IEEE
+    is_professor: bool = False  # Es profesor/docente
 
 
 class UserUpdate(BaseModel):
@@ -313,6 +314,7 @@ class UserUpdate(BaseModel):
     birthday: Optional[datetime] = None
     is_ieee_member: Optional[bool] = None
     ieee_member_id: Optional[str] = None
+    is_professor: Optional[bool] = None  # Es profesor/docente
     branch_role: Optional[str] = None  # Rol interno en la rama
     # Campos de perfil académico
     academic_program_id: Optional[int] = None
@@ -366,6 +368,7 @@ class UserResponse(BaseModel):
     ieee_member_id: Optional[str]
     ieee_roles_history: Optional[str] = None
     branch_role: Optional[str] = None  # Rol interno en la rama
+    is_professor: bool = False  # Es profesor/docente
 
     # Perfilamiento adicional
     expected_graduation: Optional[datetime] = None

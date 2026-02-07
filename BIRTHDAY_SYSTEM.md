@@ -132,7 +132,7 @@ Ejecuta manualmente el verificador de cumpleaños.
 
 #### Indicador en Tabla de Usuarios
 
-En la página de gestión de usuarios ([/admin/users](http://localhost:8000/admin/users)), se agregó un indicador visual en la columna "Cumpleaños" que muestra:
+En la página de gestión de usuarios ([/admin/users](http://localhost:8070/admin/users)), se agregó un indicador visual en la columna "Cumpleaños" que muestra:
 
 - **Badge informativo**: Muestra cuándo fue la última verificación
   - Verde: Menos de 24 horas
@@ -205,7 +205,7 @@ Al hacer clic en el badge, se abre un modal que muestra:
 
 El administrador puede ejecutar manualmente el verificador:
 
-1. Ir a **Gestión de Usuarios** ([/admin/users](http://localhost:8000/admin/users))
+1. Ir a **Gestión de Usuarios** ([/admin/users](http://localhost:8070/admin/users))
 2. Hacer clic en el badge informativo junto a "Cumpleaños"
 3. En el modal, hacer clic en **"Ejecutar Verificación Ahora"**
 4. Confirmar la acción
@@ -269,19 +269,19 @@ crontab -e
 
 ### 1. Prueba de Endpoint Last Check
 ```bash
-curl -X GET "http://localhost:8000/birthdays/last-check" \
+curl -X GET "http://localhost:8070/birthdays/last-check" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
 ### 2. Prueba de Ejecución Manual
 ```bash
-curl -X POST "http://localhost:8000/birthdays/check-now" \
+curl -X POST "http://localhost:8070/birthdays/check-now" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
 ### 3. Prueba desde UI
 1. Iniciar servidor: `uv run uvicorn main:app --reload`
-2. Acceder a http://localhost:8000/admin/users
+2. Acceder a http://localhost:8070/admin/users
 3. Verificar que el badge aparece junto a "Cumpleaños"
 4. Hacer clic en el badge y verificar modal
 5. Ejecutar verificación manual

@@ -27,24 +27,59 @@
         </div>
 
         <!-- Barra de búsqueda y filtros -->
-        <div class="mt-4 flex gap-4 items-center">
-            <div class="flex-1 relative">
-                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-                <input
-                    type="text"
-                    id="searchInput"
-                    placeholder="Buscar por nombre, email, cédula o universidad..."
-                    class="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    onkeyup="filterUsers()"
-                >
+        <div class="mt-4 space-y-3">
+            <!-- Primera fila: Búsqueda y contador -->
+            <div class="flex gap-4 items-center">
+                <div class="flex-1 relative">
+                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Buscar por nombre, email, cédula, teléfono..."
+                        class="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        onkeyup="filterUsers()"
+                    >
+                </div>
+                <div id="usersCounter" class="text-sm text-muted-foreground whitespace-nowrap">
+                    <span id="filteredCount">{{ users|length }}</span> de <span id="totalCount">{{ users|length }}</span> usuarios
+                </div>
             </div>
-            <select id="ieeeFilter" onchange="filterUsers()" class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                <option value="all">Todos los usuarios</option>
-                <option value="ieee">Solo miembros IEEE</option>
-                <option value="non-ieee">Solo no miembros IEEE</option>
-            </select>
+            <!-- Segunda fila: Filtros -->
+            <div class="flex flex-wrap gap-2 items-center">
+                <select id="ieeeFilter" onchange="filterUsers()" class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <option value="all">IEEE: Todos</option>
+                    <option value="ieee">Solo miembros IEEE</option>
+                    <option value="non-ieee">Solo no miembros</option>
+                </select>
+                <select id="universityFilter" onchange="filterUsers()" class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <option value="all">Universidad: Todas</option>
+                    {% for university in universities %}
+                    <option value="{{ university.id }}">{{ university.short_name or university.name }}</option>
+                    {% endfor %}
+                </select>
+                <select id="tagFilter" onchange="filterUsers()" class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <option value="all">Etiqueta: Todas</option>
+                    {% for tag in tags %}
+                    <option value="{{ tag.id }}">{{ tag.name }}</option>
+                    {% endfor %}
+                </select>
+                <select id="birthdayFilter" onchange="filterUsers()" class="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <option value="all">Cumpleaños: Todos</option>
+                    <option value="today">Hoy</option>
+                    <option value="week">Esta semana</option>
+                    <option value="month">Este mes</option>
+                    <option value="has">Tiene fecha</option>
+                    <option value="missing">Sin fecha</option>
+                </select>
+                <button onclick="clearFilters()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3">
+                    <svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    Limpiar
+                </button>
+            </div>
         </div>
     </div>
     <div class="p-6 pt-0">
@@ -118,7 +153,14 @@
                 </thead>
                 <tbody class="[&_tr:last-child]:border-0" id="usersTableBody">
                     {% for user in users %}
-                    <tr class="border-b transition-colors hover:bg-muted/50">
+                    <tr class="border-b transition-colors hover:bg-muted/50"
+                        data-university-id="{{ user.university.id if user.university else '' }}"
+                        data-tag-ids="{% for tag in user.tags %}{{ tag.id }}{% if not loop.last %},{% endif %}{% endfor %}"
+                        data-is-ieee="{{ 'true' if user.is_ieee_member else 'false' }}"
+                        data-birthday-today="{{ 'true' if user.birthday_status and user.birthday_status.is_today else 'false' }}"
+                        data-birthday-week="{{ 'true' if user.birthday_status and user.birthday_status.is_this_week else 'false' }}"
+                        data-birthday-month="{{ 'true' if user.birthday_status and user.birthday_status.is_this_month else 'false' }}"
+                        data-has-birthday="{{ 'true' if user.birthday else 'false' }}">
                         <td class="p-2 align-middle">{{ user.id }}</td>
                         <td class="p-2 align-middle font-medium">
                             <div class="flex items-center gap-2">
@@ -368,6 +410,13 @@
                     </label>
                 </div>
 
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" id="is_professor" name="is_professor" class="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <label for="is_professor" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        Es Profesor / Docente
+                    </label>
+                </div>
+
                 <div class="space-y-2">
                     <label for="branch_role" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Rol en la Rama</label>
                     <select id="branch_role" name="branch_role" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
@@ -528,6 +577,13 @@
                             <option value="">Seleccionar...</option>
                         </select>
                     </div>
+                    <div class="md:col-span-2">
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+                            <input type="checkbox" id="fe_is_professor" class="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-2 focus:ring-purple-500">
+                            <span>Es Profesor / Docente</span>
+                        </label>
+                        <p class="text-xs text-gray-500 mt-1">Marcar si el usuario es docente universitario</p>
+                    </div>
                 </div>
             </div>
 
@@ -622,6 +678,25 @@
                             <option value="true">Activo</option>
                             <option value="false">Inactivo</option>
                         </select>
+                    </div>
+                </div>
+
+                <!-- Sección de Tags -->
+                <div class="mt-6 pt-6 border-t">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                        </svg>
+                        Etiquetas / Tags
+                    </h4>
+                    <p class="text-xs text-gray-500 mb-3">Selecciona las etiquetas que aplican a este usuario</p>
+                    <div id="fe_tags_container" class="flex flex-wrap gap-2">
+                        {% for tag in tags %}
+                        <label class="inline-flex items-center gap-2 px-3 py-1.5 border rounded-full cursor-pointer hover:bg-gray-50 transition tag-checkbox" data-tag-id="{{ tag.id }}" style="border-color: {{ tag.color }}40;">
+                            <input type="checkbox" value="{{ tag.id }}" class="tag-input rounded text-primary focus:ring-primary" style="accent-color: {{ tag.color }};">
+                            <span class="text-sm font-medium" style="color: {{ tag.color }};">{{ tag.name }}</span>
+                        </label>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
@@ -1093,7 +1168,8 @@
             country_code: document.getElementById('country_code').value || '+57',
             phone: document.getElementById('phone').value || null,
             birthday: birthdayValue ? birthdayValue + 'T00:00:00' : null,
-            is_ieee_member: document.getElementById('is_ieee_member').checked
+            is_ieee_member: document.getElementById('is_ieee_member').checked,
+            is_professor: document.getElementById('is_professor').checked
         };
 
         // Agregar campos de email adicionales y branch_role en modo edición
@@ -1152,6 +1228,7 @@
 
     // ========== MODAL DE EDICIÓN COMPLETA ==========
     let editCatalogs = {};
+    let originalUserTags = []; // Para rastrear tags originales del usuario
 
     async function loadEditCatalogs() {
         const token = localStorage.getItem('access_token');
@@ -1250,6 +1327,9 @@
             });
             const user = await response.json();
 
+            // Guardar tags originales para sincronización posterior
+            originalUserTags = user.tags ? user.tags.map(t => t.id) : [];
+
             // Header
             document.getElementById('editUserNameHeader').textContent = user.name || 'Sin nombre';
             const initial = (user.name || '?').charAt(0).toUpperCase();
@@ -1280,6 +1360,7 @@
             document.getElementById('fe_semester_range_id').value = user.semester_range_id || '';
             document.getElementById('fe_english_level_id').value = user.english_level_id || '';
             document.getElementById('fe_expected_graduation').value = user.expected_graduation ? user.expected_graduation.substring(0, 7) : '';
+            document.getElementById('fe_is_professor').checked = user.is_professor || false;
 
             // Tab IEEE
             document.getElementById('fe_is_ieee_member').checked = user.is_ieee_member || false;
@@ -1312,6 +1393,15 @@
 
             // Tab Admin
             document.getElementById('fe_is_active').value = user.is_active !== false ? 'true' : 'false';
+
+            // Tags
+            document.querySelectorAll('.tag-input').forEach(cb => cb.checked = false);
+            if (user.tags) {
+                user.tags.forEach(t => {
+                    const cb = document.querySelector(`.tag-input[value="${t.id}"]`);
+                    if (cb) cb.checked = true;
+                });
+            }
 
         } catch (error) {
             console.error('Error cargando usuario:', error);
@@ -1350,6 +1440,7 @@
             semester_range_id: parseInt(document.getElementById('fe_semester_range_id').value) || null,
             english_level_id: parseInt(document.getElementById('fe_english_level_id').value) || null,
             expected_graduation: document.getElementById('fe_expected_graduation').value ? document.getElementById('fe_expected_graduation').value + '-01' : null,
+            is_professor: document.getElementById('fe_is_professor').checked,
             is_ieee_member: document.getElementById('fe_is_ieee_member').checked,
             ieee_member_id: document.getElementById('fe_ieee_member_id').value || null,
             ieee_membership_status_id: parseInt(document.getElementById('fe_ieee_membership_status_id').value) || null,
@@ -1375,6 +1466,27 @@
             });
 
             if (response.ok) {
+                // Sincronizar tags
+                const selectedTags = Array.from(document.querySelectorAll('.tag-input:checked')).map(cb => parseInt(cb.value));
+                const tagsToAdd = selectedTags.filter(t => !originalUserTags.includes(t));
+                const tagsToRemove = originalUserTags.filter(t => !selectedTags.includes(t));
+
+                // Agregar nuevos tags
+                for (const tagId of tagsToAdd) {
+                    await fetch(`/users/${userId}/tags/${tagId}`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                }
+
+                // Remover tags
+                for (const tagId of tagsToRemove) {
+                    await fetch(`/users/${userId}/tags/${tagId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                }
+
                 showNotification('Usuario actualizado exitosamente', 'success');
                 closeFullEditModal();
                 setTimeout(() => window.location.reload(), 1000);
@@ -2149,10 +2261,13 @@
         }
     }
 
-    // Función de búsqueda y filtrado
+    // Función de búsqueda y filtrado mejorada
     function filterUsers() {
         const searchInput = document.getElementById('searchInput').value.toLowerCase();
         const ieeeFilter = document.getElementById('ieeeFilter').value;
+        const universityFilter = document.getElementById('universityFilter').value;
+        const tagFilter = document.getElementById('tagFilter').value;
+        const birthdayFilter = document.getElementById('birthdayFilter').value;
         const tbody = document.getElementById('usersTableBody');
         const rows = tbody.getElementsByTagName('tr');
 
@@ -2173,30 +2288,61 @@
             const name = cells[1] ? cells[1].textContent.toLowerCase() : '';
             const email = cells[2] ? cells[2].textContent.toLowerCase() : '';
             const identification = cells[3] ? cells[3].textContent.toLowerCase() : '';
-            const university = cells[4] ? cells[4].textContent.toLowerCase() : '';
-            const phone = cells[6] ? cells[6].textContent.toLowerCase() : '';
+            const universityText = cells[4] ? cells[4].textContent.toLowerCase() : '';
+            const tags = cells[5] ? cells[5].textContent.toLowerCase() : '';
+            const phone = cells[7] ? cells[7].textContent.toLowerCase() : '';
 
-            // Verificar si es miembro IEEE (buscar el span con checkmark)
-            const ieeeCell = cells[5];
-            const isIeeeMember = ieeeCell ? ieeeCell.innerHTML.includes('✓') : false;
+            // Obtener datos de los atributos data-*
+            const universityId = row.dataset.universityId || '';
+            const tagIds = row.dataset.tagIds || '';
+            const isIeee = row.dataset.isIeee === 'true';
+            const birthdayToday = row.dataset.birthdayToday === 'true';
+            const birthdayWeek = row.dataset.birthdayWeek === 'true';
+            const birthdayMonth = row.dataset.birthdayMonth === 'true';
+            const hasBirthday = row.dataset.hasBirthday === 'true';
 
             // Filtrar por texto de búsqueda
             const matchesSearch = searchInput === '' ||
                 name.includes(searchInput) ||
                 email.includes(searchInput) ||
                 identification.includes(searchInput) ||
-                university.includes(searchInput) ||
+                universityText.includes(searchInput) ||
                 phone.includes(searchInput) ||
+                tags.includes(searchInput) ||
                 id.includes(searchInput);
 
             // Filtrar por estado IEEE
             const matchesIeeeFilter =
                 ieeeFilter === 'all' ||
-                (ieeeFilter === 'ieee' && isIeeeMember) ||
-                (ieeeFilter === 'non-ieee' && !isIeeeMember);
+                (ieeeFilter === 'ieee' && isIeee) ||
+                (ieeeFilter === 'non-ieee' && !isIeee);
+
+            // Filtrar por universidad
+            const matchesUniversityFilter =
+                universityFilter === 'all' ||
+                universityId === universityFilter;
+
+            // Filtrar por etiqueta
+            const matchesTagFilter =
+                tagFilter === 'all' ||
+                tagIds.split(',').includes(tagFilter);
+
+            // Filtrar por cumpleaños
+            let matchesBirthdayFilter = true;
+            if (birthdayFilter === 'today') {
+                matchesBirthdayFilter = birthdayToday;
+            } else if (birthdayFilter === 'week') {
+                matchesBirthdayFilter = birthdayWeek || birthdayToday;
+            } else if (birthdayFilter === 'month') {
+                matchesBirthdayFilter = birthdayMonth || birthdayWeek || birthdayToday;
+            } else if (birthdayFilter === 'has') {
+                matchesBirthdayFilter = hasBirthday;
+            } else if (birthdayFilter === 'missing') {
+                matchesBirthdayFilter = !hasBirthday;
+            }
 
             // Mostrar u ocultar fila
-            if (matchesSearch && matchesIeeeFilter) {
+            if (matchesSearch && matchesIeeeFilter && matchesUniversityFilter && matchesTagFilter && matchesBirthdayFilter) {
                 row.style.display = '';
                 visibleCount++;
             } else {
@@ -2204,8 +2350,21 @@
             }
         }
 
+        // Actualizar contador
+        document.getElementById('filteredCount').textContent = visibleCount;
+
         // Mostrar mensaje si no hay resultados
         showFilterMessage(visibleCount);
+    }
+
+    // Limpiar todos los filtros
+    function clearFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('ieeeFilter').value = 'all';
+        document.getElementById('universityFilter').value = 'all';
+        document.getElementById('tagFilter').value = 'all';
+        document.getElementById('birthdayFilter').value = 'all';
+        filterUsers();
     }
 
     function showFilterMessage(count) {
@@ -2218,11 +2377,11 @@
                 messageRow = document.createElement('tr');
                 messageRow.id = 'noResultsMessage';
                 messageRow.innerHTML = `
-                    <td colspan="9" class="p-8 text-center text-muted-foreground">
+                    <td colspan="11" class="p-8 text-center text-muted-foreground">
                         <svg class="mx-auto h-12 w-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
-                        No se encontraron usuarios que coincidan con tu búsqueda
+                        No se encontraron usuarios que coincidan con los filtros
                     </td>
                 `;
                 tbody.appendChild(messageRow);

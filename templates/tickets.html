@@ -440,7 +440,7 @@
             <form id="whatsappForm" class="space-y-4">
                 <div class="space-y-2">
                     <label for="whatsapp_event_id" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Evento *</label>
-                    <select id="whatsapp_event_id" name="whatsapp_event_id" required onchange="updateTicketPreview(); updateTemplatePreview();" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                    <select id="whatsapp_event_id" name="whatsapp_event_id" required onchange="updateTicketPreview(); updateTemplatePreview(); updateBulkMessagePreview();" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
                         <option value="">Seleccione un evento</option>
                         {% for event in events %}
                         <option value="{{ event.id }}">{{ event.name }} - {{ event.event_date.strftime('%d/%m/%Y') }}</option>
@@ -454,7 +454,7 @@
                     <label class="text-sm font-medium leading-none">Metodo de envio *</label>
                     <div class="grid grid-cols-2 gap-3">
                         <label class="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none hover:border-green-400 transition-colors" id="methodFreeTextLabel">
-                            <input type="radio" name="send_method" value="free_text" class="sr-only" checked onchange="updateSendMethodUI()">
+                            <input type="radio" name="send_method" value="free_text" class="sr-only" onchange="updateSendMethodUI(); updateBulkMessagePreview();">
                             <span class="flex flex-1 flex-col">
                                 <span class="flex items-center gap-2 text-sm font-medium text-gray-900">
                                     <svg class="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -469,7 +469,7 @@
                             </svg>
                         </label>
                         <label class="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none hover:border-green-400 transition-colors" id="methodTemplateLabel">
-                            <input type="radio" name="send_method" value="template" class="sr-only" onchange="updateSendMethodUI()">
+                            <input type="radio" name="send_method" value="template" class="sr-only" checked onchange="updateSendMethodUI(); updateBulkMessagePreview();">
                             <span class="flex flex-1 flex-col">
                                 <span class="flex items-center gap-2 text-sm font-medium text-gray-900">
                                     <svg class="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
@@ -487,41 +487,65 @@
                 </div>
 
                 <!-- Selector de template (visible solo cuando se selecciona Template Meta) -->
-                <div id="templateSelectorSection" class="hidden space-y-2">
+                <div id="templateSelectorSection" class="space-y-2">
                     <label for="whatsapp_template_name" class="text-sm font-medium leading-none">Template a usar *</label>
-                    <select id="whatsapp_template_name" name="whatsapp_template_name" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                        <option value="ticket_evento">ticket_evento (7 variables)</option>
-                        <option value="ticket_evento_acompanantes">ticket_evento_acompanantes (8 variables, con acompanantes)</option>
+                    <select id="whatsapp_template_name" name="whatsapp_template_name" onchange="updateBulkMessagePreview()" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                        <option value="tickets_event" selected>tickets_event (con QR en header)</option>
+                        <option value="confirmacion_evento_v2">confirmacion_evento_v2 (sin imagen)</option>
+                        <option value="recordatorio_evento">recordatorio_evento (recordatorio)</option>
                     </select>
-                    <p class="text-xs text-muted-foreground">El sistema selecciona automaticamente el template correcto segun si el ticket tiene acompanantes</p>
+                    <p id="bulkQrInfo" class="text-xs text-blue-600 bg-blue-50 p-2 rounded-md">El template "tickets_event" generara y enviara el codigo QR de cada ticket como imagen de encabezado.</p>
+                </div>
+
+                <!-- Textarea para mensaje libre masivo (solo visible con Mensaje Libre) -->
+                <div id="bulkFreeTextSection" class="hidden space-y-2">
+                    <label for="bulk_free_text_message" class="text-sm font-medium leading-none">Mensaje personalizado *</label>
+                    <textarea id="bulk_free_text_message" name="bulk_free_text_message" rows="6" oninput="updateBulkMessagePreview()"
+                        class="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        placeholder="Escribe tu mensaje aqui...
+
+Puedes usar variables:
+{nombre} - Nombre del usuario
+{evento} - Nombre del evento
+{fecha} - Fecha del evento
+{lugar} - Lugar del evento"></textarea>
+                    <p class="text-xs text-muted-foreground">
+                        Variables disponibles: <code>{nombre}</code>, <code>{evento}</code>, <code>{fecha}</code>, <code>{lugar}</code>
+                    </p>
+                    <p class="text-xs text-amber-600 flex items-center gap-1">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        Solo funciona si los usuarios han interactuado con el numero en las ultimas 24 horas
+                    </p>
                 </div>
 
                 <!-- Preview del template que se usará -->
-                <div id="templatePreviewSection" class="hidden space-y-2">
+                <div id="bulkPreviewSection" class="space-y-2">
                     <label class="text-sm font-medium">Preview del Mensaje</label>
-                    <div class="border rounded-lg p-3 bg-white space-y-3">
-                        <div>
-                            <span class="text-xs font-medium text-muted-foreground">Template:</span>
-                            <span id="templateSourceName" class="text-xs italic ml-1"></span>
-                        </div>
-
-                        <!-- Imagen si existe -->
-                        <div id="templateImageSection" class="hidden">
-                            <div class="text-xs font-medium text-muted-foreground mb-2">Imagen adjunta:</div>
-                            <img id="templatePreviewImage" src="" alt="Imagen del evento" class="max-w-xs rounded border">
-                        </div>
-
-                        <!-- Indicador de envío de QR -->
-                        <div id="templateQrIndicator" class="p-2 rounded-lg text-xs"></div>
-
-                        <!-- Mensaje -->
-                        <div>
-                            <div class="text-xs font-medium text-muted-foreground mb-2">Mensaje:</div>
-                            <div class="border rounded-lg p-3 bg-muted max-h-64 overflow-y-auto whitespace-pre-wrap text-xs font-mono">
-                                <div id="templatePreviewContent"></div>
+                    <div class="border rounded-lg bg-[#e5ddd5] p-3">
+                        <!-- Burbuja estilo WhatsApp -->
+                        <div class="flex justify-end">
+                            <div class="bg-[#dcf8c6] rounded-lg p-2 max-w-[85%] shadow-sm">
+                                <!-- Imagen QR placeholder (solo para tickets_event) -->
+                                <div id="bulkPreviewImage" class="mb-2 bg-white rounded p-2 flex items-center justify-center">
+                                    <svg class="w-24 h-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <rect x="3" y="3" width="7" height="7" stroke-width="2" rx="1"/>
+                                        <rect x="14" y="3" width="7" height="7" stroke-width="2" rx="1"/>
+                                        <rect x="3" y="14" width="7" height="7" stroke-width="2" rx="1"/>
+                                        <rect x="14" y="14" width="4" height="4" stroke-width="2" rx="0.5"/>
+                                        <rect x="17" y="17" width="4" height="4" stroke-width="2" rx="0.5"/>
+                                        <rect x="14" y="17" width="2" height="2" stroke-width="1.5" rx="0.25"/>
+                                    </svg>
+                                </div>
+                                <!-- Mensaje -->
+                                <div id="bulkPreviewContent" class="text-sm whitespace-pre-wrap text-gray-800"></div>
+                                <!-- Footer -->
+                                <div id="bulkPreviewFooter" class="text-xs text-gray-500 mt-1 pt-1 border-t border-gray-200"></div>
                             </div>
                         </div>
                     </div>
+                    <p class="text-xs text-muted-foreground">Los valores mostrados son de ejemplo. Cada usuario recibira su mensaje personalizado.</p>
                 </div>
 
                 <!-- Vista previa de tickets a enviar -->
@@ -548,87 +572,106 @@
 
 <!-- Modal para preview de mensaje individual de WhatsApp -->
 <div id="whatsappPreviewModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-lg">
+    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div class="flex flex-col space-y-1.5 p-6 border-b">
             <div class="flex items-center justify-between">
-                <h2 class="text-2xl font-semibold leading-none tracking-tight">Preview de WhatsApp</h2>
+                <h2 class="text-2xl font-semibold leading-none tracking-tight">Enviar por WhatsApp</h2>
                 <button onclick="closeWhatsAppPreviewModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
         </div>
 
-        <div class="p-6">
-            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 text-sm">
-                <div class="flex items-center gap-2 mb-2">
-                    <svg class="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                    </svg>
-                    <span class="font-semibold text-green-900">Vista previa del mensaje</span>
+        <div class="p-6 space-y-4">
+            <!-- Info del destinatario -->
+            <div class="bg-muted rounded-lg p-3 text-sm">
+                <div class="space-y-1">
+                    <div><strong>Usuario:</strong> <span id="previewUserName"></span></div>
+                    <div><strong>Teléfono:</strong> <span id="previewPhone"></span></div>
+                    <div><strong>Evento:</strong> <span id="previewEventName"></span></div>
                 </div>
-                <p class="text-green-700 text-xs">
-                    Este es el mensaje que se enviará al usuario por WhatsApp
+            </div>
+
+            <!-- Metodo de envio (primero) -->
+            <div>
+                <label class="text-sm font-medium mb-2 block">Metodo de envio:</label>
+                <div class="flex gap-2 mb-2">
+                    <label class="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 flex-1 text-sm" id="singleMethodTemplateLabel">
+                        <input type="radio" name="single_send_method" value="template" checked onchange="updateSingleSendMethodUI()">
+                        <span>Template Meta</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 flex-1 text-sm" id="singleMethodFreeTextLabel">
+                        <input type="radio" name="single_send_method" value="free_text" onchange="updateSingleSendMethodUI()">
+                        <span>Mensaje Libre</span>
+                    </label>
+                </div>
+                <p id="singleMethodHint" class="text-xs text-muted-foreground">Template Meta funciona siempre, incluso fuera de ventana de 24h</p>
+            </div>
+
+            <!-- Selector de Template (solo visible con Template Meta) -->
+            <div id="singleTemplateSelectorSection">
+                <label class="text-sm font-medium mb-2 block">Template:</label>
+                <select id="singleWhatsappTemplate" onchange="updateTemplateInfo()" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                    <option value="tickets_event" selected>tickets_event (con QR)</option>
+                    <option value="confirmacion_evento_v2">confirmacion_evento_v2</option>
+                    <option value="recordatorio_evento">recordatorio_evento</option>
+                </select>
+
+                <!-- Info de QR (solo visible con tickets_event) -->
+                <div id="templateQrInfo" class="mt-3 p-3 rounded-lg text-sm bg-blue-50 border border-blue-200">
+                    <div class="flex items-start gap-2">
+                        <svg class="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div>
+                            <p class="font-medium text-blue-900">Este template incluye codigo QR</p>
+                            <p class="text-blue-700 text-xs mt-1">El codigo QR del ticket sera generado automaticamente y enviado como imagen en el header del mensaje.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Textarea para mensaje libre (solo visible con Mensaje Libre) -->
+            <div id="singleFreeTextSection" class="hidden">
+                <label class="text-sm font-medium mb-2 block">Mensaje personalizado:</label>
+                <textarea id="singleFreeTextMessage" rows="6" oninput="updateMessagePreview('free_text', null)"
+                    class="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    placeholder="Escribe tu mensaje aqui..."></textarea>
+                <p class="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    Solo funciona si el usuario ha interactuado con el numero en las ultimas 24 horas
                 </p>
             </div>
 
-            <div class="space-y-4">
-                <!-- Info del destinatario -->
-                <div class="bg-muted rounded-lg p-3 text-sm">
-                    <div class="space-y-1">
-                        <div><strong>Usuario:</strong> <span id="previewUserName"></span></div>
-                        <div><strong>Teléfono:</strong> <span id="previewPhone"></span></div>
-                        <div><strong>Evento:</strong> <span id="previewEventName"></span></div>
-                        <div><strong>Template:</strong> <span id="previewTemplateSource" class="text-xs italic"></span></div>
+            <!-- Preview del mensaje (al final) -->
+            <div id="messagePreviewSection">
+                <label class="text-sm font-medium mb-2 block">Vista previa del mensaje:</label>
+                <div class="border rounded-lg bg-white overflow-hidden">
+                    <!-- Preview de imagen QR (si existe) -->
+                    <div id="previewImageSection" class="hidden border-b p-3 bg-gray-50 flex justify-center">
+                        <img id="previewImage" src="" alt="QR del ticket" class="max-w-[120px] max-h-[120px] object-contain rounded">
                     </div>
-                </div>
-
-                <!-- Preview de imagen (si existe) -->
-                <div id="previewImageSection" class="hidden">
-                    <label class="text-sm font-medium">Imagen adjunta:</label>
-                    <div class="mt-2 border rounded-lg p-4 bg-white">
-                        <img id="previewImage" src="" alt="Imagen del evento" class="max-w-full rounded">
-                    </div>
-                </div>
-
-                <!-- Indicador de envío de QR -->
-                <div id="previewQrIndicator" class="p-3 rounded-lg text-sm"></div>
-
-                <!-- Preview del mensaje -->
-                <div>
-                    <label class="text-sm font-medium">Mensaje:</label>
-                    <div class="mt-2 border rounded-lg p-4 bg-white max-h-96 overflow-y-auto whitespace-pre-wrap text-sm font-mono">
+                    <!-- Contenido del mensaje -->
+                    <div class="p-4 max-h-64 overflow-y-auto whitespace-pre-wrap text-sm">
                         <div id="previewMessageContent"></div>
                     </div>
                 </div>
+                <p id="previewTemplateSource" class="text-xs text-muted-foreground mt-1 italic"></p>
+            </div>
 
-                <!-- Opción de método de envío para individual -->
-                <div class="border-t pt-4 mt-4">
-                    <label class="text-sm font-medium mb-2 block">Metodo de envio:</label>
-                    <div class="flex gap-2 mb-3">
-                        <label class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 flex-1 text-sm" id="singleMethodFreeTextLabel">
-                            <input type="radio" name="single_send_method" value="free_text" checked onchange="updateSingleSendMethodUI()">
-                            <span>Mensaje Libre</span>
-                        </label>
-                        <label class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 flex-1 text-sm" id="singleMethodTemplateLabel">
-                            <input type="radio" name="single_send_method" value="template" onchange="updateSingleSendMethodUI()">
-                            <span>Template Meta</span>
-                        </label>
-                    </div>
-                    <p id="singleMethodHint" class="text-xs text-muted-foreground mb-3">Mensaje libre solo funciona si el usuario ha interactuado en las ultimas 24h</p>
-                </div>
-
-                <!-- Botones de acción -->
-                <div class="flex gap-2">
-                    <button onclick="confirmSendWhatsApp()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:bg-green-700 h-10 px-4 py-2 flex-1">
-                        <svg class="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                        </svg>
-                        Enviar Ahora
-                    </button>
-                    <button onclick="closeWhatsAppPreviewModal()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
-                        Cancelar
-                    </button>
-                </div>
+            <!-- Botones de accion -->
+            <div class="flex gap-2 pt-2">
+                <button onclick="confirmSendWhatsApp()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-green-600 text-white hover:bg-green-700 h-10 px-4 py-2 flex-1">
+                    <svg class="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                    </svg>
+                    Enviar Ahora
+                </button>
+                <button onclick="closeWhatsAppPreviewModal()" class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
+                    Cancelar
+                </button>
             </div>
         </div>
     </div>
@@ -1075,6 +1118,48 @@
     });
 
     let currentPreviewTicketId = null;
+    let currentPreviewData = null; // Guardar datos del ticket para preview de templates
+
+    // Definicion de templates con su estructura (DEBE coincidir con los templates aprobados en Meta)
+    const templateDefinitions = {
+        'tickets_event': {
+            hasImage: true,
+            imageLabel: 'Codigo QR del ticket',
+            body: `🎫 ¡Hola {{1}}! Tu registro para {{2}} ha sido confirmado.
+
+📅 Fecha: {{3}}
+📍 Lugar: {{4}}
+
+Tu código QR de acceso está en el encabezado de este mensaje.
+
+¡Te esperamos!`,
+            footer: 'IEEE Tadeo Student Branch'
+        },
+        'confirmacion_evento_v2': {
+            hasImage: false,
+            body: `🎫 ¡Hola {{1}}! Tu registro para {{2}} ha sido confirmado.
+
+📅 Fecha: {{3}}
+📍 Lugar: {{4}}
+
+¡Te esperamos!`,
+            footer: 'IEEE Tadeo Student Branch'
+        },
+        'recordatorio_evento': {
+            hasImage: false,
+            body: `⏰ ¡Hola {{1}}!
+
+Te recordamos que mañana tienes el evento:
+
+🎯 {{2}}
+
+📅 Fecha: {{3}}
+📍 Lugar: {{4}}
+
+¡Te esperamos!`,
+            footer: 'IEEE Tadeo Student Branch'
+        }
+    };
 
     async function sendWhatsApp(ticketId) {
         try {
@@ -1090,40 +1175,25 @@
             const data = await response.json();
 
             if (response.ok) {
-                // Guardar el ID del ticket para enviar después
+                // Guardar el ID del ticket y datos para preview
                 currentPreviewTicketId = ticketId;
+                currentPreviewData = data;
 
                 // Mostrar el preview en el modal
                 document.getElementById('previewUserName').textContent = data.user_name;
                 document.getElementById('previewPhone').textContent = data.phone || 'Sin teléfono';
                 document.getElementById('previewEventName').textContent = data.event_name;
 
-                const templateSourceMap = {
-                    'evento': 'Personalizado del evento',
-                    'organizacion': 'Personalizado de la organización',
-                    'default': 'Predeterminado de IEEE Tadeo'
-                };
-                document.getElementById('previewTemplateSource').textContent = templateSourceMap[data.template_source] || data.template_source;
+                // Inicializar el modal con Template Meta seleccionado por defecto
+                const templateRadio = document.querySelector('input[name="single_send_method"][value="template"]');
+                if (templateRadio) templateRadio.checked = true;
 
-                document.getElementById('previewMessageContent').textContent = data.message_preview;
+                // Resetear selector de template a tickets_event
+                const templateSelect = document.getElementById('singleWhatsappTemplate');
+                if (templateSelect) templateSelect.value = 'tickets_event';
 
-                // Mostrar imagen si existe
-                if (data.has_image && data.image_url) {
-                    document.getElementById('previewImage').src = data.image_url;
-                    document.getElementById('previewImageSection').classList.remove('hidden');
-                } else {
-                    document.getElementById('previewImageSection').classList.add('hidden');
-                }
-
-                // Mostrar indicador de envío de QR
-                const qrIndicator = document.getElementById('previewQrIndicator');
-                if (data.send_qr_with_whatsapp) {
-                    qrIndicator.className = 'p-3 rounded-lg text-sm bg-blue-50 border border-blue-200';
-                    qrIndicator.innerHTML = '✅ <strong>El código QR se enviará directamente en WhatsApp</strong>';
-                } else {
-                    qrIndicator.className = 'p-3 rounded-lg text-sm bg-gray-50 border border-gray-200';
-                    qrIndicator.innerHTML = '🔗 <strong>El código QR se enviará como enlace</strong>';
-                }
+                // Actualizar UI del metodo y template (esto tambien actualiza el preview)
+                updateSingleSendMethodUI();
 
                 // Abrir modal de preview
                 document.getElementById('whatsappPreviewModal').classList.remove('hidden');
@@ -1143,15 +1213,124 @@
         const freeTextLabel = document.getElementById('singleMethodFreeTextLabel');
         const templateLabel = document.getElementById('singleMethodTemplateLabel');
         const hint = document.getElementById('singleMethodHint');
+        const templateSection = document.getElementById('singleTemplateSelectorSection');
+        const freeTextSection = document.getElementById('singleFreeTextSection');
 
         if (freeTextRadio && freeTextRadio.checked) {
             freeTextLabel.classList.add('border-green-500', 'bg-green-50');
             templateLabel.classList.remove('border-green-500', 'bg-green-50');
             hint.textContent = 'Mensaje libre solo funciona si el usuario ha interactuado en las ultimas 24h';
+            // Ocultar selector de template, mostrar textarea
+            if (templateSection) templateSection.classList.add('hidden');
+            if (freeTextSection) freeTextSection.classList.remove('hidden');
+            // Inicializar mensaje libre con datos del usuario si existe
+            initializeFreeTextMessage();
+            // Mostrar preview de mensaje libre
+            updateMessagePreview('free_text');
         } else if (templateRadio && templateRadio.checked) {
             templateLabel.classList.add('border-green-500', 'bg-green-50');
             freeTextLabel.classList.remove('border-green-500', 'bg-green-50');
             hint.textContent = 'Template Meta funciona siempre, incluso fuera de ventana de 24h';
+            // Mostrar selector de template, ocultar textarea
+            if (templateSection) templateSection.classList.remove('hidden');
+            if (freeTextSection) freeTextSection.classList.add('hidden');
+            // Actualizar info del template y preview
+            updateTemplateInfo();
+        }
+    }
+
+    // Función para inicializar el mensaje libre con datos del ticket
+    function initializeFreeTextMessage() {
+        const textarea = document.getElementById('singleFreeTextMessage');
+        if (!textarea || !currentPreviewData) return;
+
+        // Solo inicializar si está vacío
+        if (textarea.value.trim() === '') {
+            const defaultMessage = `🎫 ¡Hola ${currentPreviewData.user_name}!
+
+Tu registro para *${currentPreviewData.event_name}* ha sido confirmado.
+
+📅 Fecha: ${currentPreviewData.event_date || 'Por confirmar'}
+📍 Lugar: ${currentPreviewData.event_location || 'Por confirmar'}
+
+¡Te esperamos!`;
+            textarea.value = defaultMessage;
+        }
+    }
+
+    // Función para actualizar info del template seleccionado
+    function updateTemplateInfo() {
+        const templateSelect = document.getElementById('singleWhatsappTemplate');
+        const qrInfo = document.getElementById('templateQrInfo');
+
+        if (!templateSelect || !qrInfo) return;
+
+        const selectedTemplate = templateSelect.value;
+
+        // Mostrar info de QR solo para tickets_event
+        if (selectedTemplate === 'tickets_event') {
+            qrInfo.classList.remove('hidden');
+        } else {
+            qrInfo.classList.add('hidden');
+        }
+
+        // Actualizar preview del mensaje
+        updateMessagePreview('template', selectedTemplate);
+    }
+
+    // Función para actualizar el preview del mensaje segun metodo y template
+    function updateMessagePreview(method, templateName = 'tickets_event') {
+        const previewContent = document.getElementById('previewMessageContent');
+        const previewSource = document.getElementById('previewTemplateSource');
+        const previewImageSection = document.getElementById('previewImageSection');
+
+        if (!currentPreviewData || !previewContent) return;
+
+        if (method === 'free_text') {
+            // Mostrar mensaje del textarea
+            const textarea = document.getElementById('singleFreeTextMessage');
+            const messageText = textarea ? textarea.value : (currentPreviewData.message_preview || '');
+            previewContent.textContent = messageText;
+            previewSource.textContent = 'Mensaje personalizado';
+
+            // No mostrar imagen en mensaje libre
+            previewImageSection.classList.add('hidden');
+        } else {
+            // Mostrar preview del template seleccionado
+            const templateDef = templateDefinitions[templateName];
+
+            if (templateDef) {
+                // Reemplazar variables con datos reales
+                let previewText = templateDef.body
+                    .replace('{{1}}', currentPreviewData.user_name || '[Nombre]')
+                    .replace('{{2}}', currentPreviewData.event_name || '[Evento]')
+                    .replace('{{3}}', currentPreviewData.event_date || '[Fecha]')
+                    .replace('{{4}}', currentPreviewData.event_location || '[Lugar]');
+
+                previewContent.textContent = previewText;
+                previewSource.textContent = 'Template: ' + templateName;
+
+                // Mostrar imagen QR real si el template tiene imagen
+                if (templateDef.hasImage) {
+                    previewImageSection.classList.remove('hidden');
+                    // Usar el QR real del ticket en base64 si está disponible
+                    if (currentPreviewData.qr_base64) {
+                        // qr_base64 ya incluye el prefijo data:image/png;base64,
+                        document.getElementById('previewImage').src = currentPreviewData.qr_base64;
+                    } else {
+                        // Fallback a placeholder si no hay QR
+                        document.getElementById('previewImage').src = 'data:image/svg+xml,' + encodeURIComponent(`
+                            <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+                                <rect fill="#f3f4f6" width="100" height="100"/>
+                                <text x="50" y="42" text-anchor="middle" fill="#6b7280" font-family="sans-serif" font-size="10">Codigo QR</text>
+                                <text x="50" y="58" text-anchor="middle" fill="#6b7280" font-family="sans-serif" font-size="8">(automatico)</text>
+                            </svg>
+                        `);
+                    }
+                } else {
+                    previewImageSection.classList.add('hidden');
+                }
+            }
         }
     }
 
@@ -1159,7 +1338,7 @@
         if (!currentPreviewTicketId) return;
 
         // Obtener método de envío seleccionado
-        const sendMethod = document.querySelector('input[name="single_send_method"]:checked')?.value || 'free_text';
+        const sendMethod = document.querySelector('input[name="single_send_method"]:checked')?.value || 'template';
         const useTemplate = sendMethod === 'template';
 
         try {
@@ -1167,8 +1346,24 @@
 
             // Construir URL con parámetros
             let url = `/tickets/${currentPreviewTicketId}/send-whatsapp`;
+            const params = new URLSearchParams();
+
             if (useTemplate) {
-                url += `?use_template=true&template_name=ticket_evento`;
+                const selectedTemplate = document.getElementById('singleWhatsappTemplate')?.value || 'tickets_event';
+                params.append('use_template', 'true');
+                params.append('template_name', selectedTemplate);
+            } else {
+                // Mensaje libre - obtener del textarea
+                const customMessage = document.getElementById('singleFreeTextMessage')?.value || '';
+                if (!customMessage.trim()) {
+                    alert('Por favor escribe un mensaje');
+                    return;
+                }
+                params.append('custom_message', customMessage);
+            }
+
+            if (params.toString()) {
+                url += '?' + params.toString();
             }
 
             const response = await fetch(url, {
@@ -1196,9 +1391,16 @@
     function closeWhatsAppPreviewModal() {
         document.getElementById('whatsappPreviewModal').classList.add('hidden');
         currentPreviewTicketId = null;
-        // Reset radio buttons
-        const freeTextRadio = document.querySelector('input[name="single_send_method"][value="free_text"]');
-        if (freeTextRadio) freeTextRadio.checked = true;
+        currentPreviewData = null;
+        // Reset radio buttons - Template Meta por defecto
+        const templateRadio = document.querySelector('input[name="single_send_method"][value="template"]');
+        if (templateRadio) templateRadio.checked = true;
+        // Reset template selector
+        const templateSelect = document.getElementById('singleWhatsappTemplate');
+        if (templateSelect) templateSelect.value = 'tickets_event';
+        // Limpiar textarea de mensaje libre
+        const freeTextArea = document.getElementById('singleFreeTextMessage');
+        if (freeTextArea) freeTextArea.value = '';
         updateSingleSendMethodUI();
     }
 
@@ -1553,7 +1755,21 @@
         document.getElementById('whatsappForm').reset();
         document.getElementById('whatsappMessage').innerHTML = '';
         document.getElementById('ticketPreview').classList.add('hidden');
-        document.getElementById('templatePreviewSection').classList.add('hidden');
+
+        // Establecer Template Meta como seleccionado por defecto
+        const templateRadio = document.querySelector('input[name="send_method"][value="template"]');
+        if (templateRadio) {
+            templateRadio.checked = true;
+        }
+
+        // Seleccionar tickets_event por defecto
+        const templateSelect = document.getElementById('whatsapp_template_name');
+        if (templateSelect) {
+            templateSelect.value = 'tickets_event';
+        }
+
+        updateSendMethodUI();
+        updateBulkMessagePreview();
     }
 
     function closeWhatsAppModal() {
@@ -1561,8 +1777,14 @@
         document.getElementById('whatsappForm').reset();
         document.getElementById('whatsappMessage').innerHTML = '';
         document.getElementById('ticketPreview').classList.add('hidden');
-        document.getElementById('templatePreviewSection').classList.add('hidden');
         document.getElementById('templateSelectorSection').classList.add('hidden');
+        document.getElementById('bulkFreeTextSection')?.classList.add('hidden');
+        // Limpiar textarea de mensaje libre
+        const bulkTextarea = document.getElementById('bulk_free_text_message');
+        if (bulkTextarea) bulkTextarea.value = '';
+        // Restaurar Template Meta como default
+        const templateRadio = document.querySelector('input[name="send_method"][value="template"]');
+        if (templateRadio) templateRadio.checked = true;
         updateSendMethodUI();
     }
 
@@ -1571,6 +1793,7 @@
         const freeTextRadio = document.querySelector('input[name="send_method"][value="free_text"]');
         const templateRadio = document.querySelector('input[name="send_method"][value="template"]');
         const templateSelector = document.getElementById('templateSelectorSection');
+        const freeTextSection = document.getElementById('bulkFreeTextSection');
         const freeTextLabel = document.getElementById('methodFreeTextLabel');
         const templateLabel = document.getElementById('methodTemplateLabel');
         const checkFreeText = document.getElementById('checkFreeText');
@@ -1578,22 +1801,131 @@
 
         if (freeTextRadio && freeTextRadio.checked) {
             templateSelector.classList.add('hidden');
+            if (freeTextSection) freeTextSection.classList.remove('hidden');
             freeTextLabel.classList.add('border-green-500', 'bg-green-50');
             templateLabel.classList.remove('border-green-500', 'bg-green-50');
             checkFreeText.classList.remove('hidden');
             checkTemplate.classList.add('hidden');
+            // Inicializar mensaje por defecto si está vacío
+            initializeBulkFreeTextMessage();
         } else if (templateRadio && templateRadio.checked) {
             templateSelector.classList.remove('hidden');
+            if (freeTextSection) freeTextSection.classList.add('hidden');
             templateLabel.classList.add('border-green-500', 'bg-green-50');
             freeTextLabel.classList.remove('border-green-500', 'bg-green-50');
             checkTemplate.classList.remove('hidden');
             checkFreeText.classList.add('hidden');
         }
+        updateBulkMessagePreview();
+    }
+
+    // Función para inicializar el mensaje libre masivo
+    function initializeBulkFreeTextMessage() {
+        const textarea = document.getElementById('bulk_free_text_message');
+        if (!textarea) return;
+
+        // Solo inicializar si está vacío
+        if (textarea.value.trim() === '') {
+            textarea.value = `🎫 ¡Hola {nombre}!
+
+Tu registro para *{evento}* ha sido confirmado.
+
+📅 Fecha: {fecha}
+📍 Lugar: {lugar}
+
+¡Te esperamos!`;
+        }
+    }
+
+    // Funcion para actualizar preview del mensaje masivo
+    function updateBulkMessagePreview() {
+        const previewSection = document.getElementById('bulkPreviewSection');
+        const previewImage = document.getElementById('bulkPreviewImage');
+        const previewContent = document.getElementById('bulkPreviewContent');
+        const previewFooter = document.getElementById('bulkPreviewFooter');
+        const qrInfo = document.getElementById('bulkQrInfo');
+
+        const sendMethod = document.querySelector('input[name="send_method"]:checked')?.value || 'template';
+        const templateName = document.getElementById('whatsapp_template_name')?.value || 'tickets_event';
+
+        // Obtener datos del evento seleccionado para preview
+        const eventSelect = document.getElementById('whatsapp_event_id');
+        const selectedOption = eventSelect?.options[eventSelect.selectedIndex];
+        const eventText = selectedOption?.text || 'Nombre del Evento - DD/MM/YYYY';
+
+        // Extraer nombre y fecha del evento
+        let eventName = 'IEEE Workshop 2025';
+        let eventDate = '15/01/2025';
+        if (selectedOption && selectedOption.value) {
+            const parts = eventText.split(' - ');
+            if (parts.length >= 2) {
+                eventName = parts.slice(0, -1).join(' - ');
+                eventDate = parts[parts.length - 1];
+            }
+        }
+
+        if (sendMethod === 'free_text') {
+            // Mensaje libre - mostrar contenido del textarea con variables reemplazadas
+            previewImage.classList.add('hidden');
+
+            const textarea = document.getElementById('bulk_free_text_message');
+            let messageText = textarea ? textarea.value : '';
+
+            // Reemplazar variables con datos de ejemplo
+            messageText = messageText
+                .replace(/\{nombre\}/g, 'María García')
+                .replace(/\{evento\}/g, eventName)
+                .replace(/\{fecha\}/g, eventDate)
+                .replace(/\{lugar\}/g, 'Auditorio IEEE Tadeo');
+
+            previewContent.textContent = messageText || '(Escribe tu mensaje arriba)';
+            previewFooter.textContent = '';
+            qrInfo.classList.add('hidden');
+            document.getElementById('templateSelectorSection').classList.add('hidden');
+            document.getElementById('bulkFreeTextSection')?.classList.remove('hidden');
+        } else {
+            // Template Meta
+            document.getElementById('templateSelectorSection').classList.remove('hidden');
+            document.getElementById('bulkFreeTextSection')?.classList.add('hidden');
+            const template = templateDefinitions[templateName];
+
+            if (template) {
+                // Mostrar/ocultar imagen segun template
+                if (template.hasImage) {
+                    previewImage.classList.remove('hidden');
+                    qrInfo.classList.remove('hidden');
+                    qrInfo.textContent = 'El template "tickets_event" generara y enviara el codigo QR de cada ticket como imagen de encabezado.';
+                } else {
+                    previewImage.classList.add('hidden');
+                    qrInfo.classList.remove('hidden');
+                    qrInfo.textContent = 'Este template no incluye imagen de encabezado.';
+                    qrInfo.className = 'text-xs text-gray-600 bg-gray-50 p-2 rounded-md';
+                }
+
+                // Sustituir variables con datos de ejemplo
+                let body = template.body
+                    .replace('{{1}}', 'Maria Garcia')
+                    .replace('{{2}}', eventName)
+                    .replace('{{3}}', eventDate)
+                    .replace('{{4}}', 'Auditorio IEEE Tadeo');
+
+                previewContent.textContent = body;
+                previewFooter.textContent = template.footer || '';
+
+                // Restaurar estilo del qrInfo si es tickets_event
+                if (template.hasImage) {
+                    qrInfo.className = 'text-xs text-blue-600 bg-blue-50 p-2 rounded-md';
+                }
+            }
+        }
+
+        previewSection.classList.remove('hidden');
     }
 
     // Inicializar UI al cargar
     document.addEventListener('DOMContentLoaded', function() {
         updateSendMethodUI();
+        updateBulkMessagePreview();
     });
 
     document.getElementById('whatsappForm').addEventListener('submit', async (e) => {
@@ -1604,12 +1936,19 @@
         const messageDiv = document.getElementById('whatsappMessage');
 
         // Obtener método de envío seleccionado
-        const sendMethod = document.querySelector('input[name="send_method"]:checked')?.value || 'free_text';
+        const sendMethod = document.querySelector('input[name="send_method"]:checked')?.value || 'template';
         const useTemplate = sendMethod === 'template';
-        const templateName = document.getElementById('whatsapp_template_name')?.value || 'ticket_evento';
+        const templateName = document.getElementById('whatsapp_template_name')?.value || 'tickets_event';
+        const customMessage = document.getElementById('bulk_free_text_message')?.value || '';
 
         if (!eventId) {
             messageDiv.innerHTML = '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Por favor seleccione un evento</div>';
+            return;
+        }
+
+        // Validar mensaje personalizado si es mensaje libre
+        if (!useTemplate && !customMessage.trim()) {
+            messageDiv.innerHTML = '<div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Por favor escribe un mensaje personalizado</div>';
             return;
         }
 
@@ -1659,7 +1998,8 @@
                 body: JSON.stringify({
                     event_id: eventId,
                     use_template: useTemplate,
-                    template_name: templateName
+                    template_name: templateName,
+                    custom_message: useTemplate ? null : customMessage
                 })
             });
 

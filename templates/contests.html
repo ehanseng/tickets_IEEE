@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Concursos - IEEE Tadeo Control System{% endblock %}
+
+{% block content %}
+<div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div class="p-6">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h2 class="text-3xl font-bold tracking-tight">Concursos y Convocatorias</h2>
+                <p class="text-sm text-muted-foreground mt-1">Oportunidades de financiacion, premios y competencias para la rama</p>
+            </div>
+            <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2" onclick="openModal()">
+                + Agregar Concurso
+            </button>
+        </div>
+
+        <!-- Filtros -->
+        <div class="flex items-center gap-3 mb-4">
+            <select id="filterCategory" onchange="filterContests()" class="h-9 rounded-md border border-input bg-background px-3 text-sm">
+                <option value="">Todas las categorias</option>
+                <option value="IEEE">IEEE</option>
+                <option value="Gobierno">Gobierno</option>
+                <option value="Empresa">Empresa</option>
+                <option value="Universidad">Universidad</option>
+                <option value="ONG">ONG</option>
+                <option value="Otro">Otro</option>
+            </select>
+            <select id="filterStatus" onchange="filterContests()" class="h-9 rounded-md border border-input bg-background px-3 text-sm">
+                <option value="">Todos</option>
+                <option value="active">Activos</option>
+                <option value="inactive">Inactivos</option>
+            </select>
+            <span id="contestCount" class="text-sm text-muted-foreground ml-auto"></span>
+        </div>
+
+        <!-- Lista de concursos -->
+        <div id="contestsList" class="space-y-3">
+            {% if contests %}
+            {% for contest in contests %}
+            <div class="contest-card rounded-lg border bg-white p-4 hover:shadow-sm transition-shadow"
+                 data-category="{{ contest.category or 'IEEE' }}"
+                 data-active="{{ 'true' if contest.is_active else 'false' }}">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                            <h3 class="font-semibold text-base">{{ contest.name }}</h3>
+                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold
+                                {% if contest.category == 'IEEE' %}bg-blue-100 text-blue-700
+                                {% elif contest.category == 'Gobierno' %}bg-green-100 text-green-700
+                                {% elif contest.category == 'Empresa' %}bg-purple-100 text-purple-700
+                                {% elif contest.category == 'Universidad' %}bg-amber-100 text-amber-700
+                                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                {{ contest.category or 'IEEE' }}
+                            </span>
+                            {% if contest.modality %}
+                            <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                {% if 'Virtual' in contest.modality %}💻{% elif 'Presencial' in contest.modality %}📍{% else %}🔄{% endif %}
+                                {{ contest.modality }}
+                            </span>
+                            {% endif %}
+                            {% if not contest.is_active %}
+                            <span class="inline-flex items-center rounded-full bg-red-100 text-red-700 px-2 py-0.5 text-xs font-semibold">Inactivo</span>
+                            {% endif %}
+                        </div>
+                        {% if contest.description %}
+                        <p class="text-sm text-muted-foreground mb-2">{{ contest.description }}</p>
+                        {% endif %}
+                        <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            {% if contest.prizes %}
+                            <span>🏆 {{ contest.prizes }}</span>
+                            {% endif %}
+                            {% if contest.deadline %}
+                            <span>📅 {{ contest.deadline }}</span>
+                            {% endif %}
+                            {% if contest.url %}
+                            <a href="{{ contest.url }}" target="_blank" class="text-primary hover:underline">🔗 Ver convocatoria</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <button onclick="editContest({{ contest.id }}, {{ contest|tojson }})" class="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3">
+                            ✏️ Editar
+                        </button>
+                        <button onclick="deleteContest({{ contest.id }}, '{{ contest.name|e }}')" class="inline-flex items-center justify-center rounded-md text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 h-8 px-3">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="text-center text-muted-foreground py-8">No hay concursos registrados</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal para crear/editar concurso -->
+<div id="contestModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto">
+    <div class="rounded-lg border bg-card text-card-foreground shadow-lg w-full max-w-lg my-8 max-h-[90vh] flex flex-col">
+        <div class="flex flex-col space-y-1.5 p-6 border-b flex-shrink-0">
+            <div class="flex items-center justify-between">
+                <h2 id="modalTitle" class="text-2xl font-semibold leading-none tracking-tight">Agregar Concurso</h2>
+                <button onclick="closeModal()" class="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-6 overflow-y-auto flex-1">
+            <form id="contestForm" class="space-y-4">
+                <input type="hidden" id="contestId" value="">
+
+                <div class="space-y-2">
+                    <label for="contestName" class="text-sm font-medium">Nombre del Concurso *</label>
+                    <input type="text" id="contestName" required class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                </div>
+
+                <div class="space-y-2">
+                    <label for="contestDescription" class="text-sm font-medium">Descripcion / Tematica</label>
+                    <textarea id="contestDescription" rows="2" class="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label for="contestCategory" class="text-sm font-medium">Categoria</label>
+                        <select id="contestCategory" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                            <option value="IEEE">IEEE</option>
+                            <option value="Gobierno">Gobierno</option>
+                            <option value="Empresa">Empresa</option>
+                            <option value="Universidad">Universidad</option>
+                            <option value="ONG">ONG</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+                    <div class="space-y-2">
+                        <label for="contestModality" class="text-sm font-medium">Modalidad</label>
+                        <select id="contestModality" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                            <option value="">Sin especificar</option>
+                            <option value="Virtual">Virtual</option>
+                            <option value="Presencial">Presencial</option>
+                            <option value="Hibrida">Hibrida</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="contestPrizes" class="text-sm font-medium">Premios Principales</label>
+                    <input type="text" id="contestPrizes" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" placeholder="Ej: $3,000 USD + Viaje pagado">
+                </div>
+
+                <div class="space-y-2">
+                    <label for="contestDeadline" class="text-sm font-medium">Fechas Clave</label>
+                    <input type="text" id="contestDeadline" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" placeholder="Ej: Cierre: Marzo 2026">
+                </div>
+
+                <div class="space-y-2">
+                    <label for="contestUrl" class="text-sm font-medium">Link de la convocatoria</label>
+                    <input type="url" id="contestUrl" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" placeholder="https://...">
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="contestActive" checked class="rounded border-input">
+                    <label for="contestActive" class="text-sm font-medium">Activo (visible para usuarios)</label>
+                </div>
+
+                <button type="submit" class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full">Guardar Concurso</button>
+            </form>
+            <div id="message" class="mt-4"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openModal(isEdit = false) {
+        document.getElementById('contestModal').classList.remove('hidden');
+        document.getElementById('modalTitle').textContent = isEdit ? 'Editar Concurso' : 'Agregar Concurso';
+        if (!isEdit) {
+            document.getElementById('contestForm').reset();
+            document.getElementById('contestId').value = '';
+            document.getElementById('contestActive').checked = true;
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('contestModal').classList.add('hidden');
+        document.getElementById('message').innerHTML = '';
+    }
+
+    function editContest(id, contest) {
+        document.getElementById('contestId').value = id;
+        document.getElementById('contestName').value = contest.name || '';
+        document.getElementById('contestDescription').value = contest.description || '';
+        document.getElementById('contestCategory').value = contest.category || 'IEEE';
+        document.getElementById('contestModality').value = contest.modality || '';
+        document.getElementById('contestPrizes').value = contest.prizes || '';
+        document.getElementById('contestDeadline').value = contest.deadline || '';
+        document.getElementById('contestUrl').value = contest.url || '';
+        document.getElementById('contestActive').checked = contest.is_active;
+        openModal(true);
+    }
+
+    async function deleteContest(id, name) {
+        if (!confirm(`¿Eliminar el concurso "${name}"?`)) return;
+
+        try {
+            const response = await fetch(`/api/contests/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const data = await response.json();
+                alert('Error: ' + (data.detail || 'No se pudo eliminar'));
+            }
+        } catch (error) {
+            alert('Error de conexion');
+        }
+    }
+
+    function filterContests() {
+        const category = document.getElementById('filterCategory').value;
+        const status = document.getElementById('filterStatus').value;
+        const cards = document.querySelectorAll('.contest-card');
+        let visible = 0;
+
+        cards.forEach(card => {
+            const cardCategory = card.dataset.category;
+            const cardActive = card.dataset.active;
+            let show = true;
+
+            if (category && cardCategory !== category) show = false;
+            if (status === 'active' && cardActive !== 'true') show = false;
+            if (status === 'inactive' && cardActive !== 'false') show = false;
+
+            card.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+
+        document.getElementById('contestCount').textContent = `${visible} concurso${visible !== 1 ? 's' : ''}`;
+    }
+
+    document.getElementById('contestForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const id = document.getElementById('contestId').value;
+        const data = {
+            name: document.getElementById('contestName').value,
+            description: document.getElementById('contestDescription').value || null,
+            category: document.getElementById('contestCategory').value,
+            modality: document.getElementById('contestModality').value || null,
+            prizes: document.getElementById('contestPrizes').value || null,
+            deadline: document.getElementById('contestDeadline').value || null,
+            url: document.getElementById('contestUrl').value || null,
+            is_active: document.getElementById('contestActive').checked
+        };
+
+        try {
+            const url = id ? `/api/contests/${id}` : '/api/contests';
+            const method = id ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                document.getElementById('message').innerHTML =
+                    '<div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">Concurso guardado exitosamente</div>';
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                const err = await response.json();
+                document.getElementById('message').innerHTML =
+                    `<div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">Error: ${err.detail}</div>`;
+            }
+        } catch (error) {
+            document.getElementById('message').innerHTML =
+                '<div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">Error de conexion</div>';
+        }
+    });
+
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('contestModal')) closeModal();
+    }
+
+    // Inicializar conteo
+    filterContests();
+</script>
+{% endblock %}

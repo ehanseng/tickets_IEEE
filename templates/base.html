@@ -283,7 +283,7 @@
 
                         <!-- Dropdown: Contenido -->
                         <div class="nav-dropdown">
-                            <button class="nav-link nav-dropdown-btn {% if '/events' in request.url.path or '/projects' in request.url.path or '/catalogs' in request.url.path %}nav-link-active{% endif %}">
+                            <button class="nav-link nav-dropdown-btn {% if '/events' in request.url.path or '/projects' in request.url.path or '/catalogs' in request.url.path or '/contests' in request.url.path %}nav-link-active{% endif %}">
                                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                                 </svg>
@@ -294,6 +294,10 @@
                                 <a href="/admin/events" class="{% if '/events' in request.url.path %}active{% endif %}">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                     Eventos
+                                </a>
+                                <a href="/admin/contests" class="{% if '/contests' in request.url.path %}active{% endif %}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                                    Concursos
                                 </a>
                                 <a href="/admin/projects" class="{% if '/projects' in request.url.path %}active{% endif %}">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
@@ -359,6 +363,17 @@
                             </svg>
                             Accesos
                         </a>
+
+                        <!-- Módulos externos -->
+                        <button onclick="goToExternalModule('asistencia')" class="nav-link">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                            </svg>
+                            Asistencias
+                            <svg class="w-3 h-3 ml-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                            </svg>
+                        </button>
                     </div>
 
                     <!-- Menú para VALIDATOR -->
@@ -448,13 +463,14 @@
 
                     <!-- Grupo: Contenido -->
                     <div class="mobile-nav-group">
-                        <button onclick="toggleMobileGroup(this)" class="mobile-nav-group-btn {% if '/events' in request.url.path or '/projects' in request.url.path or '/catalogs' in request.url.path %}active{% endif %}">
+                        <button onclick="toggleMobileGroup(this)" class="mobile-nav-group-btn {% if '/events' in request.url.path or '/projects' in request.url.path or '/catalogs' in request.url.path or '/contests' in request.url.path %}active{% endif %}">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                             Contenido
                             <svg class="w-4 h-4 ml-auto transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
                         <div class="mobile-nav-group-content hidden">
                             <a href="/admin/events" class="{% if '/events' in request.url.path %}active{% endif %}">Eventos</a>
+                            <a href="/admin/contests" class="{% if '/contests' in request.url.path %}active{% endif %}">Concursos</a>
                             <a href="/admin/projects" class="{% if '/projects' in request.url.path %}active{% endif %}">Proyectos</a>
                             <a href="/admin/catalogs" class="{% if '/catalogs' in request.url.path %}active{% endif %}">Catalogos</a>
                         </div>
@@ -541,6 +557,41 @@
                 localStorage.removeItem('user_role');
                 localStorage.removeItem('user_permissions');
                 window.location.href = '/login';
+            }
+        }
+
+        // Ir a módulo externo (genera token y redirige)
+        async function goToExternalModule(moduleName) {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                alert('No hay sesión activa');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/generate-external-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ module_name: moduleName })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    alert(err.detail || 'Error al acceder al módulo');
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    alert('Módulo no configurado correctamente');
+                }
+            } catch (error) {
+                alert('Error de conexión');
             }
         }
 

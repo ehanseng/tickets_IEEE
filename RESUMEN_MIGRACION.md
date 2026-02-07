@@ -55,10 +55,10 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Abre: http://localhost:8000
+Abre: http://localhost:8070
 
 ### 6️⃣ Reconectar WhatsApp (3 min)
-- Ve a http://localhost:8000/admin/whatsapp
+- Ve a http://localhost:8070/admin/whatsapp
 - Escanea el código QR con tu teléfono
 
 **¡Listo! 🎉**
