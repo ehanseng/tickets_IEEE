@@ -79,7 +79,7 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
-                        <button onclick="editContest({{ contest.id }}, {{ contest|tojson }})" class="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3">
+                        <button onclick='editContest({{ contest.id }}, {"name":"{{ contest.name|e }}","description":"{{ (contest.description or '')|e }}","category":"{{ contest.category or 'IEEE' }}","modality":"{{ contest.modality or '' }}","prizes":"{{ (contest.prizes or '')|e }}","deadline":"{{ (contest.deadline or '')|e }}","url":"{{ contest.url or '' }}","is_active":{{ "true" if contest.is_active else "false" }}})' class="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3">
                             ✏️ Editar
                         </button>
                         <button onclick="deleteContest({{ contest.id }}, '{{ contest.name|e }}')" class="inline-flex items-center justify-center rounded-md text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 h-8 px-3">
